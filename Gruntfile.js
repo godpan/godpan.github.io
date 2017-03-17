@@ -8,8 +8,8 @@ module.exports = function(grunt) {
       },
       all: [
         'Gruntfile.js',
-        '!assets/js/*.js',
-        '!assets/js/plugins/*.js',
+        'assets/js/*.js',
+        'assets/js/plugins/*.js',
         '!assets/js/scripts.min.js'
       ]
     },
@@ -52,7 +52,7 @@ module.exports = function(grunt) {
         files: [
           '<%= jshint.all %>'
         ],
-        tasks: ['jshint','uglify']
+        tasks: ['uglify']
       }
     },
     clean: {

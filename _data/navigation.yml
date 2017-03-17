@@ -1,7 +1,16 @@
-# Menu navigation links
+# Site navigation links
+
+- title: About
+  url: /about/
+
+- title: Articles
+  url: /articles/
+
+- title: Blog
+  url: /blog/
 
 - title: Theme Setup
   url: /theme-setup/
 
-- title: External Link
-  url: http://mademistakes.com
+- title: Search
+  url: /search/
