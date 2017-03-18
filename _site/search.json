@@ -2,9 +2,9 @@
 
   
     {
-      "title"			: "MathJax Example",
-      "link"			: "/blog/mathjax-example/",
-      "excerpt"		: "MathJax is a simple way of including Tex/LaTex/MathML based mathematics in HTML webpages. To get up and running you need to include the MathJax script in the header of your github pages page, and then write some maths. For LaTex, there are two delimiters you need to know about, one for block or displayed mathematics  ... , and the other for inline mathematics  ... ."
+      "title"			: "Akka系列-Akka简介与Actor模型",
+      "link"			: "/blog/akka-1/",
+      "excerpt"		: "Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。"
     }
   
 

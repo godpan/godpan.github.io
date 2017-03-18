@@ -1,0 +1,226 @@
+<!doctype html>
+<!--[if lt IE 7]><html class="no-js lt-ie9 lt-ie8 lt-ie7" lang="en"> <![endif]-->
+<!--[if (IE 7)&!(IEMobile)]><html class="no-js lt-ie9 lt-ie8" lang="en"><![endif]-->
+<!--[if (IE 8)&!(IEMobile)]><html class="no-js lt-ie9" lang="en"><![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"><!--<![endif]-->
+<head>
+<meta charset="utf-8">
+<title>Akka系列-Akka简介与Actor模型 &#8211; GodPan</title>
+<meta name="description" content="Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。
+
+">
+<meta name="keywords" content="">
+
+
+<!-- Twitter Cards -->
+<meta name="twitter:title" content="Akka系列-Akka简介与Actor模型">
+<meta name="twitter:description" content="Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。
+
+">
+
+
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="/images/site-logo.png">
+
+<!-- Open Graph -->
+<meta property="og:locale" content="en_US">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Akka系列-Akka简介与Actor模型">
+<meta property="og:description" content="Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。
+
+">
+<meta property="og:url" content="/blog/akka-1/">
+<meta property="og:site_name" content="GodPan">
+
+
+
+
+
+<link rel="canonical" href="/blog/akka-1/">
+<link href="/feed.xml" type="application/atom+xml" rel="alternate" title="GodPan Feed">
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<!-- Webfonts -->
+<script src="https://use.edgefonts.net/source-sans-pro:n2,i2,n3,i3,n4,i4,n6,i6,n7,i7,n9,i9;source-code-pro:n4,n7;volkhov.js"></script>
+
+<meta http-equiv="cleartype" content="on">
+
+<!-- HTML5 Shiv and Media Query Support -->
+<!--[if lt IE 9]>
+  <script src="/assets/js/vendor/html5shiv.min.js"></script>
+  <script src="/assets/js/vendor/respond.min.js"></script>
+<![endif]-->
+
+<!-- Modernizr -->
+<script src="/assets/js/vendor/modernizr-2.7.1.custom.min.js"></script>
+
+
+<!-- MathJax -->
+<script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+
+<!-- Icons -->
+<!-- 16x16 -->
+<link rel="shortcut icon" href="/favicon.ico">
+<!-- 32x32 -->
+<link rel="shortcut icon" href="/favicon.png">
+<!-- 57x57 (precomposed) for iPhone 3GS, pre-2011 iPod Touch and older Android devices -->
+<link rel="apple-touch-icon-precomposed" href="/images/apple-touch-icon-precomposed.png">
+<!-- 72x72 (precomposed) for 1st generation iPad, iPad 2 and iPad mini -->
+<link rel="apple-touch-icon-precomposed" sizes="72x72" href="/images/apple-touch-icon-72x72-precomposed.png">
+<!-- 114x114 (precomposed) for iPhone 4, 4S, 5 and post-2011 iPod Touch -->
+<link rel="apple-touch-icon-precomposed" sizes="114x114" href="/images/apple-touch-icon-114x114-precomposed.png">
+<!-- 144x144 (precomposed) for iPad 3rd and 4th generation -->
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/images/apple-touch-icon-144x144-precomposed.png">
+
+</head>
+
+<body id="post">
+
+<div class="navigation-wrapper">
+  <nav role="navigation" id="site-nav" class="animated drop">
+      <ul>
+      
+        
+        <li><a href="/about/" >About</a></li>
+      
+        
+        <li><a href="/articles/" >Articles</a></li>
+      
+        
+        <li><a href="/blog/" >Blog</a></li>
+      
+      </ul>
+  </nav>
+</div><!-- /.navigation-wrapper -->
+
+<!--[if lt IE 9]><div class="upgrade"><strong><a href="http://whatbrowser.org/">Your browser is quite old!</strong> Why not upgrade to a different browser to better enjoy this site?</a></div><![endif]-->
+
+<div class="js-menu-screen menu-screen"></div>
+
+
+<div id="main" role="main">
+  <article class="hentry">
+    
+    <div class="entry-wrapper">
+      <header class="entry-header">
+        <ul class="entry-tags">
+          
+        </ul>
+        
+          <h1 class="entry-title">Akka系列-Akka简介与Actor模型</h1>
+        
+      </header>
+      <footer class="entry-meta">
+        
+        
+          <img src="/images/bio-photo.jpg" class="bio-photo" alt="GodPan bio photo"></a>
+        
+        <span class="author vcard">By <span class="fn">GodPan</span></span>
+        <span class="entry-date date published"><time datetime="2015-08-10T20:08:50+08:00"><i class="fa fa-calendar-o"></i> August 10, 2015</time></span>
+        
+        
+        
+        
+      </footer>
+      <div class="entry-content">
+        <p>Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。</p>
+
+<h2 id="actor">Actor模型</h2>
+<p>Akka的核心就是Actor，所以不得不说Actor，Actor模型很像现实中的的邮政系统，你要寄一封信，只需把信投寄到相应的信箱中，具体它是如何帮你处理送达的，你就不需要了解了，你也有可能收到收信人的回复，这相当于消息反馈。当然Actor模型比这要复杂的多，这里主要是简洁的阐述一下Actor模型的概念。</p>
+
+<h3 id="akkaactors">Akka中Actors模型</h3>
+<ul>
+  <li><code class="highlighter-rouge">对并发模型进行了更高的抽象</code></li>
+  <li><code class="highlighter-rouge">异步、非阻塞、高性能的事件驱动编程模型</code></li>
+  <li><code class="highlighter-rouge">轻量级事件处理（1GB内存可容纳百万级别个Actor）</code></li>
+</ul>
+
+<p><code class="highlighter-rouge">为什么Actor模型是一种处理并发问题的解决方案？</code></p>
+
+<p>一开始我也不怎么理解，脑子里的一贯思维是处理并发问题就是如何保证共享数据的一致性和正确性，为什么会有保持共享数据正确性这个问题呢？无非是我们的程序是多线程的，多个线程对同一个数据进行修改，若不加同步条件，势必会造成数据污染。那么我们是不是可以转换一下思维，用单线程去处理相应的请求，但是又有人会问了，若是用单线程处理，那系统的性能又如何保证。Actor模型的出现解决了这个问题。</p>
+
+<p><code class="highlighter-rouge">Actor模型概图</code>：</p>
+
+<p><img src="/images/actor-model.png" alt="Actor模型" /></p>
+
+<p>从上图中我们可以看到，Actor与Actor之前只能用消息进行通信，当某一个Actor给另外一个Actor发消息，消息是有顺序的，你只需要将消息投寄的相应的邮箱，至于对方Actor怎么处理你的消息你并不知道，当然你也可等待它的回复。</p>
+
+<p>JVM中的Actor有以下几个特点：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">每个Actor都有对应一个邮箱</code></li>
+  <li><code class="highlighter-rouge">Actor是串行处理消息的</code></li>
+  <li><code class="highlighter-rouge">Actor中的消息是不可变的</code></li>
+</ul>
+
+<p>其实只从上面一些描述来看，并不能看出Actor在处理并发问题上的有什么优势呢?</p>
+
+<p>我总结了两点：<code class="highlighter-rouge">简化并发编程</code>，<code class="highlighter-rouge">提升程序性能</code></p>
+
+<p>1.简化并发编程：</p>
+
+<p>我们一开始说过并发导致最大的问题就是对共享数据的操作，我们在面对并发问题时多采用的是
+用锁去保证共享数据的一致性，但这同样也会带来其他相关问题，比如要去考虑锁的粒度（对方法，程序块等），锁的形式（读锁，写锁等）等问题，这些问题对并发程序来说是至关重要的，但一个初写并发程序的程序员来说，往往不能掌控的很好，这无疑给程序员在编程上提高了复杂性，而且还不容易掌控，但使用Actor就不导致这些问题，首先Actor的消息特性就觉得了在与Actor通信上不会有共享数据的困扰，另外在Actor内部是串行处理消息的，同样不会对Actor内的数据造成污染，用Actor编写并发程序无疑大大降低了编码的复杂度。</p>
+
+<p>2.提升程序性能：</p>
+
+<p>我们之前说过既然用单线程处理，那如何保证程序的性能？首先Actor是非常轻量级的，你可以再程序中创建许多个Actor，而且Actor是异步的，那么如何利用它的这个特性呢，我们要做的就是把相应的并发事件尽可能的分割成一个个小的事件，让每个Actor去处理相应的小事件,充分去利用它异步的特点，来提升程序的性能。</p>
+
+<p>其实Scala中原生的Actor并不能完成很多事，不是一套完整的并发解决方案，不适合用于生产环境，，比如错误恢复，状态持久化等，所以在新版本的Scala类库中，Akka包已经取代了原生的Actor，</p>
+
+
+        
+      </div><!-- /.entry-content -->
+    </div><!-- /.entry-wrapper -->
+    <nav class="pagination" role="navigation">
+      
+        <a href="/blog/hello-world/" class="btn" title="Hello World">Previous</a>
+      
+      
+    </nav><!-- /.pagination -->
+  </article>
+</div><!-- /#main -->
+
+<div class="footer-wrapper">
+  <footer role="contentinfo" class="entry-wrapper">
+    
+
+<span>&copy; 2017 GodPan.</span>
+<div class="social-icons">
+	
+	
+	
+	
+	
+	
+	
+	<a href="https://github.com/godpan" title="GodPan on Github" target="_blank"><i class="fa fa-github-square fa-2x"></i></a>
+	
+  
+	
+</div><!-- /.social-icons -->
+
+  </footer>
+</div><!-- /.footer-wrapper -->
+
+<script type="text/javascript">
+  var BASE_URL = '';
+</script>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="/assets/js/vendor/jquery-1.9.1.min.js"><\/script>')</script>
+<script src="/assets/js/scripts.min.js"></script>
+
+
+
+
+</body>
+</html>

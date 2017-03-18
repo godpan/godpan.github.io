@@ -80,10 +80,9 @@ span + .entry-title {
 }
 
 .entry-title {
-	font-family: $alt-font;
-	font-style: italic;
-	@include font-size(36,yes,36);
-	font-weight: 400;
+	font-family: "Microsoft YaHei";
+  font-size: 35px;
+	font-weight: 300;
 	line-height: 1;
 	letter-spacing: -3px;
 
@@ -92,13 +91,13 @@ span + .entry-title {
 		text-decoration: underline;
 	}
 
-	@include media($medium) {
+	/*@include media($medium) {
 		@include font-size(52,yes,54);
 	}
 
 	@include media($large) {
 		@include font-size(68,yes,72);
-	}
+	}*/
 }
 
 /* page/post wrapper */
@@ -146,8 +145,8 @@ span + .entry-title {
 
 	@include media($large) {
 		display: block;
-		width: 150px;
-		height: 150px;
+		width: 120px;
+		height: 120px;
 		margin-bottom: 10px;
 		@include rounded(150px);
 		@include clearfix;
