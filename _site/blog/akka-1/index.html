@@ -5,7 +5,7 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en"><!--<![endif]-->
 <head>
 <meta charset="utf-8">
-<title>Akka系列-Akka简介与Actor模型 &#8211; GodPan</title>
+<title>Akka系列(1)：Akka简介与Actor模型 &#8211; GodPan</title>
 <meta name="description" content="Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。
 
 ">
@@ -13,7 +13,7 @@
 
 
 <!-- Twitter Cards -->
-<meta name="twitter:title" content="Akka系列-Akka简介与Actor模型">
+<meta name="twitter:title" content="Akka系列(1)：Akka简介与Actor模型">
 <meta name="twitter:description" content="Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。
 
 ">
@@ -26,7 +26,7 @@
 <!-- Open Graph -->
 <meta property="og:locale" content="en_US">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Akka系列-Akka简介与Actor模型">
+<meta property="og:title" content="Akka系列(1)：Akka简介与Actor模型">
 <meta property="og:description" content="Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。
 
 ">
@@ -115,7 +115,7 @@
           
         </ul>
         
-          <h1 class="entry-title">Akka系列-Akka简介与Actor模型</h1>
+          <h1 class="entry-title">Akka系列(1)：Akka简介与Actor模型</h1>
         
       </header>
       <footer class="entry-meta">
@@ -124,7 +124,7 @@
           <img src="/images/bio-photo.jpg" class="bio-photo" alt="GodPan bio photo"></a>
         
         <span class="author vcard">By <span class="fn">GodPan</span></span>
-        <span class="entry-date date published"><time datetime="2015-08-10T20:08:50+08:00"><i class="fa fa-calendar-o"></i> August 10, 2015</time></span>
+        <span class="entry-date date published"><time datetime="2017-03-18T00:00:00+08:00"><i class="fa fa-calendar-o"></i> March 18, 2017</time></span>
         
         
         
@@ -165,12 +165,12 @@
 
 <p>我总结了两点：<code class="highlighter-rouge">简化并发编程</code>，<code class="highlighter-rouge">提升程序性能</code></p>
 
-<p>1.简化并发编程：</p>
+<h5 id="section">1.简化并发编程：</h5>
 
 <p>我们一开始说过并发导致最大的问题就是对共享数据的操作，我们在面对并发问题时多采用的是
 用锁去保证共享数据的一致性，但这同样也会带来其他相关问题，比如要去考虑锁的粒度（对方法，程序块等），锁的形式（读锁，写锁等）等问题，这些问题对并发程序来说是至关重要的，但一个初写并发程序的程序员来说，往往不能掌控的很好，这无疑给程序员在编程上提高了复杂性，而且还不容易掌控，但使用Actor就不导致这些问题，首先Actor的消息特性就觉得了在与Actor通信上不会有共享数据的困扰，另外在Actor内部是串行处理消息的，同样不会对Actor内的数据造成污染，用Actor编写并发程序无疑大大降低了编码的复杂度。</p>
 
-<p>2.提升程序性能：</p>
+<h5 id="section-1">2.提升程序性能：</h5>
 
 <p>我们之前说过既然用单线程处理，那如何保证程序的性能？首先Actor是非常轻量级的，你可以再程序中创建许多个Actor，而且Actor是异步的，那么如何利用它的这个特性呢，我们要做的就是把相应的并发事件尽可能的分割成一个个小的事件，让每个Actor去处理相应的小事件,充分去利用它异步的特点，来提升程序的性能。</p>
 

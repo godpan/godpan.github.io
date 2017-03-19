@@ -45,7 +45,6 @@
     display: block;
     float: none;
     margin-top: 5px;
-    margin-bottom: 5px;
     text-indent: 1em;
     @include font-size(14, no, 16);
 
@@ -56,6 +55,8 @@
     @include media($large) {
       width: 60%;
     }
+    margin-bottom: 5px;
+    line-height: 1.5;
   }
 }
 

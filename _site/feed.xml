@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-03-18T12:11:08+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列-Akka简介与Actor模型</title><link href="/blog/akka-1/" rel="alternate" type="text/html" title="Akka系列-Akka简介与Actor模型" /><published>2015-08-10T20:08:50+08:00</published><updated>2015-08-10T20:08:50+08:00</updated><id>/blog/akka-1</id><content type="html" xml:base="/blog/akka-1/">&lt;p&gt;Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-03-19T08:09:41+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列(1)：Akka简介与Actor模型</title><link href="/blog/akka-1/" rel="alternate" type="text/html" title="Akka系列(1)：Akka简介与Actor模型" /><published>2017-03-18T00:00:00+08:00</published><updated>2017-03-18T00:00:00+08:00</updated><id>/blog/akka-1</id><content type="html" xml:base="/blog/akka-1/">&lt;p&gt;Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。&lt;/p&gt;
 
 &lt;h2 id=&quot;actor&quot;&gt;Actor模型&lt;/h2&gt;
 &lt;p&gt;Akka的核心就是Actor，所以不得不说Actor，Actor模型很像现实中的的邮政系统，你要寄一封信，只需把信投寄到相应的信箱中，具体它是如何帮你处理送达的，你就不需要了解了，你也有可能收到收信人的回复，这相当于消息反馈。当然Actor模型比这要复杂的多，这里主要是简洁的阐述一下Actor模型的概念。&lt;/p&gt;
@@ -32,12 +32,12 @@
 
 &lt;p&gt;我总结了两点：&lt;code class=&quot;highlighter-rouge&quot;&gt;简化并发编程&lt;/code&gt;，&lt;code class=&quot;highlighter-rouge&quot;&gt;提升程序性能&lt;/code&gt;&lt;/p&gt;
 
-&lt;p&gt;1.简化并发编程：&lt;/p&gt;
+&lt;h5 id=&quot;section&quot;&gt;1.简化并发编程：&lt;/h5&gt;
 
 &lt;p&gt;我们一开始说过并发导致最大的问题就是对共享数据的操作，我们在面对并发问题时多采用的是
 用锁去保证共享数据的一致性，但这同样也会带来其他相关问题，比如要去考虑锁的粒度（对方法，程序块等），锁的形式（读锁，写锁等）等问题，这些问题对并发程序来说是至关重要的，但一个初写并发程序的程序员来说，往往不能掌控的很好，这无疑给程序员在编程上提高了复杂性，而且还不容易掌控，但使用Actor就不导致这些问题，首先Actor的消息特性就觉得了在与Actor通信上不会有共享数据的困扰，另外在Actor内部是串行处理消息的，同样不会对Actor内的数据造成污染，用Actor编写并发程序无疑大大降低了编码的复杂度。&lt;/p&gt;
 
-&lt;p&gt;2.提升程序性能：&lt;/p&gt;
+&lt;h5 id=&quot;section-1&quot;&gt;2.提升程序性能：&lt;/h5&gt;
 
 &lt;p&gt;我们之前说过既然用单线程处理，那如何保证程序的性能？首先Actor是非常轻量级的，你可以再程序中创建许多个Actor，而且Actor是异步的，那么如何利用它的这个特性呢，我们要做的就是把相应的并发事件尽可能的分割成一个个小的事件，让每个Actor去处理相应的小事件,充分去利用它异步的特点，来提升程序的性能。&lt;/p&gt;
 
