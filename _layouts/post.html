@@ -49,6 +49,9 @@
         {% endif %}
       </div><!-- /.entry-content -->
     </div><!-- /.entry-wrapper -->
+    <div class="correct-tip-box">
+      {% include correct-tip.html %}
+    </div>
     <nav class="pagination" role="navigation">
       {% if page.previous %}
         <a href="{{ site.url }}{{ page.previous.url }}" class="btn" title="{{ page.previous.title }}">Previous</a>
@@ -59,6 +62,10 @@
     </nav><!-- /.pagination -->
   </article>
 </div><!-- /#main -->
+<!-- 
+<div class="correct-tip-box">
+    {% include correct-tip.html %}
+</div> -->
 
 <div class="footer-wrapper">
   <footer role="contentinfo" class="entry-wrapper">
