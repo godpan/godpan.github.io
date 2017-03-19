@@ -10,14 +10,6 @@
 
   
     ,{
-      "title"			: "Hello World",
-      "link"			: "/blog/hello-world/",
-      "excerpt"		: "You’ll find this post in your _posts directory - edit this post and re-build (or run with the -w switch) to see your changes!To add new posts, simply add a file in the _posts directory that follows the convention: YYYY-MM-DD-name-of-post.ext."
-    }
-  
-
-  
-    ,{
       "title"			: "Override Author Byline Test Post",
       "link"			: "/articles/author-override/",
       "excerpt"		: "An article to test overriding the default site author."
@@ -102,7 +94,7 @@
 
   
     ,{
-      "title"			: "About the Jekyll Theme",
+      "title"			: "About me",
       "link"			: "/about/",
       "excerpt"		: "So Simple is a responsive Jekyll theme for your words and images."
     }
