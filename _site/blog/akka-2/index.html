@@ -265,15 +265,15 @@ the ActorSystem logLevel is DEBUG
   <span class="k">val</span> <span class="n">log</span> <span class="k">=</span> <span class="nc">Logging</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">,</span> <span class="k">this</span><span class="o">)</span>
   <span class="k">implicit</span> <span class="k">val</span> <span class="n">askTimeout</span> <span class="k">=</span> <span class="nc">Timeout</span><span class="o">(</span><span class="mi">5</span> <span class="n">seconds</span><span class="o">)</span>
   <span class="k">import</span> <span class="nn">context.dispatcher</span>
+  <span class="k">var</span> <span class="n">taskCount</span> <span class="k">=</span> <span class="mi">0</span>
   <span class="k">def</span> <span class="n">receive</span><span class="k">:</span> <span class="kt">Receive</span> <span class="o">=</span> <span class="o">{</span>
     <span class="k">case</span> <span class="n">b</span><span class="k">:</span> <span class="kt">Business</span> <span class="o">=&gt;</span>
       <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="s">"I must to do some thing,go,go,go!"</span><span class="o">)</span>
+      <span class="n">println</span><span class="o">(</span><span class="n">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">address</span><span class="o">)</span>
       <span class="c1">//创建Actor得到ActorRef的另一种方式，利用ActorContext.actorOf
 </span>      <span class="k">val</span> <span class="n">managerActors</span> <span class="k">=</span> <span class="o">(</span><span class="mi">1</span> <span class="n">to</span> <span class="mi">3</span><span class="o">).</span><span class="n">map</span><span class="o">(</span><span class="n">i</span> <span class="k">=&gt;</span>
         <span class="n">context</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">Props</span><span class="o">[</span><span class="kt">ManagerActor</span><span class="o">],</span> <span class="n">s</span><span class="s">"manager${i}"</span><span class="o">))</span> <span class="c1">//这里我们召唤3个主管
-</span>      <span class="c1">//完成的任务统计
-</span>      <span class="k">var</span> <span class="n">taskCount</span> <span class="k">=</span> <span class="mi">0</span>
-      <span class="c1">//告诉他们开会商量大计划
+</span>      <span class="c1">//告诉他们开会商量大计划
 </span>      <span class="n">managerActors</span> <span class="n">foreach</span> <span class="o">{</span>
         <span class="k">_</span> <span class="o">?</span> <span class="nc">Meeting</span><span class="o">(</span><span class="s">"Meeting to discuss big plans"</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span>
           <span class="k">case</span> <span class="n">c</span><span class="k">:</span> <span class="kt">Confirm</span> <span class="o">=&gt;</span>
@@ -283,29 +283,25 @@ the ActorSystem logLevel is DEBUG
             <span class="c1">//根据Actor路径查找已经存在的Actor获得ActorRef
 </span>            <span class="c1">//这里c.actorPath是绝对路径,你也可以根据相对路径得到相应的ActorRef
 </span>            <span class="k">val</span> <span class="n">manager</span> <span class="k">=</span> <span class="n">context</span><span class="o">.</span><span class="n">actorSelection</span><span class="o">(</span><span class="n">c</span><span class="o">.</span><span class="n">actorPath</span><span class="o">)</span>
-            <span class="n">manager</span> <span class="o">?</span> <span class="nc">DoAction</span><span class="o">(</span><span class="s">"Do thing"</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span>
-              <span class="k">case</span> <span class="n">d</span><span class="k">:</span> <span class="kt">Done</span> <span class="o">=&gt;</span>
-                <span class="n">synchronized</span><span class="o">(</span>
-                  <span class="n">taskCount</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="o">)</span>
-                <span class="k">if</span> <span class="o">(</span><span class="n">taskCount</span> <span class="o">==</span> <span class="mi">3</span><span class="o">)</span> <span class="o">{</span>
-                  <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="s">"the project is done, we will earn much money"</span><span class="o">)</span>
-                  <span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">terminate</span><span class="o">()</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
+            <span class="n">manager</span> <span class="o">!</span> <span class="nc">DoAction</span><span class="o">(</span><span class="s">"Do thing"</span><span class="o">)</span>
         <span class="o">}</span>
       <span class="o">}</span>
+    <span class="k">case</span> <span class="n">d</span><span class="k">:</span> <span class="kt">Done</span> <span class="o">=&gt;</span> <span class="o">{</span>
+      <span class="n">taskCount</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">taskCount</span> <span class="o">==</span> <span class="mi">3</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="s">"the project is done, we will earn much money"</span><span class="o">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">terminate</span><span class="o">()</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
   <span class="o">}</span>
 <span class="o">}</span>
 <span class="k">class</span> <span class="nc">ManagerActor</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
   <span class="k">val</span> <span class="n">log</span> <span class="k">=</span> <span class="nc">Logging</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">,</span> <span class="k">this</span><span class="o">)</span>
   <span class="k">def</span> <span class="n">receive</span><span class="k">:</span> <span class="kt">Receive</span> <span class="o">=</span> <span class="o">{</span>
     <span class="k">case</span> <span class="n">m</span><span class="k">:</span> <span class="kt">Meeting</span> <span class="o">=&gt;</span>
-      <span class="c1">//主管收到Boss的通知，回应我已经收到命令会马上参加会议
-</span>      <span class="n">sender</span><span class="o">()</span> <span class="o">!</span> <span class="nc">Confirm</span><span class="o">(</span><span class="s">"I have receive command"</span><span class="o">,</span> <span class="n">self</span><span class="o">.</span><span class="n">path</span><span class="o">)</span>
+      <span class="n">sender</span><span class="o">()</span> <span class="o">!</span> <span class="nc">Confirm</span><span class="o">(</span><span class="s">"I have receive command"</span><span class="o">,</span> <span class="n">self</span><span class="o">.</span><span class="n">path</span><span class="o">)</span>
     <span class="k">case</span> <span class="n">d</span><span class="k">:</span> <span class="kt">DoAction</span> <span class="o">=&gt;</span>
-      <span class="c1">//主管寻找合适的Worker，并将老板布置的任务分配给他去完成
-</span>      <span class="k">val</span> <span class="n">workerActor</span> <span class="k">=</span> <span class="n">context</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">Props</span><span class="o">[</span><span class="kt">WorkerActor</span><span class="o">],</span> <span class="s">"worker"</span><span class="o">)</span>
+      <span class="k">val</span> <span class="n">workerActor</span> <span class="k">=</span> <span class="n">context</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">Props</span><span class="o">[</span><span class="kt">WorkerActor</span><span class="o">],</span> <span class="s">"worker"</span><span class="o">)</span>
       <span class="n">workerActor</span> <span class="n">forward</span> <span class="n">d</span>
   <span class="o">}</span>
 <span class="o">}</span>
@@ -314,7 +310,7 @@ the ActorSystem logLevel is DEBUG
   <span class="k">val</span> <span class="n">log</span> <span class="k">=</span> <span class="nc">Logging</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">,</span> <span class="k">this</span><span class="o">)</span>
   <span class="k">def</span> <span class="n">receive</span><span class="k">:</span> <span class="kt">Receive</span> <span class="o">=</span> <span class="o">{</span>
     <span class="k">case</span> <span class="n">d</span><span class="k">:</span> <span class="kt">DoAction</span> <span class="o">=&gt;</span>
-      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="s">"I hava receive task"</span><span class="o">)</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="s">"I have receive task"</span><span class="o">)</span>
       <span class="n">sender</span><span class="o">()</span> <span class="o">!</span> <span class="nc">Done</span><span class="o">(</span><span class="s">"I hava done work"</span><span class="o">)</span>
   <span class="o">}</span>
 <span class="o">}</span>
