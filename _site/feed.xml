@@ -1,4 +1,243 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-03-30T21:46:17+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（二）：Akka中Actor系统</title><link href="/blog/akka-2/" rel="alternate" type="text/html" title="Akka系列（二）：Akka中Actor系统" /><published>2017-03-25T00:00:00+08:00</published><updated>2017-03-25T00:00:00+08:00</updated><id>/blog/akka-2</id><content type="html" xml:base="/blog/akka-2/">&lt;p&gt;Actor作为Akka中最核心的结构，其在Akka中的中的组织结构也至关重要，今天我们就来讲讲Akka中Actor系统。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-04-15T17:32:42+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（三）：监管与容错</title><link href="/blog/akka-3/" rel="alternate" type="text/html" title="Akka系列（三）：监管与容错" /><published>2017-04-15T00:00:00+08:00</published><updated>2017-04-15T00:00:00+08:00</updated><id>/blog/akka-3</id><content type="html" xml:base="/blog/akka-3/">&lt;p&gt;Akka作为一种成熟的生产环境并发解决方案，必须拥有一套完善的错误异常处理机制，本文主要讲讲Akka中的监管和容错。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;监管&lt;/h2&gt;
+
+&lt;p&gt;看过我上篇文章的同学应该对Actor系统的工作流程有了一定的了解&lt;a href=&quot;http://www.godpan.me/blog/akka-2/&quot;&gt;Akka系列（二）：Akka中的Actor系统&lt;/a&gt;，它的很重要的概念就是分而治之，既然我们把任务分配给Actor去执行，那么我们必须去监管相应的Actor，当Actor出现了失败，比如系统环境错误，各种异常，能根据我们制定的相应监管策略进行错误恢复，就是后面我们会说到的容错。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;监管者与被监管者&lt;/h3&gt;
+
+&lt;p&gt;既然有监管这一事件，那必然存在着&lt;strong&gt;监管者&lt;/strong&gt;这么一个角色，那么在ActorSystem中是如何确定这种角色的呢？&lt;/p&gt;
+
+&lt;p&gt;我们先来看下ActorSystem中的顶级监管者：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/actor-syatem-guardian.png&quot; alt=&quot;Actor系统顶级监管者&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;一个actor系统在其创建过程中至少要启动三个actor，如上图所示，下面来说说这三个Actor的功能：&lt;/p&gt;
+
+&lt;h4 id=&quot;section-2&quot;&gt;1.&lt;code class=&quot;highlighter-rouge&quot;&gt;/&lt;/code&gt;： 根监管者&lt;/h4&gt;
+
+&lt;p&gt;顾名思义，它是一个老大，它监管着ActorSystem中所有的顶级Actor，顶级Actor有以下几种：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;/user&lt;/code&gt;： 是所有由用户创建的顶级actor的监管者；用ActorSystem.actorOf创建的actor在其下。&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;/system&lt;/code&gt;： 是所有由系统创建的顶级actor的监管者，如日志监听器，或由配置指定在actor系统启动时自动部署的actor。&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;/deadLetters&lt;/code&gt;： 是死信actor，所有发往已经终止或不存在的actor的消息会被重定向到这里。&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;/temp&lt;/code&gt;：是所有系统创建的短时actor的监管者，例如那些在ActorRef.ask的实现中用到的actor。&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;/remote&lt;/code&gt;： 是一个人造虚拟路径，用来存放所有其监管者是远程actor引用的actor。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;跟我们平常打交道最多的就是&lt;code class=&quot;highlighter-rouge&quot;&gt;/user&lt;/code&gt;，它是我们在程序中用ActorSystem.actorOf创建的actor的监管者，下面的容错我们重点关心的就是它下面的失败处理，其他几种顶级Actor具体功能定义已经给出，有兴趣的也可以去了解一下。&lt;/p&gt;
+
+&lt;p&gt;根监管者监管着所有顶级Actor，对它们的各种失败情况进行处理，一般来说如果错误要上升到根监管者，整个系统就会停止。&lt;/p&gt;
+
+&lt;h4 id=&quot;user-actor&quot;&gt;2.&lt;code class=&quot;highlighter-rouge&quot;&gt;/user&lt;/code&gt;： 顶级actor监管者&lt;/h4&gt;
+
+&lt;p&gt;上面已经讲过&lt;code class=&quot;highlighter-rouge&quot;&gt;/user&lt;/code&gt;是所有由用户创建的顶级actor的监管者，即用ActorSystem.actorOf创建的actor，我们可以自己制定相应的监管策略，但由于它是actor系统启动时就产生的，所以我们需要在相应的配置文件里配置，具体的配置可以参考这里&lt;a href=&quot;http://doc.akka.io/docs/akka/current/general/configuration.html&quot;&gt;Akka配置&lt;/a&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;system-&quot;&gt;3.&lt;code class=&quot;highlighter-rouge&quot;&gt;/system&lt;/code&gt;： 系统监管者&lt;/h4&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;/system&lt;/code&gt;所有由系统创建的顶级actor的监管者,比如Akka中的日志监听器，因为在Akka中日志本身也是用Actor实现的，&lt;code class=&quot;highlighter-rouge&quot;&gt;/system&lt;/code&gt;的监管策略如下：对收到的除&lt;code class=&quot;highlighter-rouge&quot;&gt;ActorInitializationException&lt;/code&gt;和&lt;code class=&quot;highlighter-rouge&quot;&gt;ActorKilledException&lt;/code&gt;之外的所有&lt;code class=&quot;highlighter-rouge&quot;&gt;Exception&lt;/code&gt;无限地执行重启，当然这也会终止其所有子actor。所有其他Throwable被上升到根监管者，然后整个actor系统将会关闭。&lt;/p&gt;
+
+&lt;p&gt;用户创建的普通actor的监管：&lt;/p&gt;
+
+&lt;p&gt;上一篇文章介绍了Actor系统的组织结构，它是一种树形结构，其实这种结构对actor的监管是非常有利的，Akka实现的是一种叫“父监管”的形式，每一个被创建的actor都由其父亲所监管，这种限制使得actor的监管结构隐式符合其树形结构，所以我们可以得出一个结论：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;strong&gt;一个被创建的Actor肯定是一个被监管者，也可能是一个监管者，它监管着它的子级Actor&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;section-3&quot;&gt;监管策略&lt;/h3&gt;
+
+&lt;p&gt;上面我们对ActorSystem中的监管角色有了一定的了解，那么到底是如何制定相应的监管策略呢？Akka中有以下4种策略：&lt;/p&gt;
+
+&lt;p&gt;1.恢复下属，保持下属当前积累的内部状态&lt;/p&gt;
+
+&lt;p&gt;2.重启下属，清除下属的内部状态&lt;/p&gt;
+
+&lt;p&gt;3.永久地停止下属&lt;/p&gt;
+
+&lt;p&gt;4.升级失败（沿监管树向上传递失败），由此失败自己&lt;/p&gt;
+
+&lt;p&gt;这其实很好理解，下面是一个简单例子：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; &lt;span class=&quot;k&quot;&gt;override&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;supervisorStrategy&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt;
+    &lt;span class=&quot;nc&quot;&gt;OneForOneStrategy&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;maxNrOfRetries&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;withinTimeRange&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;minute&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;ArithmeticException&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Resume&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//恢复
+&lt;/span&gt;      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;NullPointerException&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Restart&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//重启
+&lt;/span&gt;      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IllegalArgumentException&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Stop&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//停止
+&lt;/span&gt;      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Exception&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Escalate&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//向上级传递
+&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;我们可以根据异常的不同使用不同监管策略，在后面我会具体给出一个示例程序帮助大家理解。我们在实现自己的策略时，需要复写Actor中的&lt;code class=&quot;highlighter-rouge&quot;&gt;supervisorStrategy&lt;/code&gt;，因为Actor的默认监管策略如下：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;k&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;defaultDecider&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Decider&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;ActorInitializationException&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;⇒&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Stop&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;ActorKilledException&lt;/span&gt;         &lt;span class=&quot;k&quot;&gt;⇒&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Stop&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;DeathPactException&lt;/span&gt;           &lt;span class=&quot;k&quot;&gt;⇒&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Stop&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Exception&lt;/span&gt;                    &lt;span class=&quot;k&quot;&gt;⇒&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Restart&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;它对除了它指定的异常进行停止，其他异常都是对下属进行重启。&lt;/p&gt;
+
+&lt;p&gt;Akka中有两种类型的监管策略：&lt;code class=&quot;highlighter-rouge&quot;&gt;OneForOneStrategy&lt;/code&gt;和&lt;code class=&quot;highlighter-rouge&quot;&gt;AllForOneStrategy&lt;/code&gt;，它们的主要区别在于：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;OneForOneStrategy&lt;/code&gt;： 该策略只会应用到发生故障的子actor上。&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;AllForOneStrategy&lt;/code&gt;： 该策略会应用到所有的子actor上。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;我们一般都使用&lt;code class=&quot;highlighter-rouge&quot;&gt;OneForOneStrategy&lt;/code&gt;来进行制定相关监管策略，当然你也可以根据具体需求选择合适的策略。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-4&quot;&gt;监管容错示例&lt;/h3&gt;
+
+&lt;p&gt;本示例主要演示Actor在发生错误时，它的监管者会根据相应的监管策略进行不同的处理。&lt;a href=&quot;https://github.com/godpan/akka-demo/tree/master/Example_03&quot;&gt;源码链接&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;因为这个例子比较简单，这里我直接贴上相应代码，后面根据具体的测试用例来解释各种监管策略所进行的响应：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Supervisor&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Actor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;//监管下属，根据下属抛出的异常进行相应的处理
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;override&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;supervisorStrategy&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt;
+    &lt;span class=&quot;nc&quot;&gt;OneForOneStrategy&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;maxNrOfRetries&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;withinTimeRange&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;minute&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;ArithmeticException&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Resume&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;NullPointerException&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Restart&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IllegalArgumentException&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Stop&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Exception&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Escalate&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;childIndex&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//用于标示下属Actor的序号
+&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;receive&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Props&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;childIndex&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+      &lt;span class=&quot;c1&quot;&gt;//返回一个Child Actor的引用，所以Supervisor Actor是Child Actor的监管者
+&lt;/span&gt;      &lt;span class=&quot;n&quot;&gt;sender&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;context&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;actorOf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;child${childIndex}&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Child&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Actor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;log&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Logging&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;context&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;receive&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ex&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Exception&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;throw&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ex&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//抛出相应的异常
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//改变自身状态
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Command&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;s.content&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;get&quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;log&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;the ${s.self} state is ${state}&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;sender&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//返回自身状态
+&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Command&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//相应命令
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;content&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;现在我们来看看具体的测试用例：
+首先我们先构建一个测试环境：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;GuardianSpec&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;_system&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;ActorSystem&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;TestKit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;_system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;with&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;WordSpecLike&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;with&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Matchers&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;with&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ImplicitSender&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;ActorSystem&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;GuardianSpec&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;))&lt;/span&gt;
+
+  &lt;span class=&quot;s&quot;&gt;&quot;A supervisor&quot;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;must&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+
+    &lt;span class=&quot;s&quot;&gt;&quot;apply the chosen strategy for its child&quot;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;code&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;here&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;supervisor&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;actorOf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Supervisor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;supervisor&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//创建一个监管者
+&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;supervisor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;expectMsgType&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;ActorRef&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 从 TestKit 的 testActor 中获取回应
+&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; 
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;1.TestOne：正常运行&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;50&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 将状态设为 50
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Command&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;get&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;expectMsg&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;50&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;正常运行，测试通过。&lt;/p&gt;
+
+&lt;p&gt;2.TestTwo：抛出ArithmeticException&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ArithmeticException&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// crash it
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Command&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;get&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;expectMsg&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;50&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;     
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;大家猜这时候测试会通过吗？答案是通过，原因是根据我们制定的监管策略，监管者在面对子级Actor抛出&lt;code class=&quot;highlighter-rouge&quot;&gt;ArithmeticException&lt;/code&gt;异常时，它会去恢复相应出异常的Actor，并保持该Actor的状态，所以此时Actor的状态值还是50，测试通过。&lt;/p&gt;
+
+&lt;p&gt;3.TestThree：抛出NullPointerException&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NullPointerException&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// crash it harder
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;get&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;expectMsg&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;50&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;   
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这种情况下测试还会通过吗？答案是不通过，原因是根据我们制定的监管策略，监管者在面对子级Actor抛出&lt;code class=&quot;highlighter-rouge&quot;&gt;NullPointerException&lt;/code&gt;异常时，它会去重启相应出异常的Actor，其状态会被清除，所以此时Actor的状态值应该是0，测试不通过。&lt;/p&gt;
+
+&lt;p&gt;4.TestFour：抛出IllegalArgumentException&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;supervisor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// create new child
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child2&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;expectMsgType&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;ActorRef&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;child2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 将状态设为 100
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;watch&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// have testActor watch “child”
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;IllegalArgumentException&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// break it
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;expectMsgPF&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Terminated&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;`child`&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;the child stop&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;))&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;child2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Command&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;get&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;expectMsg&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;   
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这里首先我们又创建了一个Child Actor为child2，并将它的状态置为100，这里我们监控前面创建的child1，然后给其发送一个&lt;code class=&quot;highlighter-rouge&quot;&gt;IllegalArgumentException&lt;/code&gt;的消息，让其抛出该异常，测试结果:&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;the child stop
+测试通过
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;从结果中我们可以看出，child在抛出&lt;code class=&quot;highlighter-rouge&quot;&gt;IllegalArgumentException&lt;/code&gt;后，会被其监管着停止，但监管者下的其他Actor还是正常工作。&lt;/p&gt;
+
+&lt;p&gt;5.TestFive：抛出一个自定义异常&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; &lt;span class=&quot;n&quot;&gt;watch&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+ &lt;span class=&quot;n&quot;&gt;child2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Command&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;get&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// verify it is alive
+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;expectMsg&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+ &lt;span class=&quot;n&quot;&gt;supervisor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Child&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// create new child
+&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child3&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;expectMsgType&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;ActorRef&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+ &lt;span class=&quot;n&quot;&gt;child2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Exception&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;CRASH&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// escalate failure
+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;expectMsgPF&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;@&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Terminated&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;`child2`&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;existenceConfirmed&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+       &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;the child2 stop&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;child3&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Command&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;get&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child3&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;expectMsg&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;  
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这里首先我们又创建了一个Child Actor为child3,这里我们监控前面创建的child2,然后给其发送一个&lt;code class=&quot;highlighter-rouge&quot;&gt;Exception(&quot;CRASH&quot;)&lt;/code&gt;的消息，让其抛出该异常,测试结果:&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;the child2 stop
+测试不通过
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;很多人可能会疑惑为什么TestFour可以通过，这里就通不过不了呢？因为这里错误Actor抛出的异常其监管者无法处理，只能将失败上溯传递，而顶级actor的缺省策略是对所有的Exception情况（ActorInitializationException和ActorKilledException例外）进行重启. 由于缺省的重启指令会停止所有的子actor，所以我们这里的child3也会被停止。导致测试不通过。当然这里你也可以复写默认的重启方法，比如：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;override&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;preRestart&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cause&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Throwable&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Option&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Any&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;])&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这样重启相应Actor时就不会停止其子级下的所有Actor了。&lt;/p&gt;
+
+&lt;p&gt;本文主要介绍了Actor系统中的监管和容错，这一部分内容在Akka中也是很重要的，它与Actor的树形组织结构巧妙结合，本文大量参考了Akka官方文档的相应章节，有兴趣的同学可以点击这里&lt;a href=&quot;http://doc.akka.io/docs/akka/2.5/scala/fault-tolerance.html&quot;&gt;Akka docs&lt;/a&gt;。也可以下载我的示例程序，里面包含了一个官方的提供的容错示例。&lt;/p&gt;</content><summary type="html">Akka作为一种成熟的生产环境并发解决方案，必须拥有一套完善的错误异常处理机制，本文主要讲讲Akka中的监管和容错。</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="{&quot;feature&quot;=&gt;nil}" /></entry><entry><title type="html">Akka系列（二）：Akka中的Actor系统</title><link href="/blog/akka-2/" rel="alternate" type="text/html" title="Akka系列（二）：Akka中的Actor系统" /><published>2017-04-02T00:00:00+08:00</published><updated>2017-04-02T00:00:00+08:00</updated><id>/blog/akka-2</id><content type="html" xml:base="/blog/akka-2/">&lt;p&gt;Actor模型作为Akka中最核心的概念，所以Actor在Akka中的组织结构也至关重要，本文主要介绍Akka中Actor系统。&lt;/p&gt;
 
 &lt;h2 id=&quot;actor&quot;&gt;Actor系统&lt;/h2&gt;
 &lt;p&gt;Actor作为一种封装状态和行为的对象，总是需要一个系统去统一的组织和管理它们，在Akka中即为ActorSystem，其实这非常容易理解，好比一个公司，每个员工都可以看成一个Actor，它们有自己的职位和职责，但是我们需要把员工集合起来，统一进行管理和分配任务，所以我们需要一个相应的系统进行管理，好比这里的ActorSystem对Actor进行管理一样。&lt;/p&gt;
@@ -7,20 +246,28 @@
 &lt;p&gt;ActorSystem主要有以下三个功能：&lt;/p&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;管理调度服务&lt;/code&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;配置相关参数&lt;/code&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;日志功能&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;管理调度服务&lt;/li&gt;
+  &lt;li&gt;配置相关参数&lt;/li&gt;
+  &lt;li&gt;日志功能&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;h4 id=&quot;section&quot;&gt;1.管理调度服务&lt;/h4&gt;
 
 &lt;p&gt;ActorSystem的的精髓在于将任务分拆，直到一个任务小到可以被完整处理，然后将其委托给Actor进行处理，所以ActorSystem最核心的一个功能就是管理和调度整个系统的运行，好比一个公司的管理者，他需要制定整个公司的发展计划，还需要将工作分配给相应的工作人员去完成，保障整个公司的正确运转，其实这里也体现了软件设计中的分而治之，Actor中的核心思想也是这样。&lt;/p&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;ActorSystem模型例子&lt;/code&gt;：&lt;/p&gt;
+&lt;p&gt;ActorSystem模型例子：&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&quot;/images/actor-system-example.png&quot; alt=&quot;ActorSystem模型例子&quot; /&gt;&lt;/p&gt;
 
-&lt;p&gt;上图是一个简单的开发协作的过程，我觉得这个例子应该可以清晰的表达Akka中Actor的组织结构，当然不仅于此。首先我们来看Akka中Actor的组织是一种树形结构，每个Actor都有父级，有可能有子级当然也可能没有，比如树结构中的叶子节点，每个Actor都是由其父级Actor创建，父级Actor给其分配资源，任务，并管理其的生命状态（&lt;code class=&quot;highlighter-rouge&quot;&gt;监管和监控&lt;/code&gt;），这对一个拥有成千上万个Actor的系统来说，使用树形机构来组织Actor是非常适合的。&lt;/p&gt;
+&lt;p&gt;上图是一个简单的开发协作的过程，我觉得这个例子应该可以清晰的表达Akka中Actor的组织结构，当然不仅于此。主要有以下几个特点：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Akka中Actor的组织是一种树形结构&lt;/li&gt;
+  &lt;li&gt;每个Actor都有父级，有可能有子级当然也可能没有&lt;/li&gt;
+  &lt;li&gt;父级Actor给其子级Actor分配资源，任务，并管理其的生命状态（监管和监控）&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Actor系统往往有成千上万个Actor，使用树形机构来组织管理Actor是非常适合的。&lt;/p&gt;
 
 &lt;p&gt;而且Akka天生就是分布式，你可以向一个远程的Actor发送消息，但你需要知道这个Actor的具体位置在哪，这时候你就会发现，树形结构对于确定一个Actor的路径来说是非常有利（比如Linux的文件存储），所以我觉得Actor用树形结构组织可以说是再完美不过了。&lt;/p&gt;
 
@@ -80,8 +327,8 @@ the ActorSystem logLevel is DEBUG
 &lt;p&gt;&lt;strong&gt;如何获得Actor引用？&lt;/strong&gt;&lt;/p&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;直接创建Actor&lt;/code&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;查找已经存在的Actor&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;直接创建Actor&lt;/li&gt;
+  &lt;li&gt;查找已经存在的Actor&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;h6 id=&quot;actorref&quot;&gt;1.获得ActorRef&lt;/h6&gt;
@@ -175,7 +422,7 @@ the ActorSystem logLevel is DEBUG
 &lt;/div&gt;
 &lt;p&gt;光看这段代码可能不那么容易理解，这里我会画一个流程图帮助你理解这段程序：&lt;/p&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;程序流程图&lt;/code&gt;：&lt;/p&gt;
+&lt;p&gt;程序流程图：&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&quot;/images/company-system-example.png&quot; alt=&quot;程序流程图&quot; /&gt;&lt;/p&gt;
 
@@ -184,8 +431,8 @@ the ActorSystem logLevel is DEBUG
 &lt;p&gt;这里主要是有两个知识点：&lt;/p&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;创建Actor获得ActorRef的两种方式&lt;/code&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;根据Actor路径获得ActorRef&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;创建Actor获得ActorRef的两种方式&lt;/li&gt;
+  &lt;li&gt;根据Actor路径获得ActorRef&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;前一个知识点应该比较清晰了，具体来说说第二个。&lt;/p&gt;
@@ -206,23 +453,23 @@ the ActorSystem logLevel is DEBUG
 
 &lt;p&gt;其中akka代表纯本地的，Akka中默认远程Actor的位置一般用akka.tcp或者akka.udp开头，当然你也可以使用第三方插件，Akka的远程调用我也会专门写一篇文章。&lt;/p&gt;
 
-&lt;p&gt;总的来说这一篇文章主要是讲解了ActorSystem的基础结构，相关配置，以及Actor引用，路径和地址等比较基础的知识点，这其实对理解整个Actor系统是如何运行的是很有帮助的，博主也是写了好久，争取写的通俗容易理解一点，希望能得到大家的支持，下一篇准备写一下Actor的监管和监控以及它的生命周期。&lt;/p&gt;</content><summary type="html">Actor作为Akka中最核心的结构，其在Akka中的中的组织结构也至关重要，今天我们就来讲讲Akka中Actor系统。</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="{&quot;feature&quot;=&gt;nil}" /></entry><entry><title type="html">Akka系列（一）：Akka简介与Actor模型</title><link href="/blog/akka-1/" rel="alternate" type="text/html" title="Akka系列（一）：Akka简介与Actor模型" /><published>2017-03-18T00:00:00+08:00</published><updated>2017-03-18T00:00:00+08:00</updated><id>/blog/akka-1</id><content type="html" xml:base="/blog/akka-1/">&lt;p&gt;Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。&lt;/p&gt;
+&lt;p&gt;总的来说这一篇文章主要是讲解了ActorSystem的基础结构，相关配置，以及Actor引用，路径和地址等比较基础的知识点，这其实对理解整个Actor系统是如何运行的是很有帮助的，博主也是写了好久，争取写的通俗容易理解一点，希望能得到大家的支持，下一篇准备写一下Actor的监管和监控以及它的生命周期。&lt;/p&gt;</content><summary type="html">Actor模型作为Akka中最核心的概念，所以Actor在Akka中的组织结构也至关重要，本文主要介绍Akka中Actor系统。</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="{&quot;feature&quot;=&gt;nil}" /></entry><entry><title type="html">Akka系列（一）：Akka简介与Actor模型</title><link href="/blog/akka-1/" rel="alternate" type="text/html" title="Akka系列（一）：Akka简介与Actor模型" /><published>2017-03-18T00:00:00+08:00</published><updated>2017-03-18T00:00:00+08:00</updated><id>/blog/akka-1</id><content type="html" xml:base="/blog/akka-1/">&lt;p&gt;Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。&lt;/p&gt;
 
 &lt;h2 id=&quot;actor&quot;&gt;Actor模型&lt;/h2&gt;
 &lt;p&gt;Akka的核心就是Actor，所以不得不说Actor，Actor模型我通俗的举个例子，假定现实中的两个人，他们只知道对方的地址，他们想要交流，给对方传递信息，但是又没有手机，电话，网络之类的其他途径，所以他们之间只能用信件传递消息，很像现实中的的邮政系统，你要寄一封信，只需根据地址把信投寄到相应的信箱中，具体它是如何帮你处理送达的，你就不需要了解了，你也有可能收到收信人的回复，这相当于消息反馈。上述例子中的信件就相当于Actor中的消息，Actor与Actor之间只能通过消息通信。当然Actor模型比这要复杂的多，这里主要是简洁的阐述一下Actor模型的概念。&lt;/p&gt;
 
 &lt;h3 id=&quot;akkaactors&quot;&gt;Akka中Actors模型&lt;/h3&gt;
 &lt;ul&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;对并发模型进行了更高的抽象&lt;/code&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;异步、非阻塞、高性能的事件驱动编程模型&lt;/code&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;轻量级事件处理（1GB内存可容纳百万级别个Actor）&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;对并发模型进行了更高的抽象&lt;/li&gt;
+  &lt;li&gt;异步、非阻塞、高性能的事件驱动编程模型&lt;/li&gt;
+  &lt;li&gt;轻量级事件处理（1GB内存可容纳百万级别个Actor）&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;为什么Actor模型是一种处理并发问题的解决方案？&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;为什么Actor模型是一种处理并发问题的解决方案？&lt;/p&gt;
 
 &lt;p&gt;一开始我也不怎么理解，脑子里的一贯思维是处理并发问题就是如何保证共享数据的一致性和正确性，为什么会有保持共享数据正确性这个问题呢？无非是我们的程序是多线程的，多个线程对同一个数据进行修改，若不加同步条件，势必会造成数据污染。那么我们是不是可以转换一下思维，用单线程去处理相应的请求，但是又有人会问了，若是用单线程处理，那系统的性能又如何保证。Actor模型的出现解决了这个问题。&lt;/p&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Actor模型概图&lt;/code&gt;：&lt;/p&gt;
+&lt;p&gt;Actor模型概图：&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&quot;/images/actor-model.png&quot; alt=&quot;Actor模型&quot; /&gt;&lt;/p&gt;
 
@@ -231,14 +478,14 @@ the ActorSystem logLevel is DEBUG
 &lt;p&gt;JVM中的Actor有以下几个特点：&lt;/p&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;每个Actor都有对应一个邮箱&lt;/code&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Actor是串行处理消息的&lt;/code&gt;&lt;/li&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Actor中的消息是不可变的&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;每个Actor都有对应一个邮箱&lt;/li&gt;
+  &lt;li&gt;Actor是串行处理消息的&lt;/li&gt;
+  &lt;li&gt;Actor中的消息是不可变的&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;其实只从上面一些描述来看，并不能看出Actor在处理并发问题上的有什么优势。&lt;/p&gt;
 
-&lt;p&gt;但我总结了两点：&lt;code class=&quot;highlighter-rouge&quot;&gt;简化并发编程&lt;/code&gt;，&lt;code class=&quot;highlighter-rouge&quot;&gt;提升程序性能&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;但我总结了两点：&lt;em&gt;简化并发编程&lt;/em&gt;，&lt;em&gt;提升程序性能&lt;/em&gt;&lt;/p&gt;
 
 &lt;h5 id=&quot;section&quot;&gt;1.简化并发编程：&lt;/h5&gt;
 
@@ -255,7 +502,7 @@ the ActorSystem logLevel is DEBUG
 
 &lt;p&gt;那下面我们来简单说说Akka吧，Akka作为一套成熟的并发解决方案，已经被业界大量采用，尤其是在金融，游戏等领域，Akka中的容错机制，持久化，远程调用，日志等都是很重要的模块，这些内容都会在这个系列的后续文章里一一讲解。下面就以一个入门Akka程序来结束本篇文章吧。现在我们假设有一个家居机器人，我们只需要给它发送消息它便会帮我们处理相应的事情，现在我们用程序来模拟这个场景：&lt;a href=&quot;https://github.com/godpan/akka-demo/tree/master/Example_01&quot;&gt;源码链接&lt;/a&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;本示例使用Scala语言，构建工具为SBT，IDE为IntelliJ IDEA.&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;本示例使用Scala语言，构建工具为SBT，IDE为IntelliJ IDEA.&lt;/em&gt;&lt;/p&gt;
 
 &lt;p&gt;1.首先创建一个基于SBT的Scala工程&lt;/p&gt;
 

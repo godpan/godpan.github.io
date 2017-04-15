@@ -148,16 +148,16 @@ var _hmt = _hmt || [];
 
 <h3 id="akkaactors">Akka中Actors模型</h3>
 <ul>
-  <li><code class="highlighter-rouge">对并发模型进行了更高的抽象</code></li>
-  <li><code class="highlighter-rouge">异步、非阻塞、高性能的事件驱动编程模型</code></li>
-  <li><code class="highlighter-rouge">轻量级事件处理（1GB内存可容纳百万级别个Actor）</code></li>
+  <li>对并发模型进行了更高的抽象</li>
+  <li>异步、非阻塞、高性能的事件驱动编程模型</li>
+  <li>轻量级事件处理（1GB内存可容纳百万级别个Actor）</li>
 </ul>
 
-<p><code class="highlighter-rouge">为什么Actor模型是一种处理并发问题的解决方案？</code></p>
+<p>为什么Actor模型是一种处理并发问题的解决方案？</p>
 
 <p>一开始我也不怎么理解，脑子里的一贯思维是处理并发问题就是如何保证共享数据的一致性和正确性，为什么会有保持共享数据正确性这个问题呢？无非是我们的程序是多线程的，多个线程对同一个数据进行修改，若不加同步条件，势必会造成数据污染。那么我们是不是可以转换一下思维，用单线程去处理相应的请求，但是又有人会问了，若是用单线程处理，那系统的性能又如何保证。Actor模型的出现解决了这个问题。</p>
 
-<p><code class="highlighter-rouge">Actor模型概图</code>：</p>
+<p>Actor模型概图：</p>
 
 <p><img src="/images/actor-model.png" alt="Actor模型" /></p>
 
@@ -166,14 +166,14 @@ var _hmt = _hmt || [];
 <p>JVM中的Actor有以下几个特点：</p>
 
 <ul>
-  <li><code class="highlighter-rouge">每个Actor都有对应一个邮箱</code></li>
-  <li><code class="highlighter-rouge">Actor是串行处理消息的</code></li>
-  <li><code class="highlighter-rouge">Actor中的消息是不可变的</code></li>
+  <li>每个Actor都有对应一个邮箱</li>
+  <li>Actor是串行处理消息的</li>
+  <li>Actor中的消息是不可变的</li>
 </ul>
 
 <p>其实只从上面一些描述来看，并不能看出Actor在处理并发问题上的有什么优势。</p>
 
-<p>但我总结了两点：<code class="highlighter-rouge">简化并发编程</code>，<code class="highlighter-rouge">提升程序性能</code></p>
+<p>但我总结了两点：<em>简化并发编程</em>，<em>提升程序性能</em></p>
 
 <h5 id="section">1.简化并发编程：</h5>
 
@@ -190,7 +190,7 @@ var _hmt = _hmt || [];
 
 <p>那下面我们来简单说说Akka吧，Akka作为一套成熟的并发解决方案，已经被业界大量采用，尤其是在金融，游戏等领域，Akka中的容错机制，持久化，远程调用，日志等都是很重要的模块，这些内容都会在这个系列的后续文章里一一讲解。下面就以一个入门Akka程序来结束本篇文章吧。现在我们假设有一个家居机器人，我们只需要给它发送消息它便会帮我们处理相应的事情，现在我们用程序来模拟这个场景：<a href="https://github.com/godpan/akka-demo/tree/master/Example_01">源码链接</a></p>
 
-<p><code class="highlighter-rouge">本示例使用Scala语言，构建工具为SBT，IDE为IntelliJ IDEA.</code></p>
+<p><em>本示例使用Scala语言，构建工具为SBT，IDE为IntelliJ IDEA.</em></p>
 
 <p>1.首先创建一个基于SBT的Scala工程</p>
 
@@ -272,7 +272,7 @@ var _hmt = _hmt || [];
     <nav class="pagination" role="navigation">
       
       
-        <a href="/blog/akka-2/" class="btn" title="Akka系列（二）：Akka中Actor系统">Next</a>
+        <a href="/blog/akka-2/" class="btn" title="Akka系列（二）：Akka中的Actor系统">Next</a>
       
     </nav><!-- /.pagination -->
   </article>

@@ -5,16 +5,16 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en"><!--<![endif]-->
 <head>
 <meta charset="utf-8">
-<title>Akka系列（二）：Akka中Actor系统 &#8211; GodPan</title>
-<meta name="description" content="Actor作为Akka中最核心的结构，其在Akka中的中的组织结构也至关重要，今天我们就来讲讲Akka中Actor系统。
+<title>Akka系列（二）：Akka中的Actor系统 &#8211; GodPan</title>
+<meta name="description" content="Actor模型作为Akka中最核心的概念，所以Actor在Akka中的组织结构也至关重要，本文主要介绍Akka中Actor系统。
 
 ">
 <meta name="keywords" content="">
 
 
 <!-- Twitter Cards -->
-<meta name="twitter:title" content="Akka系列（二）：Akka中Actor系统">
-<meta name="twitter:description" content="Actor作为Akka中最核心的结构，其在Akka中的中的组织结构也至关重要，今天我们就来讲讲Akka中Actor系统。
+<meta name="twitter:title" content="Akka系列（二）：Akka中的Actor系统">
+<meta name="twitter:description" content="Actor模型作为Akka中最核心的概念，所以Actor在Akka中的组织结构也至关重要，本文主要介绍Akka中Actor系统。
 
 ">
 
@@ -26,8 +26,8 @@
 <!-- Open Graph -->
 <meta property="og:locale" content="en_US">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Akka系列（二）：Akka中Actor系统">
-<meta property="og:description" content="Actor作为Akka中最核心的结构，其在Akka中的中的组织结构也至关重要，今天我们就来讲讲Akka中Actor系统。
+<meta property="og:title" content="Akka系列（二）：Akka中的Actor系统">
+<meta property="og:description" content="Actor模型作为Akka中最核心的概念，所以Actor在Akka中的组织结构也至关重要，本文主要介绍Akka中Actor系统。
 
 ">
 <meta property="og:url" content="/blog/akka-2/">
@@ -125,7 +125,7 @@ var _hmt = _hmt || [];
           
         </ul>
         
-          <h1 class="entry-title">Akka系列（二）：Akka中Actor系统</h1>
+          <h1 class="entry-title">Akka系列（二）：Akka中的Actor系统</h1>
         
       </header>
       <footer class="entry-meta">
@@ -134,14 +134,14 @@ var _hmt = _hmt || [];
           <img src="/images/bio-photo.jpg" class="bio-photo" alt="GodPan bio photo"></a>
         
         <span class="author vcard">By <span class="fn">GodPan</span></span>
-        <span class="entry-date date published"><time datetime="2017-03-25T00:00:00+08:00"><i class="fa fa-calendar-o"></i> March 25, 2017</time></span>
+        <span class="entry-date date published"><time datetime="2017-04-02T00:00:00+08:00"><i class="fa fa-calendar-o"></i> April 02, 2017</time></span>
         
         
         
         
       </footer>
       <div class="entry-content">
-        <p>Actor作为Akka中最核心的结构，其在Akka中的中的组织结构也至关重要，今天我们就来讲讲Akka中Actor系统。</p>
+        <p>Actor模型作为Akka中最核心的概念，所以Actor在Akka中的组织结构也至关重要，本文主要介绍Akka中Actor系统。</p>
 
 <h2 id="actor">Actor系统</h2>
 <p>Actor作为一种封装状态和行为的对象，总是需要一个系统去统一的组织和管理它们，在Akka中即为ActorSystem，其实这非常容易理解，好比一个公司，每个员工都可以看成一个Actor，它们有自己的职位和职责，但是我们需要把员工集合起来，统一进行管理和分配任务，所以我们需要一个相应的系统进行管理，好比这里的ActorSystem对Actor进行管理一样。</p>
@@ -150,20 +150,28 @@ var _hmt = _hmt || [];
 <p>ActorSystem主要有以下三个功能：</p>
 
 <ul>
-  <li><code class="highlighter-rouge">管理调度服务</code></li>
-  <li><code class="highlighter-rouge">配置相关参数</code></li>
-  <li><code class="highlighter-rouge">日志功能</code></li>
+  <li>管理调度服务</li>
+  <li>配置相关参数</li>
+  <li>日志功能</li>
 </ul>
 
 <h4 id="section">1.管理调度服务</h4>
 
 <p>ActorSystem的的精髓在于将任务分拆，直到一个任务小到可以被完整处理，然后将其委托给Actor进行处理，所以ActorSystem最核心的一个功能就是管理和调度整个系统的运行，好比一个公司的管理者，他需要制定整个公司的发展计划，还需要将工作分配给相应的工作人员去完成，保障整个公司的正确运转，其实这里也体现了软件设计中的分而治之，Actor中的核心思想也是这样。</p>
 
-<p><code class="highlighter-rouge">ActorSystem模型例子</code>：</p>
+<p>ActorSystem模型例子：</p>
 
 <p><img src="/images/actor-system-example.png" alt="ActorSystem模型例子" /></p>
 
-<p>上图是一个简单的开发协作的过程，我觉得这个例子应该可以清晰的表达Akka中Actor的组织结构，当然不仅于此。首先我们来看Akka中Actor的组织是一种树形结构，每个Actor都有父级，有可能有子级当然也可能没有，比如树结构中的叶子节点，每个Actor都是由其父级Actor创建，父级Actor给其分配资源，任务，并管理其的生命状态（<code class="highlighter-rouge">监管和监控</code>），这对一个拥有成千上万个Actor的系统来说，使用树形机构来组织Actor是非常适合的。</p>
+<p>上图是一个简单的开发协作的过程，我觉得这个例子应该可以清晰的表达Akka中Actor的组织结构，当然不仅于此。主要有以下几个特点：</p>
+
+<ul>
+  <li>Akka中Actor的组织是一种树形结构</li>
+  <li>每个Actor都有父级，有可能有子级当然也可能没有</li>
+  <li>父级Actor给其子级Actor分配资源，任务，并管理其的生命状态（监管和监控）</li>
+</ul>
+
+<p>Actor系统往往有成千上万个Actor，使用树形机构来组织管理Actor是非常适合的。</p>
 
 <p>而且Akka天生就是分布式，你可以向一个远程的Actor发送消息，但你需要知道这个Actor的具体位置在哪，这时候你就会发现，树形结构对于确定一个Actor的路径来说是非常有利（比如Linux的文件存储），所以我觉得Actor用树形结构组织可以说是再完美不过了。</p>
 
@@ -223,8 +231,8 @@ the ActorSystem logLevel is DEBUG
 <p><strong>如何获得Actor引用？</strong></p>
 
 <ul>
-  <li><code class="highlighter-rouge">直接创建Actor</code></li>
-  <li><code class="highlighter-rouge">查找已经存在的Actor</code></li>
+  <li>直接创建Actor</li>
+  <li>查找已经存在的Actor</li>
 </ul>
 
 <h6 id="actorref">1.获得ActorRef</h6>
@@ -318,7 +326,7 @@ the ActorSystem logLevel is DEBUG
 </div>
 <p>光看这段代码可能不那么容易理解，这里我会画一个流程图帮助你理解这段程序：</p>
 
-<p><code class="highlighter-rouge">程序流程图</code>：</p>
+<p>程序流程图：</p>
 
 <p><img src="/images/company-system-example.png" alt="程序流程图" /></p>
 
@@ -327,8 +335,8 @@ the ActorSystem logLevel is DEBUG
 <p>这里主要是有两个知识点：</p>
 
 <ul>
-  <li><code class="highlighter-rouge">创建Actor获得ActorRef的两种方式</code></li>
-  <li><code class="highlighter-rouge">根据Actor路径获得ActorRef</code></li>
+  <li>创建Actor获得ActorRef的两种方式</li>
+  <li>根据Actor路径获得ActorRef</li>
 </ul>
 
 <p>前一个知识点应该比较清晰了，具体来说说第二个。</p>
@@ -363,6 +371,8 @@ the ActorSystem logLevel is DEBUG
       
         <a href="/blog/akka-1/" class="btn" title="Akka系列（一）：Akka简介与Actor模型">Previous</a>
       
+      
+        <a href="/blog/akka-3/" class="btn" title="Akka系列（三）：监管与容错">Next</a>
       
     </nav><!-- /.pagination -->
   </article>
