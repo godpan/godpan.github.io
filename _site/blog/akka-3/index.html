@@ -147,7 +147,7 @@ var _hmt = _hmt || [];
 
 <p>看过我上篇文章的同学应该对Actor系统的工作流程有了一定的了解<a href="http://www.godpan.me/blog/akka-2/">Akka系列（二）：Akka中的Actor系统</a>，它的很重要的概念就是分而治之，既然我们把任务分配给Actor去执行，那么我们必须去监管相应的Actor，当Actor出现了失败，比如系统环境错误，各种异常，能根据我们制定的相应监管策略进行错误恢复，就是后面我们会说到的容错。</p>
 
-<h3 id="section-1">监管者与被监管者</h3>
+<h3 id="section-1">监管者</h3>
 
 <p>既然有监管这一事件，那必然存在着<strong>监管者</strong>这么一个角色，那么在ActorSystem中是如何确定这种角色的呢？</p>
 
@@ -185,21 +185,20 @@ var _hmt = _hmt || [];
 
 <p>上一篇文章介绍了Actor系统的组织结构，它是一种树形结构，其实这种结构对actor的监管是非常有利的，Akka实现的是一种叫“父监管”的形式，每一个被创建的actor都由其父亲所监管，这种限制使得actor的监管结构隐式符合其树形结构，所以我们可以得出一个结论：</p>
 
-<ul>
-  <li><strong>一个被创建的Actor肯定是一个被监管者，也可能是一个监管者，它监管着它的子级Actor</strong></li>
-</ul>
+<blockquote>
+  <p>一个被创建的Actor肯定是一个被监管者，也可能是一个监管者，它监管着它的子级Actor</p>
+</blockquote>
 
 <h3 id="section-3">监管策略</h3>
 
 <p>上面我们对ActorSystem中的监管角色有了一定的了解，那么到底是如何制定相应的监管策略呢？Akka中有以下4种策略：</p>
 
-<p>1.恢复下属，保持下属当前积累的内部状态</p>
-
-<p>2.重启下属，清除下属的内部状态</p>
-
-<p>3.永久地停止下属</p>
-
-<p>4.升级失败（沿监管树向上传递失败），由此失败自己</p>
+<ul>
+  <li>恢复下属，保持下属当前积累的内部状态</li>
+  <li>重启下属，清除下属的内部状态</li>
+  <li>永久地停止下属</li>
+  <li>升级失败（沿监管树向上传递失败），由此失败自己</li>
+</ul>
 
 <p>这其实很好理解，下面是一个简单例子：</p>
 
@@ -232,7 +231,7 @@ var _hmt = _hmt || [];
   <li><code class="highlighter-rouge">AllForOneStrategy</code>： 该策略会应用到所有的子actor上。</li>
 </ul>
 
-<p>我们一般都使用<code class="highlighter-rouge">OneForOneStrategy</code>来进行制定相关监管策略，当然你也可以根据具体需求选择合适的策略。</p>
+<p>我们一般都使用<code class="highlighter-rouge">OneForOneStrategy</code>来进行制定相关监管策略，当然你也可以根据具体需求选择合适的策略。另外我们可以给我们的策略配置相应参数，比如上面maxNrOfRetries，withinTimeRange等，这里的含义是每分钟最多进行10次重启，若超出这个界限相应的Actor将会被停止，当然你也可以使用策略的默认配置，具体配置信息可以参考源码。</p>
 
 <h3 id="section-4">监管容错示例</h3>
 

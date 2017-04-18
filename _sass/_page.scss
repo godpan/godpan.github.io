@@ -148,6 +148,7 @@ span + .entry-title {
 		width: 120px;
 		height: 120px;
 		margin-bottom: 10px;
+    display: none;
 		@include rounded(150px);
 		@include clearfix;
 	}
@@ -353,8 +354,8 @@ span + .entry-title {
   color: #333332;
   margin-bottom: 1.5em;
   border-radius: 3px;
-  margin-left: 378px;
-  width: 717px;
+  margin-left: 30%;
+  width: 697px;
   margin-top: 20px;
   padding: 20px;
 }
