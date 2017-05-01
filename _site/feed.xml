@@ -1,4 +1,222 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-04-18T22:03:40+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（三）：监管与容错</title><link href="/blog/akka-3/" rel="alternate" type="text/html" title="Akka系列（三）：监管与容错" /><published>2017-04-15T00:00:00+08:00</published><updated>2017-04-15T00:00:00+08:00</updated><id>/blog/akka-3</id><content type="html" xml:base="/blog/akka-3/">&lt;p&gt;Akka作为一种成熟的生产环境并发解决方案，必须拥有一套完善的错误异常处理机制，本文主要讲讲Akka中的监管和容错。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-05-01T12:48:27+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（四）：Akka中的共享内存模型</title><link href="/blog/akka-4/" rel="alternate" type="text/html" title="Akka系列（四）：Akka中的共享内存模型" /><published>2017-05-01T00:00:00+08:00</published><updated>2017-05-01T00:00:00+08:00</updated><id>/blog/akka-4</id><content type="html" xml:base="/blog/akka-4/">&lt;p&gt;通过前几篇的学习，相信大家对Akka应该有所了解了，都说解决并发哪家强，JVM上面找Akka，那么Akka到底在解决并发问题上帮我们做了什么呢？&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;共享内存&lt;/h2&gt;
+
+&lt;p&gt;众所周知，在处理并发问题上面，最核心的一部分就是如何处理共享内存，很多时候我们都需要花费很多时间和精力在共享内存上，那么在学习Akka对共享内存是如何管理之前，我们先来看看Java中是怎么处理这个问题的。&lt;/p&gt;
+
+&lt;h3 id=&quot;java&quot;&gt;Java共享内存&lt;/h3&gt;
+
+&lt;p&gt;相信对Java并发有所了解的同学都应该知道在Java5推出JSR 133后，Java对内存管理有了更高标准的规范了，这使我们开发并发程序也有更好的标准了，不会有一些模糊的定义导致的无法确定的错误。&lt;/p&gt;
+
+&lt;p&gt;首先来看看一下Java内存模型的简单构图：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/java-memory.png&quot; alt=&quot;Java Memory&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;从图中我们可以看到我们线程都有自己的一个工作内存，这就好比高速缓存，它是对主内存部分数据的拷贝，线程对自己工作内存的操作速度远远快于对主内存的操作，但这也往往会引起共享变量不一致的问题，比如以下一个场景：&lt;/p&gt;
+
+&lt;div class=&quot;language-java highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;setA&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;上面是一个很简单的例子，a是一个全局变量，然后我们有一个方法去修改这个值，每次增加一，假如我们用100个线程去运行这段代码，那a最终的结果会是多少呢？
+100？显然不一定，它可能是80，90，或者其他数，这就造成共享变量不一致的问题，那么为什么会导致这个问题呢，就是我们上面所说的，线程去修改a的时候可能就只是修改了自己工作内存中a的副本，但并没有将a的值及时的刷新到主内存中，这便会导致其他线程可能读到未被修改a的值，最终出现变量不一致问题。&lt;/p&gt;
+
+&lt;p&gt;那么Java中是怎么处理这种问题，如何保证共享变量的一致性的呢？&lt;/p&gt;
+
+&lt;h4 id=&quot;section-1&quot;&gt;同步机制&lt;/h4&gt;
+
+&lt;p&gt;大体上Java中有3类同步机制，但它们所解决的问题并不相同，我们先来看一看这三种机制：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;final关键词&lt;/li&gt;
+  &lt;li&gt;volatile关键词&lt;/li&gt;
+  &lt;li&gt;synchronized关键词（这里代表了所有类似监视锁的机制）&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h5 id=&quot;final&quot;&gt;1.final关键词&lt;/h5&gt;
+
+&lt;p&gt;写过Java程序的同学对这个关键词应该再熟悉不过了，其基本含义就是&lt;strong&gt;不可变&lt;/strong&gt;，不可变变量，比如：&lt;/p&gt;
+
+&lt;div class=&quot;language-java highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;hello&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;不可变的含义在于当你对这些变量或者对象赋初值后，不能再重新去赋值，但对于对象来说，我们不能修改的是它的引用，但是对象内的内容还是可以修改的。下面是一个简单的例子：&lt;/p&gt;
+
+&lt;div class=&quot;language-java highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;User&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;u&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;User&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;a&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;u&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//可以修改&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;u&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;User&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;b&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//不可修改&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;所以在利用final关键词用来保证共享变量的一致性时一定要了解清楚自己的需求，选择合适的方法。&lt;/p&gt;
+
+&lt;h4 id=&quot;volatile&quot;&gt;3.volatile关键词&lt;/h4&gt;
+
+&lt;p&gt;很多同学在遇到共享变量不一致的问题后，都会说我在声明变量前加一个volatile就好了，但事实真是这样嘛？答案显然不是。那我们来看看volatile到底为我们做了什么。&lt;/p&gt;
+
+&lt;p&gt;前面我们说过每个线程都有自己的工作内存，很多时候线程去修改一个变量的值只是修改了自己工作内存中副本的值，这便会导致主内存的值并不是最新的，其他线程读取到的变量便会出现问题。volatile帮我们解决了这个问题，它有两个特点：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;线程每次都会去主内存中读取变量&lt;/li&gt;
+  &lt;li&gt;线程每次修改变量后的值都会及时更新到主内存中去&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;举个例子：&lt;/p&gt;
+
+&lt;div class=&quot;language-java highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;volatile&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;setA&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;现在线程在执行这段代码时，都会强制去主内存中读取变量的值，修改后也会马上更新到主内存中去，但是这真的能解决共享变量不一致的问题嘛，其实不然，比如我们有这么一个场景：两个线程同时读取了主内存中变量最新的值，这是我们两个线程都去执行修改操作，最后结果会是什么呢？这里就留给大家自己去思考了，其实也很简单的。&lt;/p&gt;
+
+&lt;p&gt;那么volatile在什么场景下能保证线程安全，按照官方来说，有以下两个条件：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;对变量的写操作不依赖于当前值&lt;/li&gt;
+  &lt;li&gt;该变量没有包含在具有其他变量的不变式中&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;多的方面这里我就不展开了，推荐两篇我觉得写的还不错的文章：&lt;a href=&quot;http://www.cnblogs.com/paddix/p/5428507.html&quot;&gt;volatile的使用及其原理&lt;/a&gt;&lt;a href=&quot;http://blog.csdn.net/vking_wang/article/details/9982709&quot;&gt;volatile的适用场景&lt;/a&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;synchronized&quot;&gt;2.synchronized关键词&lt;/h4&gt;
+
+&lt;p&gt;很多同学在学习Java并发过程中最先接触的就是synchronized关键词了，它确实能解决我们上述的并发问题，那它到时如何帮我们保证共享变量的一致性的呢？&lt;/p&gt;
+
+&lt;p&gt;简而言之的说，线程在访问请求用synchronized关键词修饰的方法，代码块都会要求获得一个监视器锁，当线程获得了监视器锁后，它才有权限去执行相应的方法或代码块，并在执行结束后释放监视器锁，这便能保证共享内存的一致性了，因为本文主要是讲Akka的共享内存，过多的篇幅就不展开了，这里推荐一篇解析synchronized原理很不错的文章，有兴趣的同学可以去看看：&lt;a href=&quot;http://www.cnblogs.com/paddix/p/5367116.html&quot;&gt;Synchronized及其实现原理&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;akka&quot;&gt;Akka共享内存&lt;/h3&gt;
+
+&lt;p&gt;Akka中的共享内存是基于Actor模型的，Actor模型提倡的是：&lt;strong&gt;通过通讯来实现共享内存，而不是用共享内存来实现通讯&lt;/strong&gt;，这点是跟Java解决共享内存最大的区别，举个例子：
+在Java中我们要去操作共享内存中数据时，每个线程都需要不断的获取共享内存的监视器锁，然后将操作后的数据暴露给其他线程访问使用，用共享内存来实现各个线程之间的通讯，而在Akka中我们可以将共享可变的变量作为一个Actor内部的状态，利用Actor模型本身串行处理消息的机制来保证变量的一致性。&lt;/p&gt;
+
+&lt;p&gt;当然要使用Akka中的机制也必须满足一下两条原则：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;消息的发送必须先于消息的接收&lt;/li&gt;
+  &lt;li&gt;同一个Actor对一条消息的处理先于下一条消息处理&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;第二个原则很好理解，就是上面我们说的Actor内部是串行处理消息，那我们来看看第一个原则，为什么要保证消息的发送先于消息的接收，是为了防止我们在创建消息的时候发生了不确定的错误，接收者将可能接收到不正确的消息，导致发生奇怪的异常。&lt;/p&gt;
+
+&lt;p&gt;通过前面的学习我们知道Actor是一种比线程更轻量级，抽象程度更高的一种结构，它帮我们规避了我们自己去操作线程，那么Akka底层到底是怎么帮我们去保证共享内存的一致性的呢？&lt;/p&gt;
+
+&lt;p&gt;一个Actor它可能会有很多线程同时向它发送消息，之前我们也说到Actor本身是串行处理的消息的，那它是如何保障这种机制的呢？&lt;/p&gt;
+
+&lt;h4 id=&quot;mailbox&quot;&gt;Mailbox&lt;/h4&gt;
+
+&lt;p&gt;Mailbox在Actor模型是一个很重要的概念，我们都知道向一个Actor发送的消息首先都会被存储到它所对应的Mailbox中，那么我们先来看看MailBox的定义结构(本文所引用的代码都在akka.dispatch.Mailbox.scala中，有兴趣的同学也可以去研究一下）：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;private&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;akka&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;abstract&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Mailbox&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;messageQueue&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;MessageQueue&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ForkJoinTask&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Unit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;with&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;SystemMessageQueue&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;with&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Runnable&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;很清晰Mailbox内部维护了一个messageQueue这样的消息队列，并继承了Scala自身定义的ForkJoinTask任务执行类和我们很熟悉的Runnable接口，由此可以看出，Mailbox底层还是利用Java中的线程进行处理的。那么我们先来看看它的run方法：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;override&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Unit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;isClosed&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//Volatile read, needed here
+&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;processAllSystemMessages&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//First, deal with any system messages
+&lt;/span&gt;        &lt;span class=&quot;n&quot;&gt;processMailbox&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//Then deal with messages
+&lt;/span&gt;      &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;finally&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;setAsIdle&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//Volatile write, needed here
+&lt;/span&gt;      &lt;span class=&quot;n&quot;&gt;dispatcher&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;registerForExecution&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;为了配合理解，我们这里先来看一下定义：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@inline&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;currentStatus&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Mailbox.Status&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Unsafe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;instance&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getIntVolatile&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;AbstractMailbox&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mailboxStatusOffset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;nd&quot;&gt;@inline&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;isClosed&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Boolean&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;currentStatus&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Closed&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这里我们可以看出Mailbox本身会维护一个状态Mailbox.Status，是一个Int变量,而且是可变的，并且用到volatile来保证了它的可见性：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@volatile&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;protected&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;_statusDoNotCallMeDirectly&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Status&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//0 by default
+&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;现在我们在回去看上面的代码，run方法的执行过程，首先它会去读取MailBox此时的状态，因为是一个Volatile read，所以能保证读取到的是最新的值，然后它会先处理任何的系统消息，这部分不需要我们太过关心，之后便是执行我们发送的消息，这里我们需要详细看一下processMailbox()的实现：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+&lt;span class=&quot;nd&quot;&gt;@tailrec&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;processMailbox&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;left&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt;       &lt;span class=&quot;kt&quot;&gt;Int&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;java&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lang&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Math&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;max&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dispatcher&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;throughput&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;),&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;deadlineNs&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Long&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dispatcher&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;isThroughputDeadlineTimeDefined&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nanoTime&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dispatcher&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;throughputDeadlineTime&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;toNanos&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0L&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Unit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shouldProcessMessage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;next&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dequeue&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//去出下一条消息
+&lt;/span&gt;      &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;next&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ne&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;null&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Mailbox&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;debug&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;actor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;self&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot; processing message &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;actor&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;invoke&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;next&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;interrupted&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;())&lt;/span&gt;
+          &lt;span class=&quot;k&quot;&gt;throw&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;InterruptedException&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Interrupted while processing actor messages&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;processAllSystemMessages&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;left&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dispatcher&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;isThroughputDeadlineTimeDefined&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nanoTime&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;deadlineNs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;))&lt;/span&gt;
+          &lt;span class=&quot;n&quot;&gt;processMailbox&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;left&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;deadlineNs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//递归处理下一条消息
+&lt;/span&gt;      &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;从上述代码中我们可以清晰的看到，当满足消息处理的情况下就会进行消息处理，从消息队列列取出下一条消息就是上面的&lt;code class=&quot;highlighter-rouge&quot;&gt;dequeue()&lt;/code&gt;,然后将消息发给具体的Actor进行处理，接下去又是处理系统消息，然后判断是否还有满足情况需要下一条消息，若有则再次进行处理，可以看成一个递归操作,&lt;code class=&quot;highlighter-rouge&quot;&gt;@tailrec&lt;/code&gt;也说明了这一点，它表示的是让编译器进行尾递归优化。&lt;/p&gt;
+
+&lt;p&gt;现在我们来看一下一条消息从发送到最终处理在Akka中到底是怎么执行的，下面的内容是我通过阅读Akka源码加自身理解得出的，这里先画了一张流程图：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/actor-process.png&quot; alt=&quot;Actor process&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;消息的大致流程我都在图中给出，还有一些细节，必须序列化消息，获取状态等就没有具体说明了，有兴趣的同学可以自己去阅读以下Akka的源码，个人觉得Akka的源码阅读性还是很好的，比如：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;基本没有方法超过20行&lt;/li&gt;
+  &lt;li&gt;不会有过多的注释，但关键部分会给出，更能加深自己的理解&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;当然也有一些困扰，我们在不了解各个类，接口之间的关系时，阅读体验就会变得很糟糕，当然我用IDEA很快就解决了这个问题。&lt;/p&gt;
+
+&lt;p&gt;我们这里来看看关键的部分：&lt;strong&gt;Actor是如何保证串行处理消息的？&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;上图中有一根判定，是否已有线程在执行任务？我们来看看这个判定的具体逻辑：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@tailrec&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;setAsScheduled&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Boolean&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//是否有线程正在调度执行该MailBox的任务
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;s&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;currentStatus&lt;/span&gt;
+    &lt;span class=&quot;cm&quot;&gt;/*
+     * Only try to add Scheduled bit if pure Open/Suspended, not Closed or with
+     * Scheduled bit already set.
+     */&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;shouldScheduleMask&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Open&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;updateStatus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;s&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Scheduled&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;setAsScheduled&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;从注释和代码的逻辑上我们可以看出当已有线程在执行返回false，若没有则去更改状态为以调度，直到被其他线程抢占或者更改成功，其中updateStatus()是线程安全的，我们可以看一下它的实现,是一个CAS操作：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@inline&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;protected&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;updateStatus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;oldStatus&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Status&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;newStatus&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Status&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Boolean&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;
+    &lt;span class=&quot;nc&quot;&gt;Unsafe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;instance&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;compareAndSwapInt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;AbstractMailbox&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mailboxStatusOffset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;oldStatus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;newStatus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;到这里我们应该可以大致清楚Actor内部是如何保证共享内存的一致性了，Actor接收消息是多线程的，但处理消息是单线程的，利用MailBox中的Status来保障这一机制。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-2&quot;&gt;总结&lt;/h3&gt;
+
+&lt;p&gt;通过上面的内容我们可以总结出以下几点：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Akka并不是说用了什么特殊魔法来保证并发的，底层使用的还是Java和JVM的同步机制&lt;/li&gt;
+  &lt;li&gt;Akka并没有使用任何的锁机制，这就避免了死锁的可能性&lt;/li&gt;
+  &lt;li&gt;Akka并发执行的处理并没有使用线程切换，不仅提高了线程的使用效率，也大大减少了线程切换消耗&lt;/li&gt;
+  &lt;li&gt;Akka为我们提供了更高层次的并发抽象模型，让我们不必关心底层的实现，只需着重实现业务逻辑就行，遵循它的规范，让框架帮我们处理一切难点吧&lt;/li&gt;
+&lt;/ul&gt;</content><summary type="html">通过前几篇的学习，相信大家对Akka应该有所了解了，都说解决并发哪家强，JVM上面找Akka，那么Akka到底在解决并发问题上帮我们做了什么呢？</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="{&quot;feature&quot;=&gt;nil}" /></entry><entry><title type="html">Akka系列（三）：监管与容错</title><link href="/blog/akka-3/" rel="alternate" type="text/html" title="Akka系列（三）：监管与容错" /><published>2017-04-15T00:00:00+08:00</published><updated>2017-04-15T00:00:00+08:00</updated><id>/blog/akka-3</id><content type="html" xml:base="/blog/akka-3/">&lt;p&gt;Akka作为一种成熟的生产环境并发解决方案，必须拥有一套完善的错误异常处理机制，本文主要讲讲Akka中的监管和容错。&lt;/p&gt;
 
 &lt;h2 id=&quot;section&quot;&gt;监管&lt;/h2&gt;
 
