@@ -2,6 +2,14 @@
 
   
     {
+      "title"			: "Akka系列（五）：Java和Scala中的Future",
+      "link"			: "/blog/akka-5/",
+      "excerpt"		: "随着CPU的核数的增加，异步编程模型在并发领域中的得到了越来越多的应用，由于Scala是一门函数式语言，天然的支持异步编程模型，今天主要来看一下Java和Scala中的Futrue，带你走入异步编程的大门。"
+    }
+  
+
+  
+    ,{
       "title"			: "Akka系列（四）：Akka中的共享内存模型",
       "link"			: "/blog/akka-4/",
       "excerpt"		: "通过前几篇的学习，相信大家对Akka应该有所了解了，都说解决并发哪家强，JVM上面找Akka，那么Akka到底在解决并发问题上帮我们做了什么呢？"

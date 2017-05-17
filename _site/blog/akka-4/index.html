@@ -72,9 +72,6 @@ var _hmt = _hmt || [];
 <script src="/assets/js/vendor/modernizr-2.7.1.custom.min.js"></script>
 
 
-<!-- MathJax -->
-<script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
 
 <!-- Icons -->
 <!-- 16x16 -->
@@ -193,9 +190,9 @@ var _hmt = _hmt || [];
 <span class="n">u</span> <span class="o">=</span> <span class="k">new</span> <span class="n">User</span><span class="o">(</span><span class="mi">2</span><span class="o">,</span><span class="s">"b"</span><span class="o">);</span> <span class="c1">//不可修改</span>
 </code></pre>
 </div>
-<p>所以在利用final关键词用来保证共享变量的一致性时一定要了解清楚自己的需求，选择合适的方法。</p>
+<p>所以在利用final关键词用来保证共享变量的一致性时一定要了解清楚自己的需求，选择合适的方法，另外final变量必须在定义或者构建对象的时候进行初始化，不然会报错。</p>
 
-<h4 id="volatile">3.volatile关键词</h4>
+<h4 id="volatile">2.volatile关键词</h4>
 
 <p>很多同学在遇到共享变量不一致的问题后，都会说我在声明变量前加一个volatile就好了，但事实真是这样嘛？答案显然不是。那我们来看看volatile到底为我们做了什么。</p>
 
@@ -225,7 +222,7 @@ var _hmt = _hmt || [];
 
 <p>多的方面这里我就不展开了，推荐两篇我觉得写的还不错的文章：<a href="http://www.cnblogs.com/paddix/p/5428507.html">volatile的使用及其原理</a><a href="http://blog.csdn.net/vking_wang/article/details/9982709">volatile的适用场景</a></p>
 
-<h4 id="synchronized">2.synchronized关键词</h4>
+<h4 id="synchronized">3.synchronized关键词</h4>
 
 <p>很多同学在学习Java并发过程中最先接触的就是synchronized关键词了，它确实能解决我们上述的并发问题，那它到时如何帮我们保证共享变量的一致性的呢？</p>
 
@@ -243,7 +240,7 @@ var _hmt = _hmt || [];
   <li>同一个Actor对一条消息的处理先于下一条消息处理</li>
 </ul>
 
-<p>第二个原则很好理解，就是上面我们说的Actor内部是串行处理消息，那我们来看看第一个原则，为什么要保证消息的发送先于消息的接收，是为了防止我们在创建消息的时候发生了不确定的错误，接收者将可能接收到不正确的消息，导致发生奇怪的异常。</p>
+<p>第二个原则很好理解，就是上面我们说的Actor内部是串行处理消息，那我们来看看第一个原则，为什么要保证消息的发送先于消息的接收，是为了防止我们在创建消息的时候发生了不确定的错误，接收者将可能接收到不正确的消息，导致发生奇怪的异常，主要表现为消息对象未初始化完整时，若没有这条规则保证，Actor收到的消息便会不完整。</p>
 
 <p>通过前面的学习我们知道Actor是一种比线程更轻量级，抽象程度更高的一种结构，它帮我们规避了我们自己去操作线程，那么Akka底层到底是怎么帮我们去保证共享内存的一致性的呢？</p>
 
@@ -350,7 +347,7 @@ var _hmt = _hmt || [];
 </div>
 <p>到这里我们应该可以大致清楚Actor内部是如何保证共享内存的一致性了，Actor接收消息是多线程的，但处理消息是单线程的，利用MailBox中的Status来保障这一机制。</p>
 
-<h3 id="section-2">总结</h3>
+<h2 id="section-2">总结</h2>
 
 <p>通过上面的内容我们可以总结出以下几点：</p>
 
@@ -373,6 +370,8 @@ var _hmt = _hmt || [];
       
         <a href="/blog/akka-3/" class="btn" title="Akka系列（三）：监管与容错">Previous</a>
       
+      
+        <a href="/blog/akka-5/" class="btn" title="Akka系列（五）：Java和Scala中的Future">Next</a>
       
     </nav><!-- /.pagination -->
   </article>
@@ -419,7 +418,7 @@ var _hmt = _hmt || [];
 })();
 </script>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="http://scala.cool/lib/jquery/jquery-3.1.1.min.js"></script>
 <script>window.jQuery || document.write('<script src="/assets/js/vendor/jquery-1.9.1.min.js"><\/script>')</script>
 <script src="/assets/js/scripts.min.js"></script>
 

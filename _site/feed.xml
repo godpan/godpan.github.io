@@ -1,4 +1,238 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-05-01T12:48:27+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（四）：Akka中的共享内存模型</title><link href="/blog/akka-4/" rel="alternate" type="text/html" title="Akka系列（四）：Akka中的共享内存模型" /><published>2017-05-01T00:00:00+08:00</published><updated>2017-05-01T00:00:00+08:00</updated><id>/blog/akka-4</id><content type="html" xml:base="/blog/akka-4/">&lt;p&gt;通过前几篇的学习，相信大家对Akka应该有所了解了，都说解决并发哪家强，JVM上面找Akka，那么Akka到底在解决并发问题上帮我们做了什么呢？&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-05-17T16:19:58+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（五）：Java和Scala中的Future</title><link href="/blog/akka-5/" rel="alternate" type="text/html" title="Akka系列（五）：Java和Scala中的Future" /><published>2017-05-14T00:00:00+08:00</published><updated>2017-05-14T00:00:00+08:00</updated><id>/blog/akka-5</id><content type="html" xml:base="/blog/akka-5/">&lt;p&gt;随着CPU的核数的增加，异步编程模型在并发领域中的得到了越来越多的应用，由于Scala是一门函数式语言，天然的支持异步编程模型，今天主要来看一下Java和Scala中的Futrue，带你走入异步编程的大门。&lt;/p&gt;
+
+&lt;h2 id=&quot;future&quot;&gt;Future&lt;/h2&gt;
+
+&lt;p&gt;很多同学可能会有疑问，Futrue跟异步编程有什么关系？从Future的表面意思是未来，一个Future对象可以看出一个将来得到的结果，这就和异步执行的概念很像，你只管自己去执行，只要将最终的结果传达给我就行，线程不必一直暂停等待结果，可以在具体异步任务执行的时候去执行其他操作，举个例子：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/async-work.png&quot; alt=&quot;async work&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;我们现在在执行做饭这么一个任务，它需要煮饭，烧菜，摆置餐具等操作，如果我们通过异步这种概念去执行这个任务，比如煮饭可能需要比较久的时间，但煮饭这个过程又不需要我们管理，我们可以利用这段时间去烧菜，烧菜过程中也可能有空闲时间，我们可以去摆置餐具，当电饭锅通知我们饭烧好了，菜也烧好了，最后我们就可以开始吃饭了，所以说，上面的“&lt;strong&gt;煮饭 -&amp;gt; 饭&lt;/strong&gt;”，“&lt;strong&gt;烧菜 -&amp;gt; 菜&lt;/strong&gt;”都可以看成一个Future的过程。&lt;/p&gt;
+
+&lt;h3 id=&quot;javafuture&quot;&gt;Java中的Future&lt;/h3&gt;
+
+&lt;p&gt;在Java的早期版本中，我们不能得到线程的执行结果，不管是继承Thread类还是实现Runnable接口，都无法获取线程的执行结果，所以我们只能在线程执行的run方法里去做相应的一些业务逻辑操作，但随着Java5的发布，它为了我们带来了Callable和Future接口，我们可以利用这两个接口的特性来获取线程的执行结果。&lt;/p&gt;
+
+&lt;h4 id=&quot;callable&quot;&gt;Callable接口&lt;/h4&gt;
+
+&lt;p&gt;通俗的讲，Callable接口也是一个线程执行类接口，那么它跟Runnable接口有什么区别呢？我们先来看看它们两个的定义：&lt;/p&gt;
+
+&lt;p&gt;1.Callable接口：&lt;/p&gt;
+
+&lt;div class=&quot;language-java highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@FunctionalInterface&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;interface&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Callable&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;cm&quot;&gt;/**
+     * Computes a result, or throws an exception if unable to do so.
+     *
+     * @return computed result
+     * @throws Exception if unable to compute a result
+     */&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;V&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;call&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;throws&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Exception&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;2.Runnable接口：&lt;/p&gt;
+
+&lt;div class=&quot;language-java highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@FunctionalInterface&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;interface&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Runnable&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;abstract&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;从上面的定义，我们可以看出，两者最大的区别就是对应的执行方法是否有返回值。Callable接口中call方法具有返回值，这便是为什么我们可以通过Callable接口来得到一个线程执行的返回值或者是异常信息。&lt;/p&gt;
+
+&lt;h4 id=&quot;future-1&quot;&gt;Future接口&lt;/h4&gt;
+
+&lt;p&gt;上面说到既然Callable接口能返回线程执行的结果，那么为什么还需要Future接口呢？因为Callable接口执行的结果只是一个将来的结果值，我们若是需要得到具体的结果就必须利用Future接口，另外Callable接口需要委托ExecutorService的submit提交任务去执行，我们来看看它是如何定义的：&lt;/p&gt;
+
+&lt;div class=&quot;language-java highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Future&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;submit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Callable&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+ 
+ &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Future&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;submit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Callable&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;null&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;throw&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;NullPointerException&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;RunnableFuture&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ftask&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;newTaskFor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;execute&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ftask&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ftask&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;从submit的方法定义也可以看出它的返回值是一个Future接口类型的值，这里其实是RunnableFuture接口，这是一个很重要的接口，我们来看一下它的定义：&lt;/p&gt;
+
+&lt;div class=&quot;language-java highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;interface&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;RunnableFuture&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Runnable&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Future&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;V&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;cm&quot;&gt;/**
+     * Sets this Future to the result of its computation
+     * unless it has been cancelled.
+     */&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这个接口分别继承了Runnable和Future接口，而FutureTask又实现了RunnableFuture接口，它们之间的关系：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/future-runnable.png&quot; alt=&quot;future runnable&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;RunnableFuture有以下两个特点：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;继承Runnable接口，还是以run方法作为线程执行入口，其实上面submit方法的具体实现也可以看出，一个Callable的Task再执行的时候会被包装成RunnableFuture，然后以FutureTask作为实现类，执行FutureTask时，还是执行其的run方法，只不过run方法里面的业务逻辑是由我们定义的call方法的内容，当然再执行run方法时，程序会自动将call方法的执行结果帮我们包装起来，对外部表现成一个Future对象。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;继承Future接口，通过实现Future接口中的方法更新或者获取线程的的执行状态，比如其中的cancel(),isDone(),get()等方法。&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;future-2&quot;&gt;Future程序示例与结果获取&lt;/h4&gt;
+
+&lt;p&gt;下面是一个简单的Future示例，我们先来看一下代码：&lt;/p&gt;
+
+&lt;div class=&quot;language-java highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ExecutorService&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;es&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Executors&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;newSingleThreadExecutor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;Future&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;es&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;submit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;execute call&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;});&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;try&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;isDone&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;());&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//检测任务是否完成&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2000&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;TimeUnit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;MILLISECONDS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;));&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;isDone&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;());&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//检测任务是否完成&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;catch&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;InterruptedException&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;printStackTrace&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;catch&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ExecutionException&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;printStackTrace&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;catch&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TimeoutException&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;printStackTrace&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;上面的代码使用了lambda表达式，有兴趣的同学可以自己去了解下，这里我们首先构建了一个ExecutorService，然后利用submit提交执行Callable接口的任务。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;为什么是Callable接口呢？&lt;/strong&gt; 其实这里我们并没有显示声明Callable接口，这里lambda会帮我们自动进行类型推导，首先submit接受Callable接口或Runnble接口类型作为参数，而这里我们又给定了返回值，所以lambda能自动帮我们推导出内部是一个Callable接口参数。&lt;/p&gt;
+
+&lt;p&gt;到这里我们应该大致清楚了在Java中的得到Future，那么我们又是如何从Future中得到我们想要的值呢？这个结论其实很容易得出，你只需要去跑一下上面的程序即可，在利用get去获取Future中的值时，线程会一直阻塞，直到返回值或者超时，所以Future中的get方法是阻塞，所以虽然利用Future似乎是异步执行任务，但是在某些需求上还是会阻塞的，并不是真正的异步，stackoverflow上有两个讨论说明了这个问题&lt;a href=&quot;http://stackoverflow.com/questions/31092067/method-call-to-future-get-blocks-is-that-really-desirable&quot;&gt;Future.get&lt;/a&gt;，&lt;a href=&quot;http://stackoverflow.com/questions/31092067/method-call-to-future-get-blocks-is-that-really-desirable&quot;&gt;without blocking when task complete&lt;/a&gt;，有兴趣的同学可以去看看。&lt;/p&gt;
+
+&lt;h3 id=&quot;scalafuture&quot;&gt;Scala中的Future&lt;/h3&gt;
+
+&lt;p&gt;Scala中的Future相对于Java的Future有什么不同呢？我总结了一下几点：&lt;/p&gt;
+
+&lt;h4 id=&quot;future-3&quot;&gt;1.创建Future变得很容易&lt;/h4&gt;
+
+&lt;p&gt;异步编程作为函数式语言的一大优势，Scala对于Future的支持也是非常棒的，首先它也提供了Futrue接口，但不同的是我们在构建Future对象是不用像Java一样那么繁琐，并且非常简单，举个例子：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;scala.concurrent._&lt;/span&gt; 
+&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;ExecutionContext.Implicits.global&lt;/span&gt; 
+
+&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Future&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Future&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Hello World!&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;是不是非常简单，也大大降低了我们使用Future的难度。&lt;/p&gt;
+
+&lt;h4 id=&quot;future-4&quot;&gt;2.提供真正异步的Future&lt;/h4&gt;
+
+&lt;p&gt;前面我们也说到，Java中的Future并不是全异步的，当你需要Future里的值的时候，你只能用get去获取它，亦或者不断访问Future的状态，若完成再去取值，但其意义上便不是真正的异步了，它在获取值的时候是一个阻塞的操作，当然也就无法执行其他的操作，直到结果返回。&lt;/p&gt;
+
+&lt;p&gt;但在Scala中，我们无需担心，虽然它也提供了类似Java中获取值的方式，比如：&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Future&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;Java&lt;/th&gt;
+      &lt;th style=&quot;text-align: right&quot;&gt;Scala&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;判断任务是否完成&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;isDone&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;isCompleted&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;获取值&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;get&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;value&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;但是我们并不推荐这么做，因为这么做又回到了Java的老路上了，在Scala中我们可以利用Callback来获取它的结果：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fut&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Future&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;fut&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;onComplete&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Success&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;the result is ${r}&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;some Exception&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;I am working&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2000&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这是一个简单的例子，Future在执行完任务后会进行回调，这里使用了onComplete，也可以注册多个回调函数，但不推荐那么做，因为你不能保证这些回调函数的执行顺序，其他的一些回调函数基本都是基于onComplete的，有兴趣的同学可以去阅读一下Future的源码。&lt;/p&gt;
+
+&lt;p&gt;我们先来看一下它的运行结果:&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;I&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;am&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;working&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;the&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;从结果中我们可以分析得出，我们在利用Callback方式来获取Future结果的时候并不会阻塞，而只是当Future完成后会自动调用onComplete，我们只需要根据它的结果再做处理即可，而其他互不依赖的操作可以继续执行不会阻塞。&lt;/p&gt;
+
+&lt;h4 id=&quot;future-5&quot;&gt;3.强大的Future组合&lt;/h4&gt;
+
+&lt;p&gt;前面我们讲的较多的都是单个Future的情况，但是在真正实际应用时往往会遇到多个Future的情况，那么在Scala中是如何处理这种情况的呢？&lt;/p&gt;
+
+&lt;p&gt;Scala中的有多种方式来组合Future,那我们就来看看这些方式吧。&lt;/p&gt;
+
+&lt;h5 id=&quot;flatmap&quot;&gt;1.flatMap&lt;/h5&gt;
+
+&lt;p&gt;我们可以利用flatMap来组合多个Future，不多说，先上代码：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fut1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Future&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;enter task1&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2000&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fut2&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Future&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;enter task2&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;fut1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flatMap&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;fut2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v2&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;the result is ${v1 + v2}&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2500&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;利用flatMap确实能组合Future，但代码的阅读性实在是有点差，你能想象5个甚至10个map层层套着么，所以我们并不推荐这么做，但是我们需要了解这种方式，其他简洁的方式可能最终转化成的版本也许就是这样的。&lt;/p&gt;
+
+&lt;h5 id=&quot;for-yield&quot;&gt;2.for yield表达式&lt;/h5&gt;
+
+&lt;p&gt;我们只是把上面关于flatMap的代码替换一下，看下面：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;v1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fut1&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;v2&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fut2&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;the result is ${v1 + v2}&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;看上去是不是比之前的方式简洁多了，这也是我们在面对Future组合时推荐的方式，当然不得不说for yield表达式是一种语法糖，它最终还是会被翻译成我们常见的方法，比如flatMap，map，filter等，感兴趣的可以参考它的官方文档。&lt;a href=&quot;http://docs.scala-lang.org/tutorials/FAQ/yield.html&quot;&gt;for yield表达式&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;总的来说Scala中的Future确实强大，在实现真正异步的情况下，为我们提供许多方便而又简洁的操作模式，其实比如还有Future.reduce()，Future.traverse(),Future.sequence()等方法，这些方法的具体功能和具体使用这里就不讲了，但相关的示例代码都会在我的示例工程里，有兴趣的同学可以去跑跑加深理解。&lt;a href=&quot;https://github.com/godpan/akka-demo/tree/master/Example_04&quot;&gt;源码链接&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;总结&lt;/h2&gt;
+
+&lt;p&gt;这篇文章主要讲解了JVM生态上两大语言Java和Scala在异步编程上的一些表现，这里主要是Future机制，在清楚明白它的概念后，我们才能写出更好的程序，虽然本篇文章没有涉及到Akka相关的内容，但是Akka本身是用Scala写的，而且大量使用了Scala中的Future，相信通过对Future的学习，对Akka的理解会有一定的帮助。&lt;/p&gt;</content><summary type="html">随着CPU的核数的增加，异步编程模型在并发领域中的得到了越来越多的应用，由于Scala是一门函数式语言，天然的支持异步编程模型，今天主要来看一下Java和Scala中的Futrue，带你走入异步编程的大门。</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="{&quot;feature&quot;=&gt;nil}" /></entry><entry><title type="html">Akka系列（四）：Akka中的共享内存模型</title><link href="/blog/akka-4/" rel="alternate" type="text/html" title="Akka系列（四）：Akka中的共享内存模型" /><published>2017-05-01T00:00:00+08:00</published><updated>2017-05-01T00:00:00+08:00</updated><id>/blog/akka-4</id><content type="html" xml:base="/blog/akka-4/">&lt;p&gt;通过前几篇的学习，相信大家对Akka应该有所了解了，都说解决并发哪家强，JVM上面找Akka，那么Akka到底在解决并发问题上帮我们做了什么呢？&lt;/p&gt;
 
 &lt;h2 id=&quot;section&quot;&gt;共享内存&lt;/h2&gt;
 
@@ -50,9 +284,9 @@
 &lt;span class=&quot;n&quot;&gt;u&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;User&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;b&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//不可修改&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
-&lt;p&gt;所以在利用final关键词用来保证共享变量的一致性时一定要了解清楚自己的需求，选择合适的方法。&lt;/p&gt;
+&lt;p&gt;所以在利用final关键词用来保证共享变量的一致性时一定要了解清楚自己的需求，选择合适的方法，另外final变量必须在定义或者构建对象的时候进行初始化，不然会报错。&lt;/p&gt;
 
-&lt;h4 id=&quot;volatile&quot;&gt;3.volatile关键词&lt;/h4&gt;
+&lt;h4 id=&quot;volatile&quot;&gt;2.volatile关键词&lt;/h4&gt;
 
 &lt;p&gt;很多同学在遇到共享变量不一致的问题后，都会说我在声明变量前加一个volatile就好了，但事实真是这样嘛？答案显然不是。那我们来看看volatile到底为我们做了什么。&lt;/p&gt;
 
@@ -82,7 +316,7 @@
 
 &lt;p&gt;多的方面这里我就不展开了，推荐两篇我觉得写的还不错的文章：&lt;a href=&quot;http://www.cnblogs.com/paddix/p/5428507.html&quot;&gt;volatile的使用及其原理&lt;/a&gt;&lt;a href=&quot;http://blog.csdn.net/vking_wang/article/details/9982709&quot;&gt;volatile的适用场景&lt;/a&gt;&lt;/p&gt;
 
-&lt;h4 id=&quot;synchronized&quot;&gt;2.synchronized关键词&lt;/h4&gt;
+&lt;h4 id=&quot;synchronized&quot;&gt;3.synchronized关键词&lt;/h4&gt;
 
 &lt;p&gt;很多同学在学习Java并发过程中最先接触的就是synchronized关键词了，它确实能解决我们上述的并发问题，那它到时如何帮我们保证共享变量的一致性的呢？&lt;/p&gt;
 
@@ -100,7 +334,7 @@
   &lt;li&gt;同一个Actor对一条消息的处理先于下一条消息处理&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;p&gt;第二个原则很好理解，就是上面我们说的Actor内部是串行处理消息，那我们来看看第一个原则，为什么要保证消息的发送先于消息的接收，是为了防止我们在创建消息的时候发生了不确定的错误，接收者将可能接收到不正确的消息，导致发生奇怪的异常。&lt;/p&gt;
+&lt;p&gt;第二个原则很好理解，就是上面我们说的Actor内部是串行处理消息，那我们来看看第一个原则，为什么要保证消息的发送先于消息的接收，是为了防止我们在创建消息的时候发生了不确定的错误，接收者将可能接收到不正确的消息，导致发生奇怪的异常，主要表现为消息对象未初始化完整时，若没有这条规则保证，Actor收到的消息便会不完整。&lt;/p&gt;
 
 &lt;p&gt;通过前面的学习我们知道Actor是一种比线程更轻量级，抽象程度更高的一种结构，它帮我们规避了我们自己去操作线程，那么Akka底层到底是怎么帮我们去保证共享内存的一致性的呢？&lt;/p&gt;
 
@@ -207,7 +441,7 @@
 &lt;/div&gt;
 &lt;p&gt;到这里我们应该可以大致清楚Actor内部是如何保证共享内存的一致性了，Actor接收消息是多线程的，但处理消息是单线程的，利用MailBox中的Status来保障这一机制。&lt;/p&gt;
 
-&lt;h3 id=&quot;section-2&quot;&gt;总结&lt;/h3&gt;
+&lt;h2 id=&quot;section-2&quot;&gt;总结&lt;/h2&gt;
 
 &lt;p&gt;通过上面的内容我们可以总结出以下几点：&lt;/p&gt;
 

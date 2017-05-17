@@ -95,19 +95,19 @@ ins {
 
 a {
 	text-decoration: none;
-	color: $link-color;
+	color: #5e7dda;
 
 	&:visited {
-		color: lighten($link-color, 20);
+		color: #5e7dda;
 	}
 
 	&:hover {
-		color: darken($link-color, 20);
+		color: #0741f0;
 	}
 
 	&:focus {
 		outline: thin dotted;
-		color: darken($link-color, 20);
+		color: #0741f0;
 	}
 
 	&:hover,

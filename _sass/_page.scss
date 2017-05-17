@@ -38,6 +38,29 @@
 	@include fill-parent;
 }
 
+table {
+  width: 66%;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-collapse: collapse;
+  border-left: none;
+  word-break: normal;
+}
+table th {
+  padding: 8px;
+  border: 1px solid #ddd;
+  line-height: 20px;
+  vertical-align: middle;
+  font-weight: 700;
+  text-align: inherit;
+}
+table td, .note .post .article .show-content table th {
+  padding: 8px;
+  border: 1px solid #ddd;
+  line-height: 20px;
+  vertical-align: middle;
+}
+
 /* tag listing in page header */
 
 .entry-tags {
