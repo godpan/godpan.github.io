@@ -95,19 +95,19 @@ ins {
 
 a {
 	text-decoration: none;
-	color: #5e7dda;
+	color: $link-color;
 
 	&:visited {
-		color: #5e7dda;
+		color: lighten($link-color, 20);
 	}
 
 	&:hover {
-		color: #0741f0;
+		color: darken($link-color, 20);
 	}
 
 	&:focus {
 		outline: thin dotted;
-		color: #0741f0;
+		color: darken($link-color, 20);
 	}
 
 	&:hover,
@@ -115,6 +115,30 @@ a {
 		outline: 0;
 	}
 }
+/*
+.entry-content a {
+  text-decoration: none;
+  color: #5e7dda;
+
+  &:visited {
+    color: #5e7dda;
+  }
+
+  &:hover {
+    color: #0741f0;
+  }
+
+  &:focus {
+    outline: thin dotted;
+    color: #0741f0;
+  }
+
+  &:hover,
+  &:active {
+    outline: 0;
+  }
+}
+*/
 
 /*
    Horizontal rules
