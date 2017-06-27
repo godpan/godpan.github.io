@@ -335,21 +335,21 @@ var _hmt = _hmt || [];
 <p>我们可以利用flatMap来组合多个Future，不多说，先上代码：</p>
 
 <div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="k">val</span> <span class="n">fut1</span> <span class="k">=</span> <span class="nc">Future</span> <span class="o">{</span>
-    <span class="n">println</span><span class="o">(</span><span class="s">"enter task1"</span><span class="o">)</span>
-    <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">2000</span><span class="o">)</span>
-    <span class="mi">1</span> <span class="o">+</span> <span class="mi">1</span>
+  <span class="n">println</span><span class="o">(</span><span class="s">"enter task1"</span><span class="o">)</span>
+  <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">2000</span><span class="o">)</span>
+  <span class="mi">1</span> <span class="o">+</span> <span class="mi">1</span>
 <span class="o">}</span>
 
 <span class="k">val</span> <span class="n">fut2</span> <span class="k">=</span> <span class="nc">Future</span> <span class="o">{</span>
-    <span class="n">println</span><span class="o">(</span><span class="s">"enter task2"</span><span class="o">)</span>
-    <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
-    <span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span>
+  <span class="n">println</span><span class="o">(</span><span class="s">"enter task2"</span><span class="o">)</span>
+  <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
+  <span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span>
 <span class="o">}</span>
 
 <span class="n">fut1</span><span class="o">.</span><span class="n">flatMap</span> <span class="o">{</span> <span class="n">v1</span> <span class="k">=&gt;</span>
-    <span class="n">fut2</span><span class="o">.</span><span class="n">map</span> <span class="o">{</span> <span class="n">v2</span> <span class="k">=&gt;</span>
-      <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">"the result is ${v1 + v2}"</span><span class="o">)</span>
-    <span class="o">}</span>
+  <span class="n">fut2</span><span class="o">.</span><span class="n">map</span> <span class="o">{</span> <span class="n">v2</span> <span class="k">=&gt;</span>
+    <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">"the result is ${v1 + v2}"</span><span class="o">)</span>
+  <span class="o">}</span>
 <span class="o">}</span>
 <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">2500</span><span class="o">)</span>
 </code></pre>
@@ -361,12 +361,35 @@ var _hmt = _hmt || [];
 <p>我们只是把上面关于flatMap的代码替换一下，看下面：</p>
 
 <div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="k">for</span> <span class="o">{</span>
-    <span class="n">v1</span> <span class="k">&lt;-</span> <span class="n">fut1</span>
-    <span class="n">v2</span> <span class="k">&lt;-</span> <span class="n">fut2</span>
+  <span class="n">v1</span> <span class="k">&lt;-</span> <span class="n">fut1</span>
+  <span class="n">v2</span> <span class="k">&lt;-</span> <span class="n">fut2</span>
 <span class="o">}</span> <span class="k">yield</span> <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">"the result is ${v1 + v2}"</span><span class="o">)</span>
 </code></pre>
 </div>
 <p>看上去是不是比之前的方式简洁多了，这也是我们在面对Future组合时推荐的方式，当然不得不说for yield表达式是一种语法糖，它最终还是会被翻译成我们常见的方法，比如flatMap，map，filter等，感兴趣的可以参考它的官方文档。<a href="http://docs.scala-lang.org/tutorials/FAQ/yield.html">for yield表达式</a></p>
+
+<h5 id="scala-async">3.scala-async</h5>
+
+<p>另外我们可以用scala-async来组装Futrue语句块，示例如下：</p>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="k">import</span> <span class="nn">scala.async.Async.</span><span class="o">{</span><span class="n">async</span><span class="o">,</span> <span class="n">await</span><span class="o">}</span>
+
+<span class="k">val</span> <span class="n">v1</span> <span class="k">=</span> <span class="n">async</span> <span class="o">{</span>
+  <span class="n">await</span><span class="o">(</span><span class="n">fut1</span><span class="o">)</span> <span class="o">+</span> <span class="n">await</span><span class="o">(</span><span class="n">fut2</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="n">v1</span> <span class="n">foreach</span> <span class="o">{</span>
+  <span class="k">case</span> <span class="n">r</span> <span class="k">=&gt;</span> <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">"the result is ${v1}"</span><span class="o">)</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+<p>这种方式与for yield表达式有啥区别呢？其实主要有两点：</p>
+<ul>
+  <li>表达语意更加清晰，不需要用为中间值命名</li>
+  <li>不需要<code class="highlighter-rouge">&lt;-</code>等表达式，可减少一定的代码量</li>
+</ul>
+
+<p>scala-async相关的具体信息可以参考它的项目主页。<a href="https://github.com/scala/async">scala-async</a></p>
 
 <p>总的来说Scala中的Future确实强大，在实现真正异步的情况下，为我们提供许多方便而又简洁的操作模式，其实比如还有Future.reduce()，Future.traverse(),Future.sequence()等方法，这些方法的具体功能和具体使用这里就不讲了，但相关的示例代码都会在我的示例工程里，有兴趣的同学可以去跑跑加深理解。<a href="https://github.com/godpan/akka-demo/tree/master/Example_04">源码链接</a></p>
 
