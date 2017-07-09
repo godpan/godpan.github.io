@@ -2,6 +2,14 @@
 
   
     {
+      "title"			: "Akka系列（六）：Actor解决了什么问题？",
+      "link"			: "/blog/akka-6/",
+      "excerpt"		: "这段时间由于忙毕业前前后后的事情，拖更了很久，表示非常抱歉，回归后的第一篇文章主要是看到了Akka最新文档中写的What problems does the actor model solve?,阅读完后觉得还是蛮不错，能简洁清晰的阐述目前并发领域遇到的问题，并为何利用Actor模型可以解决这些问题，本文主要是利用自己的理解将这篇文章进行翻译，有不足之处还请指出。"
+    }
+  
+
+  
+    ,{
       "title"			: "Akka系列（五）：Java和Scala中的Future",
       "link"			: "/blog/akka-5/",
       "excerpt"		: "随着CPU的核数的增加，异步编程模型在并发领域中的得到了越来越多的应用，由于Scala是一门函数式语言，天然的支持异步编程模型，今天主要来看一下Java和Scala中的Futrue，带你走入异步编程的大门。"
