@@ -374,94 +374,94 @@ var _hmt = _hmt || [];
 
 <p>上面说到我司用的是akka-persistence-sql-async插件，所以我们是将事件和快照持久化到数据库的，一开始我也是像上面demo一样，每次事件都会持久化到数据库，但是后来在性能测试的时候，因为本身业务场景对数据库的压力也比较大，在当数据库到达每秒1000+的读写量后，另外说明一下使用的是某云数据库，性能中配以上，发现每次持久化的时间将近要15ms，这样换算一下的话Actor每秒只能处理60~70个需要持久化的事件，而实际业务场景要求Actor必须在3秒内返回处理结果，这种情况下导致大量消息处理超时得不到反馈，另外还有大量的消息得不到处理，导致系统错误暴增，用户体验下降，既然我们发现了问题，那么我们能不能进行优化呢?事实上当然是可以，既然单个插入慢，那么我们能不能批量插入呢，Akka persistence为我们提供了persistAll方法，下面我就对上面的demo进行一下改造，让其变成批量持久化：</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>class LotteryActorN(initState: Lottery) extends PersistentActor with ActorLogging{
-  override def persistenceId: String = "lottery-actor-2"
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="k">class</span> <span class="nc">LotteryActorN</span><span class="o">(</span><span class="n">initState</span><span class="k">:</span> <span class="kt">Lottery</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">PersistentActor</span> <span class="k">with</span> <span class="nc">ActorLogging</span><span class="o">{</span>
+  <span class="k">override</span> <span class="k">def</span> <span class="n">persistenceId</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="s">"lottery-actor-2"</span>
 
-  var state = initState  //初始化Actor的状态
+  <span class="k">var</span> <span class="n">state</span> <span class="k">=</span> <span class="n">initState</span>  <span class="c1">//初始化Actor的状态
+</span>
+  <span class="k">override</span> <span class="k">def</span> <span class="n">receiveRecover</span><span class="k">:</span> <span class="kt">Receive</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">case</span> <span class="n">event</span><span class="k">:</span> <span class="kt">LuckyEvent</span> <span class="o">=&gt;</span>
+      <span class="n">updateState</span><span class="o">(</span><span class="n">event</span><span class="o">)</span>  <span class="c1">//恢复Actor时根据持久化的事件恢复Actor状态
+</span>    <span class="k">case</span> <span class="nc">SnapshotOffer</span><span class="o">(</span><span class="k">_</span><span class="o">,</span> <span class="n">snapshot</span><span class="k">:</span> <span class="kt">Lottery</span><span class="o">)</span> <span class="k">=&gt;</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="n">s</span><span class="s">"Recover actor state from snapshot and the snapshot is ${snapshot}"</span><span class="o">)</span>
+      <span class="n">state</span> <span class="k">=</span> <span class="n">snapshot</span> <span class="c1">//利用快照恢复Actor的状态
+</span>    <span class="k">case</span> <span class="nc">RecoveryCompleted</span> <span class="k">=&gt;</span> <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="s">"the actor recover completed"</span><span class="o">)</span>
+  <span class="o">}</span>
 
-  override def receiveRecover: Receive = {
-    case event: LuckyEvent =&gt;
-      updateState(event)  //恢复Actor时根据持久化的事件恢复Actor状态
-    case SnapshotOffer(_, snapshot: Lottery) =&gt;
-      log.info(s"Recover actor state from snapshot and the snapshot is ${snapshot}")
-      state = snapshot //利用快照恢复Actor的状态
-    case RecoveryCompleted =&gt; log.info("the actor recover completed")
-  }
+  <span class="k">def</span> <span class="n">updateState</span><span class="o">(</span><span class="n">le</span><span class="k">:</span> <span class="kt">LuckyEvent</span><span class="o">)</span> <span class="k">=</span>
+    <span class="n">state</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">update</span><span class="o">(</span><span class="n">le</span><span class="o">.</span><span class="n">luckyMoney</span><span class="o">)</span>  <span class="c1">//更新自身状态
+</span>
+  <span class="k">var</span> <span class="n">lotteryQueue</span> <span class="k">:</span> <span class="kt">ArrayBuffer</span><span class="o">[(</span><span class="kt">LotteryCmd</span>, <span class="kt">ActorRef</span><span class="o">)]</span> <span class="k">=</span> <span class="nc">ArrayBuffer</span><span class="o">()</span>
 
-  def updateState(le: LuckyEvent) =
-    state = state.update(le.luckyMoney)  //更新自身状态
+  <span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">scheduler</span>  <span class="c1">//定时器，定时触发抽奖逻辑
+</span>    <span class="o">.</span><span class="n">schedule</span><span class="o">(</span>
+      <span class="mf">0.</span><span class="n">milliseconds</span><span class="o">,</span>
+      <span class="mf">100.</span><span class="n">milliseconds</span><span class="o">,</span>
+      <span class="k">new</span> <span class="nc">Runnable</span> <span class="o">{</span>
+        <span class="k">def</span> <span class="n">run</span> <span class="k">=</span> <span class="o">{</span>
+          <span class="n">self</span> <span class="o">!</span> <span class="s">"doLottery"</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+    <span class="o">)</span>
 
-  var lotteryQueue : ArrayBuffer[(LotteryCmd, ActorRef)] = ArrayBuffer()
+  <span class="k">override</span> <span class="k">def</span> <span class="n">receiveCommand</span><span class="k">:</span> <span class="kt">Receive</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">case</span> <span class="n">lc</span><span class="k">:</span> <span class="kt">LotteryCmd</span> <span class="o">=&gt;</span>
+      <span class="n">lotteryQueue</span> <span class="k">=</span> <span class="n">lotteryQueue</span> <span class="o">:+</span> <span class="o">(</span><span class="n">lc</span><span class="o">,</span> <span class="n">sender</span><span class="o">())</span>  <span class="c1">//参与信息加入抽奖队列
+</span>      <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">"the lotteryQueue size is ${lotteryQueue.size}"</span><span class="o">)</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">lotteryQueue</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="o">)</span>  <span class="c1">//当参与人数有5个时触发抽奖
+</span>        <span class="n">joinN</span><span class="o">(</span><span class="n">lotteryQueue</span><span class="o">)</span>
+    <span class="k">case</span> <span class="s">"doLottery"</span> <span class="k">=&gt;</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">lotteryQueue</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span>
+        <span class="n">joinN</span><span class="o">(</span><span class="n">lotteryQueue</span><span class="o">)</span>
+    <span class="k">case</span> <span class="s">"saveSnapshot"</span> <span class="k">=&gt;</span>  <span class="c1">// 接收存储快照命令执行存储快照操作
+</span>      <span class="n">saveSnapshot</span><span class="o">(</span><span class="n">state</span><span class="o">)</span>
+    <span class="k">case</span> <span class="nc">SaveSnapshotSuccess</span><span class="o">(</span><span class="n">metadata</span><span class="o">)</span> <span class="k">=&gt;</span>  <span class="o">???</span>  <span class="c1">//你可以在快照存储成功后做一些操作，比如删除之前的快照等
+</span>  <span class="o">}</span>
 
-  context.system.scheduler  //定时器，定时触发抽奖逻辑
-    .schedule(
-      0.milliseconds,
-      100.milliseconds,
-      new Runnable {
-        def run = {
-          self ! "doLottery"
-        }
-      }
-    )
-
-  override def receiveCommand: Receive = {
-    case lc: LotteryCmd =&gt;
-      lotteryQueue = lotteryQueue :+ (lc, sender())  //参与信息加入抽奖队列
-      println(s"the lotteryQueue size is ${lotteryQueue.size}")
-      if (lotteryQueue.size &gt; 5)  //当参与人数有5个时触发抽奖
-        joinN(lotteryQueue)
-    case "doLottery" =&gt;
-      if (lotteryQueue.size &gt; 0)
-        joinN(lotteryQueue)
-    case "saveSnapshot" =&gt;  // 接收存储快照命令执行存储快照操作
-      saveSnapshot(state)
-    case SaveSnapshotSuccess(metadata) =&gt;  ???  //你可以在快照存储成功后做一些操作，比如删除之前的快照等
-  }
-
-  private def joinN(lotteryQueue: ArrayBuffer[(LotteryCmd, ActorRef)]) = {  //批量处理抽奖结果
-    val rs = doLotteryN(lotteryQueue)
-    val success = rs.collect {  //得到其中中奖的相应信息
-      case (event: LuckyEvent, ref: ActorRef) =&gt;
-        event -&gt; ref
-    }.toMap
-    println(success)
-    val failure = rs.collect {  //得到其中未中奖的相应信息
-      case (event: FailureEvent, ref: ActorRef) =&gt; event -&gt; ref
-    }
-    persistAll(success.keys.toIndexedSeq) {  //批量持久化中奖用户事件
-      case event =&gt;  println(event)
-        updateState(event)
-        increaseEvtCountAndSnapshot()
-        success(event) ! event
-    }
-    failure.foreach {
-      case (event, ref) =&gt; ref ! event
-    }
-    this.lotteryQueue.clear()  //情况参与队列
-  }
+  <span class="k">private</span> <span class="k">def</span> <span class="n">joinN</span><span class="o">(</span><span class="n">lotteryQueue</span><span class="k">:</span> <span class="kt">ArrayBuffer</span><span class="o">[(</span><span class="kt">LotteryCmd</span>, <span class="kt">ActorRef</span><span class="o">)])</span> <span class="k">=</span> <span class="o">{</span>  <span class="c1">//批量处理抽奖结果
+</span>    <span class="k">val</span> <span class="n">rs</span> <span class="k">=</span> <span class="n">doLotteryN</span><span class="o">(</span><span class="n">lotteryQueue</span><span class="o">)</span>
+    <span class="k">val</span> <span class="n">success</span> <span class="k">=</span> <span class="n">rs</span><span class="o">.</span><span class="n">collect</span> <span class="o">{</span>  <span class="c1">//得到其中中奖的相应信息
+</span>      <span class="k">case</span> <span class="o">(</span><span class="n">event</span><span class="k">:</span> <span class="kt">LuckyEvent</span><span class="o">,</span> <span class="n">ref</span><span class="k">:</span> <span class="kt">ActorRef</span><span class="o">)</span> <span class="k">=&gt;</span>
+        <span class="n">event</span> <span class="o">-&gt;</span> <span class="n">ref</span>
+    <span class="o">}.</span><span class="n">toMap</span>
+    <span class="n">println</span><span class="o">(</span><span class="n">success</span><span class="o">)</span>
+    <span class="k">val</span> <span class="n">failure</span> <span class="k">=</span> <span class="n">rs</span><span class="o">.</span><span class="n">collect</span> <span class="o">{</span>  <span class="c1">//得到其中未中奖的相应信息
+</span>      <span class="k">case</span> <span class="o">(</span><span class="n">event</span><span class="k">:</span> <span class="kt">FailureEvent</span><span class="o">,</span> <span class="n">ref</span><span class="k">:</span> <span class="kt">ActorRef</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">event</span> <span class="o">-&gt;</span> <span class="n">ref</span>
+    <span class="o">}</span>
+    <span class="n">persistAll</span><span class="o">(</span><span class="n">success</span><span class="o">.</span><span class="n">keys</span><span class="o">.</span><span class="n">toIndexedSeq</span><span class="o">)</span> <span class="o">{</span>  <span class="c1">//批量持久化中奖用户事件
+</span>      <span class="k">case</span> <span class="n">event</span> <span class="k">=&gt;</span>  <span class="n">println</span><span class="o">(</span><span class="n">event</span><span class="o">)</span>
+        <span class="n">updateState</span><span class="o">(</span><span class="n">event</span><span class="o">)</span>
+        <span class="n">increaseEvtCountAndSnapshot</span><span class="o">()</span>
+        <span class="n">success</span><span class="o">(</span><span class="n">event</span><span class="o">)</span> <span class="o">!</span> <span class="n">event</span>
+    <span class="o">}</span>
+    <span class="n">failure</span><span class="o">.</span><span class="n">foreach</span> <span class="o">{</span>
+      <span class="k">case</span> <span class="o">(</span><span class="n">event</span><span class="o">,</span> <span class="n">ref</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">ref</span> <span class="o">!</span> <span class="n">event</span>
+    <span class="o">}</span>
+    <span class="k">this</span><span class="o">.</span><span class="n">lotteryQueue</span><span class="o">.</span><span class="n">clear</span><span class="o">()</span>  <span class="c1">//情况参与队列
+</span>  <span class="o">}</span>
 
 
-  private def increaseEvtCountAndSnapshot() = {
-    val snapShotInterval = 5
-    if (lastSequenceNr % snapShotInterval == 0 &amp;&amp; lastSequenceNr != 0) {  //当有持久化5个事件后我们便存储一次当前Actor状态的快照
-      self ! "saveSnapshot"
-    }
-  }
+  <span class="k">private</span> <span class="k">def</span> <span class="n">increaseEvtCountAndSnapshot</span><span class="o">()</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="k">val</span> <span class="n">snapShotInterval</span> <span class="k">=</span> <span class="mi">5</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">lastSequenceNr</span> <span class="o">%</span> <span class="n">snapShotInterval</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">lastSequenceNr</span> <span class="o">!=</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>  <span class="c1">//当有持久化5个事件后我们便存储一次当前Actor状态的快照
+</span>      <span class="n">self</span> <span class="o">!</span> <span class="s">"saveSnapshot"</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
 
-  private def doLotteryN(lotteryQueue: ArrayBuffer[(LotteryCmd, ActorRef)]) = {  //抽奖逻辑具体实现
-    var remainAmount = state.remainAmount
-    lotteryQueue.map(lq =&gt;
-      if (remainAmount &gt; 0) {
-        val luckyMoney = scala.util.Random.nextInt(remainAmount) + 1
-        remainAmount = remainAmount - luckyMoney
-        (LuckyEvent(lq._1.userId, luckyMoney),lq._2)
-      }
-      else {
-        (FailureEvent(lq._1.userId, "下次早点来，红包已被抽完咯！"),lq._2)
-      }
-    )
-  }
-}
+  <span class="k">private</span> <span class="k">def</span> <span class="n">doLotteryN</span><span class="o">(</span><span class="n">lotteryQueue</span><span class="k">:</span> <span class="kt">ArrayBuffer</span><span class="o">[(</span><span class="kt">LotteryCmd</span>, <span class="kt">ActorRef</span><span class="o">)])</span> <span class="k">=</span> <span class="o">{</span>  <span class="c1">//抽奖逻辑具体实现
+</span>    <span class="k">var</span> <span class="n">remainAmount</span> <span class="k">=</span> <span class="n">state</span><span class="o">.</span><span class="n">remainAmount</span>
+    <span class="n">lotteryQueue</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">lq</span> <span class="k">=&gt;</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">remainAmount</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">val</span> <span class="n">luckyMoney</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="nc">Random</span><span class="o">.</span><span class="n">nextInt</span><span class="o">(</span><span class="n">remainAmount</span><span class="o">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">remainAmount</span> <span class="k">=</span> <span class="n">remainAmount</span> <span class="o">-</span> <span class="n">luckyMoney</span>
+        <span class="o">(</span><span class="nc">LuckyEvent</span><span class="o">(</span><span class="n">lq</span><span class="o">.</span><span class="n">_1</span><span class="o">.</span><span class="n">userId</span><span class="o">,</span> <span class="n">luckyMoney</span><span class="o">),</span><span class="n">lq</span><span class="o">.</span><span class="n">_2</span><span class="o">)</span>
+      <span class="o">}</span>
+      <span class="k">else</span> <span class="o">{</span>
+        <span class="o">(</span><span class="nc">FailureEvent</span><span class="o">(</span><span class="n">lq</span><span class="o">.</span><span class="n">_1</span><span class="o">.</span><span class="n">userId</span><span class="o">,</span> <span class="s">"下次早点来，红包已被抽完咯！"</span><span class="o">),</span><span class="n">lq</span><span class="o">.</span><span class="n">_2</span><span class="o">)</span>
+      <span class="o">}</span>
+    <span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
 </code></pre>
 </div>
 <p>这是改造后的参与Actor，实现了批量持久的功能，当然这里为了给发送者返回消息，处理逻辑稍微复杂了一点，不过真实场景可能会更复杂，相关源码也在刚才的项目上。</p>
