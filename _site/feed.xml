@@ -1,4 +1,334 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-07-05T09:07:31+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（六）：Actor解决了什么问题？</title><link href="/blog/akka-6/" rel="alternate" type="text/html" title="Akka系列（六）：Actor解决了什么问题？" /><published>2017-07-01T00:00:00+08:00</published><updated>2017-07-01T00:00:00+08:00</updated><id>/blog/akka-6</id><content type="html" xml:base="/blog/akka-6/">&lt;p&gt;这段时间由于忙毕业前前后后的事情，拖更了很久，表示非常抱歉，回归后的第一篇文章主要是看到了Akka最新文档中写的&lt;code class=&quot;highlighter-rouge&quot;&gt;What problems does the actor model solve?&lt;/code&gt;,阅读完后觉得还是蛮不错，能简洁清晰的阐述目前并发领域遇到的问题，并为何利用Actor模型可以解决这些问题，本文主要是利用自己的理解将这篇文章进行翻译，有不足之处还请指出。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-07-23T13:53:53+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（七）：Actor持久化之Akka persistence</title><link href="/blog/akka-7/" rel="alternate" type="text/html" title="Akka系列（七）：Actor持久化之Akka persistence" /><published>2017-07-22T00:00:00+08:00</published><updated>2017-07-22T00:00:00+08:00</updated><id>/blog/akka-7</id><content type="html" xml:base="/blog/akka-7/">&lt;p&gt;这次把这部分内容提到现在写，是因为这段时间开发的项目刚好在这一块遇到了一些难点，所以准备把经验分享给大家，我们在使用Akka时，会经常遇到一些存储Actor内部状态的场景，在系统正常运行的情况下，我们不需要担心什么，但是当系统出错，比如Actor错误需要重启，或者内存溢出，亦或者整个系统崩溃，如果我们不采取一定的方案的话，在系统重启时Actor的状态就会丢失，这会导致我们丢失一些关键的数据，造成系统数据不一致的问题。Akka作为一款成熟的生产环境应用，为我们提供了相应的解决方案就是Akka persistence。&lt;/p&gt;
+
+&lt;h3 id=&quot;actor&quot;&gt;为什么需要持久化的Actor？&lt;/h3&gt;
+
+&lt;p&gt;万变不离其宗，数据的一致性是永恒的主题，一个性能再好的系统，不能保证数据的正确，也称不上是一个好的系统，一个系统在运行的时候难免会出错，如何保证系统在出错后能正确的恢复数据，不让数据出现混乱是一个难题。使用Actor模型的时候，我们会有这么一个想法，就是能不对数据库操作就尽量不对数据库操作（这里我们假定我们的数据库是安全，可靠的，能保证数据的正确性和一致性，比如使用国内某云的云数据库），一方面如果大量的数据操作会使数据库面临的巨大的压力，导致崩溃，另一方面即使数据库能处理的过来，比如一些count，update的大表操作也会消耗很多的时间，远没有内存中直接操作来的快，大大影响性能。但是又有人说几人内存操作这么快，为什么不把数据都放内存中呢？答案显而易见，当出现机器死机，或者内存溢出等问题时，数据很有可能就丢失了导致无法恢复。在这种背景下，我们是不是有一种比较好的解决方案，既能满足需求又能用最小的性能消耗，答案就是上面我们的说的Akka persistence。&lt;/p&gt;
+
+&lt;h3 id=&quot;akka-persistence&quot;&gt;Akka persistence的核心架构&lt;/h3&gt;
+
+&lt;p&gt;在具体深入Akka persistence之前，我们可以先了解一下它的核心设计理念，其实简单来说，我们可以利用一些thing来恢复Actor的状态，这里的thing可以是日志、数据库中的数据，亦或者是文件，所以说它的本质非常容易理解，在Actor处理的时候我们会保存一些数据，Actor在恢复的时候能根据这些数据恢复其自身的状态。&lt;/p&gt;
+
+&lt;p&gt;所以Akka persistence 有以下几个关键部分组成：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;PersistentActor：任何一个需要持久化的Actor都必须继承它，并必须定义或者实现其中的三个关键属性：&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;persistenceId&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;example&quot;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//作为持久化Actor的唯一表示，用于持久化或者查询时使用
+&lt;/span&gt;
+ &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;receiveCommand&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Receive&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;???&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//Actor正常运行时处理处理消息逻辑，可在这部分内容里持久化自己想要的消息
+&lt;/span&gt;
+ &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;receiveRecover&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Receive&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;???&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//Actor重启恢复是执行的逻辑
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;相比普通的Actor，除receiveCommand相似以外，还必须实现另外两个属性。
+另外在持久化Actor中还有另外两个关键的的概念就是&lt;em&gt;Journal&lt;/em&gt;和&lt;em&gt;Snapshot&lt;/em&gt;，前者用于持久化事件，后者用于保存Actor的快照，两者在Actor恢复状态的时候都起到了至关重要的作用。&lt;/p&gt;
+
+&lt;h3 id=&quot;akka-persistencedemo&quot;&gt;Akka persistence的demo实战&lt;/h3&gt;
+
+&lt;p&gt;这里我首先会用一个demo让大家能对Akka persistence的使用有一定了解的，并能大致明白它的工作原理，后面再继续讲解一些实战可能会遇到的问题。&lt;/p&gt;
+
+&lt;p&gt;假定现在有这么一个场景，现在假设有一个1w元的大红包，瞬间可能会很多人同时来抢，每个人抢的金额也可能不一样，场景很简单，实现方式也有很多种，但前提是保证数据的正确性，比如最普通的使用数据库保证，但对这方面有所了解的同学都知道这并不是一个很好的方案，因为需要锁，并需要大量的数据库操作，导致性能不高，那么我们是否可以用Actor来实现这个需求么？答案是当然可以。&lt;/p&gt;
+
+&lt;p&gt;我们首先来定义一个抽奖命令，&lt;/p&gt;
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;LotteryCmd&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;userId&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Long&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 参与用户Id
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;username&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//参与用户名
+&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;email&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 参与用户邮箱
+&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;然后我们实现一个抽奖Actor，并继承PersistentActor作出相应的实现：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;LuckyEvent&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//抽奖成功事件
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;userId&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Long&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;luckyMoney&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;FailureEvent&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//抽奖失败事件
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;userId&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Long&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;reason&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Lottery&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;totalAmount&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//红包总金额
+&lt;/span&gt;    &lt;span class=&quot;n&quot;&gt;remainAmount&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Int&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//剩余红包金额
+&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;update&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;luckyMoney&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;copy&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;remainAmount&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;remainAmount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;luckyMoney&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;LotteryActor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;initState&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Lottery&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;PersistentActor&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;with&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ActorLogging&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;override&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;persistenceId&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;lottery-actor-1&quot;&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;initState&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//初始化Actor的状态
+&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;override&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;receiveRecover&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Receive&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;LuckyEvent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;updateState&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//恢复Actor时根据持久化的事件恢复Actor状态
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;SnapshotOffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;snapshot&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Lottery&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;log&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Recover actor state from snapshot and the snapshot is ${snapshot}&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;snapshot&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//利用快照恢复Actor的状态
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;RecoveryCompleted&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;log&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;the actor recover completed&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;updateState&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;le&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;LuckyEvent&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;update&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;le&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;luckyMoney&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//更新自身状态
+&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;override&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;receiveCommand&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Receive&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lc&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;LotteryCmd&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;doLottery&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;match&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;     &lt;span class=&quot;c1&quot;&gt;//进行抽奖，并得到抽奖结果，根据结果做出不同的处理
+&lt;/span&gt;        &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;le&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;LuckyEvent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//抽到随机红包
+&lt;/span&gt;          &lt;span class=&quot;n&quot;&gt;persist&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;le&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;updateState&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;increaseEvtCountAndSnapshot&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;sender&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;event&lt;/span&gt;
+          &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fe&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;FailureEvent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//红包已经抽完
+&lt;/span&gt;          &lt;span class=&quot;n&quot;&gt;sender&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fe&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;saveSnapshot&quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;// 接收存储快照命令执行存储快照操作
+&lt;/span&gt;      &lt;span class=&quot;n&quot;&gt;saveSnapshot&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;state&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;SaveSnapshotSuccess&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;metadata&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;???&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//你可以在快照存储成功后做一些操作，比如删除之前的快照等
+&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;increaseEvtCountAndSnapshot&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;snapShotInterval&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lastSequenceNr&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;snapShotInterval&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lastSequenceNr&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//当有持久化5个事件后我们便存储一次当前Actor状态的快照
+&lt;/span&gt;      &lt;span class=&quot;n&quot;&gt;self&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;saveSnapshot&quot;&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;doLottery&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lc&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;LotteryCmd&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//抽奖逻辑具体实现
+&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;state&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;remainAmount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;luckyMoney&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;scala&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;util&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nextInt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;state&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;remainAmount&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+      &lt;span class=&quot;nc&quot;&gt;LuckyEvent&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;userId&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;luckyMoney&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nc&quot;&gt;FailureEvent&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;userId&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;下次早点来，红包已被抽完咯！&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;程序很简单，关键位置我也给了注释，相信大家对Actor有所了解的话很容易理解，当然要是有些疑惑，可以看看我之前写的文章，下面我们就对刚才写的抽红包Actor进行测试：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;PersistenceTest&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;App&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lottery&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Lottery&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10000&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10000&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;system&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ActorSystem&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;example-05&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lotteryActor&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;actorOf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;LotteryActor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lottery&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)),&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;LotteryActor-1&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//创建抽奖Actor
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;ExecutorService&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Executors&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;newFixedThreadPool&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;r&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;to&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;LotteryRun&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lotteryActor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;LotteryCmd&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;toLong&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;godpan&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;xx@gmail.com&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;))&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//创建100个抽奖请求
+&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;execute&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;))&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//使用线程池来发起抽奖请求，模拟同时多人参加
+&lt;/span&gt;  &lt;span class=&quot;nc&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5000&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;pool&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;shutdown&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;terminate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;LotteryRun&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lotteryActor&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;ActorRef&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lotteryCmd&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;LotteryCmd&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Runnable&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//抽奖请求
+&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;implicit&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;timeout&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Timeout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;3.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;seconds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Unit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;fut&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lotteryActor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lotteryCmd&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fut&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;match&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//根据不同事件显示不同的抽奖结果
+&lt;/span&gt;      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;le&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;LuckyEvent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;恭喜用户${le.userId}抽到了${le.luckyMoney}元红包&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fe&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;FailureEvent&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reason&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;系统错误，请重新抽取&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;运行程序,我们可能看到以下的结果：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2017/07/result-persistence-demo.png&quot; alt=&quot;result persistence demo&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;下面我会把persistence actor在整个运行过程的步骤给出，帮助大家理解它的原理：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;1.初始化Persistence Actor
+    &lt;ul&gt;
+      &lt;li&gt;1.1若是第一次初始化，则与正常的Actor的初始化一致。&lt;/li&gt;
+      &lt;li&gt;1.2若是重启恢复Actor，这根据Actor之前持久的数据恢复。
+        &lt;ul&gt;
+          &lt;li&gt;1.2.1从快照恢复，可快速恢复Actor，但并非每次持久化事件都会保存快照，在快照完整的情况下，Actor优先从快照恢复自身状态。&lt;/li&gt;
+          &lt;li&gt;1.2.2从事件（日志，数据库记录等）恢复，通过重放持久化事件恢复Actor状态，比较关键。&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;2.接收命令进行处理，转化为需要持久化的事件（持久化的事件尽量只包含关键性的数据）使用Persistence Actor的持久化方法进行持久化（上述例子中的persist，后面我会讲一下批量持久化），并处理持久化成功后的逻辑处理，比如修改Actor状态，向外部Actor发送消息等。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;3.若是我们需要存储快照，那么可以主动指定存储快照的频率，比如持久化事件100次我们就存储一次快照，这个频率应该要考虑实际的业务场景，在存储快照成功后我们也可以执行一些操作。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;总的来说Persistence Actor运行时的大致操作就是以上这些，当然它是持久化事件等有兴趣的可以看一下Akka源码。&lt;/p&gt;
+
+&lt;h3 id=&quot;akka-persistence-1&quot;&gt;使用Akka persistence的相关配置&lt;/h3&gt;
+
+&lt;p&gt;首先我们必须加载相应的依赖包，在&lt;code class=&quot;highlighter-rouge&quot;&gt;bulid.sbt&lt;/code&gt;中加入以下依赖：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;libraryDependencies ++= Seq(
+&quot;com.typesafe.akka&quot; %% &quot;akka-actor&quot; % &quot;2.4.16&quot;,  //Akka actor 核心依赖
+  &quot;com.typesafe.akka&quot; %% &quot;akka-persistence&quot; % &quot;2.4.16&quot;, //Akka persistence 依赖
+  &quot;org.iq80.leveldb&quot;            % &quot;leveldb&quot;          % &quot;0.7&quot;, //leveldb java版本依赖
+  &quot;org.fusesource.leveldbjni&quot;   % &quot;leveldbjni-all&quot;   % &quot;1.8&quot;, //leveldb java版本依赖
+  &quot;com.twitter&quot;              %% &quot;chill-akka&quot;                  % &quot;0.8.0&quot; //事件序列化依赖
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;另外我们还需在&lt;code class=&quot;highlighter-rouge&quot;&gt;application.conf&lt;/code&gt;加入以下配置:&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;akka&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;persistence&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;journal&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;plugin&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;akka.persistence.journal.leveldb&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;akka&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;persistence&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;snapshot&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;store&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;plugin&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;akka.persistence.snapshot-store.local&quot;&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;akka&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;persistence&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;journal&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;leveldb&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dir&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;log/journal&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;akka&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;persistence&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;snapshot&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;store&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;local&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dir&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;log/snapshots&quot;&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;DO&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;USE&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;THIS&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;IN&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;PRODUCTION&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!!!&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;#&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;See&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;also&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;https&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;://&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;github&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;com&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;typesafehub&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;activator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;issues&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;287&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;akka&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;persistence&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;journal&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;leveldb&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;native&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//因为我们本地并没有安装leveldb，所以这个属性置为false，但是生产环境并不推荐使用
+&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;akka&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;actor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;serializers&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;kryo&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;com.twitter.chill.akka.AkkaSerializer&quot;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;akka&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;actor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;serialization&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bindings&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;s&quot;&gt;&quot;scala.Product&quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;kryo&lt;/span&gt;
+  &lt;span class=&quot;s&quot;&gt;&quot;akka.persistence.PersistentRepr&quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;kryo&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;至此为止我们整个Akka persistence demo已经搭建好了，可以正常运行了，有兴趣的同学可以下载源码。&lt;a href=&quot;https://github.com/godpan/akka-demo/tree/master/Example_05&quot;&gt;源码链接&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;akka-persistence-2&quot;&gt;Akka persistence进阶&lt;/h3&gt;
+
+&lt;h4 id=&quot;section&quot;&gt;1.持久化插件&lt;/h4&gt;
+
+&lt;p&gt;有同学可能会问，我对leveldb不是很熟悉亦或者觉得单机存储并不是安全，有没有支持分布式数据存储的插件呢，比如某爸的云数据库？答案当然是有咯，良心的我当然是帮你们都找好咯。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;1.akka-persistence-sql-async: 支持MySQL和PostgreSQL，另外使用了全异步的数据库驱动，提供异步非阻塞的API，我司用的就是它的变种版，6的飞起。&lt;a href=&quot;https://github.com/okumin/akka-persistence-sql-async&quot;&gt;项目地址&lt;/a&gt;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;2.akka-persistence-cassandra: 官方推荐的插件，使用写性能very very very fast的cassandra数据库，是几个插件中比较流行的一个，另外它还支持persistence query。&lt;a href=&quot;https://github.com/krasserm/akka-persistence-cassandra&quot;&gt;项目地址&lt;/a&gt;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;3.akka-persistence-redis: redis应该也很符合Akka persistence的场景，熟悉redis的同学可以使用看看。&lt;a href=&quot;https://github.com/hootsuite/akka-persistence-redis&quot;&gt;项目地址&lt;/a&gt;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;4.akka-persistence-jdbc: 怎么能少了jdbc呢？不然怎么对的起java爸爸呢，支持scala和java哦。&lt;a href=&quot;https://github.com/dnvriend/akka-persistence-jdbc&quot;&gt;项目地址&lt;/a&gt;&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;相应的插件的具体使用可以看该项目的具体介绍使用，我看了下相对来说都是比较容易的。&lt;/p&gt;
+
+&lt;h4 id=&quot;section-1&quot;&gt;2.批量持久化&lt;/h4&gt;
+
+&lt;p&gt;上面说到我司用的是akka-persistence-sql-async插件，所以我们是将事件和快照持久化到数据库的，一开始我也是像上面demo一样，每次事件都会持久化到数据库，但是后来在性能测试的时候，因为本身业务场景对数据库的压力也比较大，在当数据库到达每秒1000+的读写量后，另外说明一下使用的是某云数据库，性能中配以上，发现每次持久化的时间将近要15ms，这样换算一下的话Actor每秒只能处理60~70个需要持久化的事件，而实际业务场景要求Actor必须在3秒内返回处理结果，这种情况下导致大量消息处理超时得不到反馈，另外还有大量的消息得不到处理，导致系统错误暴增，用户体验下降，既然我们发现了问题，那么我们能不能进行优化呢?事实上当然是可以，既然单个插入慢，那么我们能不能批量插入呢，Akka persistence为我们提供了persistAll方法，下面我就对上面的demo进行一下改造，让其变成批量持久化：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;class LotteryActorN(initState: Lottery) extends PersistentActor with ActorLogging{
+  override def persistenceId: String = &quot;lottery-actor-2&quot;
+
+  var state = initState  //初始化Actor的状态
+
+  override def receiveRecover: Receive = {
+    case event: LuckyEvent =&amp;gt;
+      updateState(event)  //恢复Actor时根据持久化的事件恢复Actor状态
+    case SnapshotOffer(_, snapshot: Lottery) =&amp;gt;
+      log.info(s&quot;Recover actor state from snapshot and the snapshot is ${snapshot}&quot;)
+      state = snapshot //利用快照恢复Actor的状态
+    case RecoveryCompleted =&amp;gt; log.info(&quot;the actor recover completed&quot;)
+  }
+
+  def updateState(le: LuckyEvent) =
+    state = state.update(le.luckyMoney)  //更新自身状态
+
+  var lotteryQueue : ArrayBuffer[(LotteryCmd, ActorRef)] = ArrayBuffer()
+
+  context.system.scheduler  //定时器，定时触发抽奖逻辑
+    .schedule(
+      0.milliseconds,
+      100.milliseconds,
+      new Runnable {
+        def run = {
+          self ! &quot;doLottery&quot;
+        }
+      }
+    )
+
+  override def receiveCommand: Receive = {
+    case lc: LotteryCmd =&amp;gt;
+      lotteryQueue = lotteryQueue :+ (lc, sender())  //参与信息加入抽奖队列
+      println(s&quot;the lotteryQueue size is ${lotteryQueue.size}&quot;)
+      if (lotteryQueue.size &amp;gt; 5)  //当参与人数有5个时触发抽奖
+        joinN(lotteryQueue)
+    case &quot;doLottery&quot; =&amp;gt;
+      if (lotteryQueue.size &amp;gt; 0)
+        joinN(lotteryQueue)
+    case &quot;saveSnapshot&quot; =&amp;gt;  // 接收存储快照命令执行存储快照操作
+      saveSnapshot(state)
+    case SaveSnapshotSuccess(metadata) =&amp;gt;  ???  //你可以在快照存储成功后做一些操作，比如删除之前的快照等
+  }
+
+  private def joinN(lotteryQueue: ArrayBuffer[(LotteryCmd, ActorRef)]) = {  //批量处理抽奖结果
+    val rs = doLotteryN(lotteryQueue)
+    val success = rs.collect {  //得到其中中奖的相应信息
+      case (event: LuckyEvent, ref: ActorRef) =&amp;gt;
+        event -&amp;gt; ref
+    }.toMap
+    println(success)
+    val failure = rs.collect {  //得到其中未中奖的相应信息
+      case (event: FailureEvent, ref: ActorRef) =&amp;gt; event -&amp;gt; ref
+    }
+    persistAll(success.keys.toIndexedSeq) {  //批量持久化中奖用户事件
+      case event =&amp;gt;  println(event)
+        updateState(event)
+        increaseEvtCountAndSnapshot()
+        success(event) ! event
+    }
+    failure.foreach {
+      case (event, ref) =&amp;gt; ref ! event
+    }
+    this.lotteryQueue.clear()  //情况参与队列
+  }
+
+
+  private def increaseEvtCountAndSnapshot() = {
+    val snapShotInterval = 5
+    if (lastSequenceNr % snapShotInterval == 0 &amp;amp;&amp;amp; lastSequenceNr != 0) {  //当有持久化5个事件后我们便存储一次当前Actor状态的快照
+      self ! &quot;saveSnapshot&quot;
+    }
+  }
+
+  private def doLotteryN(lotteryQueue: ArrayBuffer[(LotteryCmd, ActorRef)]) = {  //抽奖逻辑具体实现
+    var remainAmount = state.remainAmount
+    lotteryQueue.map(lq =&amp;gt;
+      if (remainAmount &amp;gt; 0) {
+        val luckyMoney = scala.util.Random.nextInt(remainAmount) + 1
+        remainAmount = remainAmount - luckyMoney
+        (LuckyEvent(lq._1.userId, luckyMoney),lq._2)
+      }
+      else {
+        (FailureEvent(lq._1.userId, &quot;下次早点来，红包已被抽完咯！&quot;),lq._2)
+      }
+    )
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这是改造后的参与Actor，实现了批量持久的功能，当然这里为了给发送者返回消息，处理逻辑稍微复杂了一点，不过真实场景可能会更复杂，相关源码也在刚才的项目上。&lt;/p&gt;
+
+&lt;h4 id=&quot;persistence-query&quot;&gt;3.Persistence Query&lt;/h4&gt;
+
+&lt;p&gt;另外Akka Persistence还提供了Query接口，用于需要查询持久化事件的需求，这部分内容可能要根据实际业务场景考虑是否需要应用，我就不展开讲了，另外我也写了一个小demo在项目中，想要尝试的同学也可以试试。&lt;/p&gt;</content><summary type="html">这次把这部分内容提到现在写，是因为这段时间开发的项目刚好在这一块遇到了一些难点，所以准备把经验分享给大家，我们在使用Akka时，会经常遇到一些存储Actor内部状态的场景，在系统正常运行的情况下，我们不需要担心什么，但是当系统出错，比如Actor错误需要重启，或者内存溢出，亦或者整个系统崩溃，如果我们不采取一定的方案的话，在系统重启时Actor的状态就会丢失，这会导致我们丢失一些关键的数据，造成系统数据不一致的问题。Akka作为一款成熟的生产环境应用，为我们提供了相应的解决方案就是Akka persistence。</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="{&quot;feature&quot;=&gt;nil}" /></entry><entry><title type="html">Akka系列（六）：Actor解决了什么问题？</title><link href="/blog/akka-6/" rel="alternate" type="text/html" title="Akka系列（六）：Actor解决了什么问题？" /><published>2017-07-08T00:00:00+08:00</published><updated>2017-07-08T00:00:00+08:00</updated><id>/blog/akka-6</id><content type="html" xml:base="/blog/akka-6/">&lt;p&gt;这段时间由于忙毕业前前后后的事情，拖更了很久，表示非常抱歉，回归后的第一篇文章主要是看到了Akka最新文档中写的&lt;a href=&quot;http://doc.akka.io/docs/akka/current/scala/guide/actors-intro.html&quot;&gt;What problems does the actor model solve?&lt;/a&gt;,阅读完后觉得还是蛮不错，能简洁清晰的阐述目前并发领域遇到的问题，并为何利用Actor模型可以解决这些问题，本文主要是利用自己的理解将这篇文章进行翻译，有不足之处还请指出。&lt;/p&gt;
 
 &lt;h2 id=&quot;actor&quot;&gt;Actor解决了什么问题？&lt;/h2&gt;
 
@@ -55,6 +385,10 @@
 
 &lt;p&gt;&lt;img src=&quot;/images/2017/07/object-graph.png&quot; alt=&quot;object graph&quot; /&gt;&lt;/p&gt;
 
+&lt;p&gt;然后，在多线程分布式环境中，实际上线程是通过方法调用遍历这个对象实例网络。因此，线程是方法调用驱动执行的：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2017/07/object-graph-snakes.png&quot; alt=&quot;object graph snakes&quot; /&gt;&lt;/p&gt;
+
 &lt;p&gt;总结：&lt;/p&gt;
 
 &lt;ul&gt;
@@ -92,7 +426,115 @@
 
 &lt;p&gt;今天，我们还经常调用堆栈来进行任务执行，但是它是在并发并不那么重要的时代发明的，因为当时多核的CPU系统并不常见。调用堆栈不能跨线程，所以不能进行异步调用。&lt;/p&gt;
 
-&lt;p&gt;线程在将任务委托后台执行会出现一个问题，实际中，是将任务委托给另一个线程执行，这不是简单的方法调用，而是有本地的线程直接调用执行，&lt;/p&gt;</content><summary type="html">这段时间由于忙毕业前前后后的事情，拖更了很久，表示非常抱歉，回归后的第一篇文章主要是看到了Akka最新文档中写的What problems does the actor model solve?,阅读完后觉得还是蛮不错，能简洁清晰的阐述目前并发领域遇到的问题，并为何利用Actor模型可以解决这些问题，本文主要是利用自己的理解将这篇文章进行翻译，有不足之处还请指出。</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="{&quot;feature&quot;=&gt;nil}" /></entry><entry><title type="html">Akka系列（五）：Java和Scala中的Future</title><link href="/blog/akka-5/" rel="alternate" type="text/html" title="Akka系列（五）：Java和Scala中的Future" /><published>2017-05-14T00:00:00+08:00</published><updated>2017-05-14T00:00:00+08:00</updated><id>/blog/akka-5</id><content type="html" xml:base="/blog/akka-5/">&lt;p&gt;随着CPU的核数的增加，异步编程模型在并发领域中的得到了越来越多的应用，由于Scala是一门函数式语言，天然的支持异步编程模型，今天主要来看一下Java和Scala中的Futrue，带你走入异步编程的大门。&lt;/p&gt;
+&lt;p&gt;线程在将任务委托后台执行会出现一个问题，实际中，是将任务委托给另一个线程执行，这不是简单的方法调用，而是有本地的线程直接调用执行，通常来说，一个调用者线程将任务添加到一个内存位置中，具体的工作线程可以不断的从中选取任务进行执行，这样的话，调用者线程不必阻塞可以去做一些其他的任务了。&lt;/p&gt;
+
+&lt;p&gt;但是这里有几个问题，第一个就是调用者如何受到任务完成的通知？还有一个更重要的问题是当任务发生异常出现错误后，异常会被谁处理？异常将会被具体执行任务的工作线程所处理并不会关心是哪个调用者调用的任务：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2017/07/exception-prop.png&quot; alt=&quot;exception prop&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;这是一个很严重的问题，具体执行任务的线程是怎么处理这种状况的？具体执行任务去处理这个问题并不是一个好的方案，因为它并不清楚该任务执行的真正目的，而且调用者应该被通知发生了什么，但是实际上并没有这样的结构去解决这个问题。假如并不能正确的通知，调用者线程将不会的到任何错误的信息甚至任务都会丢失。这就好比在网络上你的请求失败或者消息丢失却得不到任何的通知。&lt;/p&gt;
+
+&lt;p&gt;在某些情况，这个问题可能会变得更糟糕，工作线程发生了错误但是其自身却无法恢复。比如一个由bug引起的内部错误导致了线程的关闭，那么会导致一个问题，到底应该由谁来重启线程并且保存线程之前的状态呢？表面上看，这个问题是可以解决的，但又会有一个新的意外可能发生，当工作线程正在执行任务的时候，它便不能共享任务队列，而事实上，当一个异常发生后，并逐级上传，最终可能导致整个任务队列的状态全部丢失。所以说即使我们在本地交互也可能存在消息丢失的情况。&lt;/p&gt;
+
+&lt;p&gt;总结：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;实现任何一个高并发且高效性能的系统，线程必须将任务有效率的委托给别的线程执行以至不会阻塞，这种任务委托的并发方式在分布式的环境也适用，但是需要引入错误处理和失败通知等机制。失败成为这种领域模型的一部分。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;并发系统适用任务委托机制需要去处理服务故障也就意味需要在发生故障后去恢复服务，但实际情况下，重启服务可能会丢失消息，即使没有发生这种情况，调用者得到的回应也可能因为队列等待，垃圾回收等影响而延迟，所以，在真正的环境中，我们需要设置请求回复的超时时间，就像在网络系统亦或者分布式系统。&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;actor-1&quot;&gt;为什么在高并发，分布式系统需要Actor模型？&lt;/h2&gt;
+
+&lt;p&gt;综上所述，通常的编程模型并不适用现代的高并发分布式系统，幸运的是，我们可以不必抛弃我们了解的知识，另外，Actor用很好的方式帮我们克服了这些问题，它让我们以一种更好的模型去实现我们的系统。&lt;/p&gt;
+
+&lt;p&gt;我们重点需求的是以下几个方面：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;使用封装，但是不使用锁。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;构建一种实体能够处理消息，更改状态，发送消息用来推动整个程序运行。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;不必担心程序执行与真实环境的不匹配。&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Actor模型能帮我们实现这些目标，以下是具体描述。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-3&quot;&gt;使用消息机制避免使用锁以防止阻塞&lt;/h3&gt;
+
+&lt;p&gt;不同于方法调用，Actor模型使用消息进行交互。发送消息的方式不会将发送消息方的执行线程转换为具体的任务执行线程。Actor可以不断的发送和接收消息但不会阻塞。因此它可以做更多的工作，比如发送消息和接收消息。&lt;/p&gt;
+
+&lt;p&gt;在面对对象编程上，直到一个方法返回后，才会释放对调用者线程的控制。在这这一方面上，Actor模型跟面对对象模型类似，它对消息做出处理，并在消息处理完成后返回执行。我们可以模拟这种执行模式：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2017/07/actor-graph.png&quot; alt=&quot;actor graph&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;但是这种方式与方法调用方式最大的区别就是没有返回值。通过发送消息，Actor将任务委托给另一Actor执行。就想我们之前说的堆栈调用一样，加入你需要一个返回值，那么发送Actor需要阻塞或者与具体执行任务的Actor在同一个线程中。另外，接收Actor以消息的方式返回结果。&lt;/p&gt;
+
+&lt;p&gt;第二个关键的变化是继续保持封装。Actor对消息处理就就跟调用方法一样，但是不同的是，Actor在多线程的情况下能保证自身内部的状态和变量不会被破坏，Actor的执行独立于发送消息的Actor，并且同一个Actor在同一个时刻只处理一个消息。每个Actor有序的处理接收的消息，所以一个Actor系统中多个Actor可以并发的处理自己的消息，充分的利用多核CPU。因为一个Actor同一时刻最多处理一个消息，所以它不需要同步机制保障变量的一致性。所以说它并不需要锁：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2017/07/serialized-timeline-invariants.png&quot; alt=&quot;serialized timeline invariants&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;总而言之，Actor执行的时候会发生以下行为：&lt;/p&gt;
+
+&lt;p&gt;1.Actor将消息加入到消息队列的尾部。
+2.假如一个Actor并未被调度执行，则将其标记为可执行。
+3.一个（对外部不可见）调度器对Actor的执行进行调度。
+4.Actor从消息队列头部选择一个消息进行处理。
+5.Actor在处理过程中修改自身的状态，并发送消息给其他的Actor。
+6.Actor&lt;/p&gt;
+
+&lt;p&gt;为了实现这些行为，Actor必须有以下特性：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;邮箱（作为一个消息队列）&lt;/li&gt;
+  &lt;li&gt;行为（作为Actor的内部状态，处理消息逻辑）&lt;/li&gt;
+  &lt;li&gt;消息（请求Actor的数据，可看成方法调用时的参数数据）&lt;/li&gt;
+  &lt;li&gt;执行环境（比如线程池，调度器，消息分发机制等）&lt;/li&gt;
+  &lt;li&gt;位置信息（用于后续可能会发生的行为）&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;消息会被添加到Actor的信箱中，Actor的行为可以看成Actor是如何对消息做出回应的（比如发送更多消息或者修改自身状态）。执行环境提供一组线程池，用于执行Actor的这些行为操作。&lt;/p&gt;
+
+&lt;p&gt;Actor是一个非常简单的模型而且它可以解决先前提到的问题：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;继续使用封装，但通过信号机制保障不需传递执行（方法调用需要传递执行线程，但发送消息不需要）。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;不需要任何的锁，修改Actor内部的状态只能通过消息，Actor是串行处理消息，可以保障内部状态和变量的正确性。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;因为不会再任何地方使用锁，所以发送者不会被阻塞，成千上万个Actor可以被合理的分配在几十个线程上执行，充分利用了现代CPU的潜力。任务委托这个模式在Actor上非常适用。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Actor的状态是本地的，不可共享的，变化和数据只能通过消息传递。&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;actor-2&quot;&gt;Actor优雅的处理错误&lt;/h3&gt;
+
+&lt;p&gt;Actor不再使用共享的堆栈调用，所以它要以不同的方式去处理错误。这里有两种错误需要考虑：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;第一种情况是当任务委托后再目标Actor上由于任务本身错误而失败了（典型的如验证错误，比如不存在的用户ID）。在这个情况下，Actor服务本身是正确的，只是相应的任务出错了。服务Actor应该想发送Actor发送消息，已告知错误情况。这里没什么特殊的，错误作为Actor模型的一部分，也可以当做消息。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;第二种情况是当服务本身遇到内部故障时。Akka强制所有Actor被组织成一个树状的层次结构，即创建另一个Actor的Actor成为该新Actor的分级。 这与操作系统将流程组合到树中非常相似。就像进程一样，当一个Actor失败时，它的父actor被通知，并对失败做出反应。此外，如果父actor停止，其所有子Actor也被递归停止。这中形式被称为监督，它是Akka的核心：&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2017/07/actor-tree-supervision.png&quot; alt=&quot;actor tree supervision&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;监管者可以根据被监管者（子Actor）的失败的错误类型来执行不同的策略，比如重启该Actor或者停止该Actor让其它Actor代替执行任务。一个Actor不会无缘无故的死亡（除非出现死循环之类的情况），而是失败，并可以将失败传递给它的监管者让其做出相应的故障处理策略，当然也可能会被停止（若被停止，也会接收到相应的消息指令）。一个Actor总有监管者就是它的父级Actor。Actor重新启动是不可见的，协作Actor可以帮其代发消息直到目标Actor重启成功。&lt;/p&gt;</content><summary type="html">这段时间由于忙毕业前前后后的事情，拖更了很久，表示非常抱歉，回归后的第一篇文章主要是看到了Akka最新文档中写的What problems does the actor model solve?,阅读完后觉得还是蛮不错，能简洁清晰的阐述目前并发领域遇到的问题，并为何利用Actor模型可以解决这些问题，本文主要是利用自己的理解将这篇文章进行翻译，有不足之处还请指出。</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="{&quot;feature&quot;=&gt;nil}" /></entry><entry><title type="html">Akka系列（五）：Java和Scala中的Future</title><link href="/blog/akka-5/" rel="alternate" type="text/html" title="Akka系列（五）：Java和Scala中的Future" /><published>2017-05-14T00:00:00+08:00</published><updated>2017-05-14T00:00:00+08:00</updated><id>/blog/akka-5</id><content type="html" xml:base="/blog/akka-5/">&lt;p&gt;随着CPU的核数的增加，异步编程模型在并发领域中的得到了越来越多的应用，由于Scala是一门函数式语言，天然的支持异步编程模型，今天主要来看一下Java和Scala中的Futrue，带你走入异步编程的大门。&lt;/p&gt;
 
 &lt;h2 id=&quot;future&quot;&gt;Future&lt;/h2&gt;
 
