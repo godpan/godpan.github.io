@@ -423,7 +423,6 @@ var _hmt = _hmt || [];
 </span>      <span class="k">case</span> <span class="o">(</span><span class="n">event</span><span class="k">:</span> <span class="kt">LuckyEvent</span><span class="o">,</span> <span class="n">ref</span><span class="k">:</span> <span class="kt">ActorRef</span><span class="o">)</span> <span class="k">=&gt;</span>
         <span class="n">event</span> <span class="o">-&gt;</span> <span class="n">ref</span>
     <span class="o">}.</span><span class="n">toMap</span>
-    <span class="n">println</span><span class="o">(</span><span class="n">success</span><span class="o">)</span>
     <span class="k">val</span> <span class="n">failure</span> <span class="k">=</span> <span class="n">rs</span><span class="o">.</span><span class="n">collect</span> <span class="o">{</span>  <span class="c1">//得到其中未中奖的相应信息
 </span>      <span class="k">case</span> <span class="o">(</span><span class="n">event</span><span class="k">:</span> <span class="kt">FailureEvent</span><span class="o">,</span> <span class="n">ref</span><span class="k">:</span> <span class="kt">ActorRef</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">event</span> <span class="o">-&gt;</span> <span class="n">ref</span>
     <span class="o">}</span>
