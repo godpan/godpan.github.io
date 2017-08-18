@@ -1,4 +1,299 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-08-05T14:44:53+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（八）：Akka persistence设计理念之CQRS</title><link href="/blog/akka-8/" rel="alternate" type="text/html" title="Akka系列（八）：Akka persistence设计理念之CQRS" /><published>2017-07-29T00:00:00+08:00</published><updated>2017-07-29T00:00:00+08:00</updated><id>/blog/akka-8</id><content type="html" xml:base="/blog/akka-8/">&lt;p&gt;这一篇文章主要是讲解Akka persistence的核心设计理念，也是CQRS（Command Query Responsibility Segregation）架构设计的典型应用，就让我们来看看为什么Akka persistence会采用CQRS架构设计。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-08-18T21:44:33+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（九）：Akka分布式之Akka Remote以及Akka Serialization</title><link href="/blog/akka-9/" rel="alternate" type="text/html" title="Akka系列（九）：Akka分布式之Akka Remote以及Akka Serialization" /><published>2017-08-18T00:00:00+08:00</published><updated>2017-08-18T00:00:00+08:00</updated><id>/blog/akka-9</id><content type="html" xml:base="/blog/akka-9/">&lt;p&gt;Akka作为一个天生用于构建分布式应用的工具，当然提供了用于分布式组件即Akka Remote，那么我们就来看看如何用Akka Remote以及Akka Serialization来构建分布式应用。&lt;/p&gt;
+
+&lt;h3 id=&quot;section&quot;&gt;背景&lt;/h3&gt;
+
+&lt;p&gt;很多同学在程序的开发中都会遇到一个问题，当业务需求变得越来越复杂，单机服务器已经不足以承载相应的请求的时候，我们都会考虑将服务部署到不同的服务器上，但服务器之间可能需要相互调用，那么系统必须拥有相互通信的接口，用于相应的数据交互，这时候一个好的远程调用方案是一个绝对的利器，主流的远程通信有以下几种选择：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;RPC（Remote Procedure Call Protocol）&lt;/li&gt;
+  &lt;li&gt;Web Service&lt;/li&gt;
+  &lt;li&gt;RMI （Remote Method Invocation）&lt;/li&gt;
+  &lt;li&gt;JMS（Java Messaging Service）&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;这几种方式都是被采用比较广泛的通信方案，有兴趣的同学可以自己去了解一下，这里我会讲一下RMI和JMS。&lt;/p&gt;
+
+&lt;h3 id=&quot;java&quot;&gt;JAVA远程调用&lt;/h3&gt;
+
+&lt;p&gt;RMI和JMS相信很多写过Java程序的同学都知道，是Java程序用来远程通信的主要方式，那么RMI和JMS又有什么区别呢？&lt;/p&gt;
+
+&lt;h4 id=&quot;rmi&quot;&gt;1.RMI&lt;/h4&gt;
+
+&lt;h5 id=&quot;section-1&quot;&gt;1.特征：&lt;/h5&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;同步通信：在使用RMI调用远程方法时，线程会持续等待直到结果返回，所以它是一个同步阻塞操作；&lt;/li&gt;
+  &lt;li&gt;强耦合：请求的系统中需要使用的RMI服务进行接口声明，返回的数据类型有一定的约束；&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h5 id=&quot;section-2&quot;&gt;2.优点：&lt;/h5&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;实现相对简单，方法调用形式通俗易理解，接口声明服务功能清晰。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h5 id=&quot;section-3&quot;&gt;3.缺点：&lt;/h5&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;只局限支持JVM平台；&lt;/li&gt;
+  &lt;li&gt;对无法兼容Java语言的其他语言也不适用；&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;jms&quot;&gt;2.JMS&lt;/h4&gt;
+
+&lt;h5 id=&quot;section-4&quot;&gt;1.特征：&lt;/h5&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;异步通信：JMS发送消息进行通信，在通信过程中，线程不会被阻塞，不必等待请求回应，所以是一个异步操作；&lt;/li&gt;
+  &lt;li&gt;松耦合：不需要接口声明，返回的数据类型可以是各种各样，比如JSON，XML等；&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h5 id=&quot;section-5&quot;&gt;2.通信方式：&lt;/h5&gt;
+
+&lt;p&gt;（1）点对点消息传送模型&lt;/p&gt;
+
+&lt;p&gt;顾名思义，点对点可以理解为两个服务器的定点通信，发送者和接收者都能明确知道对方是谁，大致模型如下：
+&lt;img src=&quot;/images/2017/08/jms-point-to-point.png&quot; alt=&quot;jms-point-to-point&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;（2）发布/订阅消息传递模型&lt;/p&gt;
+
+&lt;p&gt;点对点模型有些场景并不是很适用，比如有一台主服务器，它产生一条消息需要让所有的从服务器都能收到，若采用点对点模型的话，那主服务器需要循环发送消息，后续若有新的从服务器增加，还要改主服务器的配置，这样就会导致不必要的麻烦，那么发布/订阅模型是怎么样的呢？其实这种模式跟设计模式中的观察者模式很相似，相信很多同学都很熟悉，它最大的特点就是较松耦合，易扩展等特点，所以发布/订阅模型的大致结构如下：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2017/08/jms-topic.png&quot; alt=&quot;jms-point-to-point&quot; /&gt;&lt;/p&gt;
+
+&lt;h5 id=&quot;section-6&quot;&gt;3.优点：&lt;/h5&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;由于使用异步通信，不需要线程暂停等待，性能相对较高。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h5 id=&quot;section-7&quot;&gt;4.缺点：&lt;/h5&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;技术实现相对复杂，并需要维护相关的消息队列；&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;更通俗的说：&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;RMI可以看成是用打电话的方式进行信息交流，而JMS更像是发短信。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;总的来说两种方式没有孰优孰劣，我们也不用比较到底哪种方式比较好，存在即合理，更重要的是哪种选择可能更适合你的系统。&lt;/p&gt;
+
+&lt;h3 id=&quot;akka-remote&quot;&gt;Akka Remote&lt;/h3&gt;
+
+&lt;p&gt;上面讲到JAVA中远程通信的方式，但我们之前说过Akka也是基于JVM平台的，那么它的通信方式又有什么不同呢？&lt;/p&gt;
+
+&lt;p&gt;在我看来，Akka的远程通信方式更像是RMI和JMS的结合，但更偏向于JMS的方式，为什么这么说呢，我们先来看一个示例:&lt;/p&gt;
+
+&lt;p&gt;我们先来创建一个远程的Actor：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;RemoteActor&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Actor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;receive&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;RemoteActor received message '$msg'&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;sender&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Hello from the RemoteActor&quot;&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;现在我们在远程服务器上启动这个Actor：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;system&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ActorSystem&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;RemoteDemoSystem&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;remoteActor&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;actorOf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;RemoteActor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;RemoteActor&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;那么现在我们假如有一个系统需要向这个Actor发送消息应该怎么做呢？&lt;/p&gt;
+
+&lt;p&gt;首先我们需要类似RMI发布自己的服务一样，我们需要为其他系统调用远程Actor提供消息通信的接口，在Akka中，设置非常简单，不需要代码侵入，只需简单的在配置文件里配置即可：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;akka {
+  actor {
+    provider = &quot;akka.remote.RemoteActorRefProvider&quot;
+  }
+  remote {
+    enabled-transports = [&quot;akka.remote.netty.tcp&quot;]
+    netty.tcp {
+      hostname = $localIp  //比如127.0.0.1
+      port = $port //比如2552
+    }
+    log-sent-messages = on
+    log-received-messages = on
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;我们只需配置相应的驱动，传输方式，ip，端口等属性就可简单完成Akka Remote的配置。&lt;/p&gt;
+
+&lt;p&gt;当然本地服务器也需要配置这些信息，因为Akka之间是需要相互通信的，当然配置除了hostname有一定的区别外，其他配置信息可一致，本例子是在同一台机器上，所以这里hostname是相同的。&lt;/p&gt;
+
+&lt;p&gt;这时候我们就可以在本地的服务器向这个Actor发送消息了，首先我们可以创建一个本地的Actor：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Init&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;SendNoReturn&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;LocalActor&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Actor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;path&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ConfigFactory&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;defaultApplication&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;().&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getString&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;remote.actor.name.test&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;implicit&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;timeout&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Timeout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;4.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;seconds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;receive&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Receive&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Init&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;init local actor&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;SendNoReturn&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;remoteActor&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;context&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;actorSelection&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;resolveOne&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;r&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;remoteActor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;hello remote actor&quot;&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;r&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;其中的&lt;code class=&quot;highlighter-rouge&quot;&gt;remote.actor.name.test&lt;/code&gt;的值为：“akka.tcp://RemoteDemoSystem@127.0.0.1:4444/user/RemoteActor”，另外我们可以看到我们使用了&lt;code class=&quot;highlighter-rouge&quot;&gt;context.actorSelection(path).resolveOne()&lt;/code&gt;来获取一个ActorRef，这里是不是很熟悉，因为它跟本地获取Actor方式是一样的，因为Akka中Actor是位置透明的，获取本地Actor和远程Actor是一样的。&lt;/p&gt;
+
+&lt;p&gt;最后我们首先启动远程Actor的系统：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;RemoteDemo&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;App&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;system&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ActorSystem&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;RemoteDemoSystem&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;remoteActor&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;actorOf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;RemoteActor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;RemoteActor&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;remoteActor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;The RemoteActor is alive&quot;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;然后我们在本地系统中启动这个LocalActor，并向它发送消息：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;LocalDemo&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;App&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;implicit&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;system&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ActorSystem&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;LocalDemoSystem&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;localActor&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;actorOf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;LocalActor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;LocalActor&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;localActor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Init&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;localActor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;SendNoReturn&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;我们可以看到RemoteActor收到了一条消息：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2017/08/send-no-return.png&quot; alt=&quot;send-no-return&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;从以上的步骤和结果看出可以看出，Akka的远程通信跟JMS的点对点模式似乎更相似一点，但是它有不需要我们维护消息队列，而是使用Actor自身的邮箱，另外我们利用context.actorSelection获取的ActorRef，可以看成远程Actor的副本，这个又和RMI相关概念类似，所以说Akka远程通信的形式上像是RMI和JMS的结合,当然底层还是通过TCP、UDP等相关网络协议进行数据传输的，从配置文件的相应内容便可以看出。&lt;/p&gt;
+
+&lt;p&gt;上述例子演示的是sendNoReturn的模式，那么假如我们需要远程Actor给我们一个回复应该怎么做呢？&lt;/p&gt;
+
+&lt;p&gt;首先我们创建一个消息：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;SendHasReturn&lt;/span&gt;
+
+ &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;receive&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Receive&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;SendHasReturn&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;r&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;remoteActor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ask&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;hello remote actor&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;r&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;我们重新运行LocalActor并像RemoteActor发送一条消息：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2017/08/send-has-return.png&quot; alt=&quot;send-has-return&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;可以看到LocalActor在发送消息后并收到了RemoteActor返回来的消息，另外我们这里设置了超时时间，若在规定的时间内没有得到反馈，程序就会报错。&lt;/p&gt;
+
+&lt;h3 id=&quot;akka-serialization&quot;&gt;Akka Serialization&lt;/h3&gt;
+
+&lt;p&gt;其实这一部分本可以单独拿出来写，但是相信序列化这块大家都应该有所了解了，所以就不准备讲太多序列化的知识了，怕班门弄斧，主要讲讲Akka中的序列化。&lt;/p&gt;
+
+&lt;p&gt;继续上面的例子，假如我们这时向RemoteActor发送一个自定义的对象，比如一个case class对象，但是我们这是是在网络中传输这个消息，那么怎么保证这个对象类型和值呢，在同一个JVM系统中我们不需要担心这个，因为对象就在堆中，我们只要传递相应的地址即可就行，但是在不同的环境中，我们并不能这么做，我们在网络中只能传输字节数据，所以我们必须将对象做特殊的处理，在传输的时候转化成特定的由一连串字节组成的数据，而且我们又可以根据这些数据恢复成一个相应的对象，这便是序列化。&lt;/p&gt;
+
+&lt;p&gt;我们先定义一个参与的case class, 并修改一下上面发送消息的语句:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;case object SendSerialization
+case class JoinEvt(
+    id: Long,
+    name: String
+)
+def receive: Receive = {
+    case SendSerialization =&amp;gt;
+      for {
+        r &amp;lt;- remoteActor.ask(JoinEvt(1L,&quot;godpan&quot;))
+      } yield println(r)
+  }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这时我们重新启动RemoteActor和LocalActor所在的系统，发送这条消息：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/2017/08/send-serialization.png&quot; alt=&quot;send-serialization&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;有同学可能会觉得奇怪，我们明明没有对JoinEvt进行过任何序列化的标识和处理，为什么程序还能运行成功呢？&lt;/p&gt;
+
+&lt;p&gt;其实不然，只不过是有人替我们默认做了，不用说，肯定是贴心的Akka，它为我们提供了一个默认的序列化策略，那就是我们熟悉又纠结的java.io.Serializable，沉浸在它的易使用性上，又对它的性能深恶痛绝，尤其是当有大量对象需要传输的分布式系统，如果是小系统，当我没说，毕竟存在即合理。&lt;/p&gt;
+
+&lt;p&gt;又有同学说了，既然Akka是一个天生分布式的组件，为什么还用低效的java.io.Serializable，你问我我也不知道，可能当时的作者偷了偷懒，当然Akka现在可能觉醒了，首先它支持第三方的序列化工具，当然如果你有特殊需求，你也可以自己实现一个，而且在最新的文档中说明，在Akka 2.5x之后Akka内核消息全面废弃java.io.Serializable，用户自定义的消息暂时还是支持使用java.io.Serializable的，但是不推荐用，因为它是低效的，容易被攻击，所以在这里我也推荐大家再Akka中尽量不要在使用了java.io.Serializable。&lt;/p&gt;
+
+&lt;p&gt;那么在Akka中我们如何使用第三方的序列化工具呢？&lt;/p&gt;
+
+&lt;p&gt;这里我推荐一个在Java社区已经久负盛名的序列化工具：kryo，有兴趣的同学可以去了解一下：&lt;a href=&quot;https://github.com/EsotericSoftware/kryo&quot;&gt;kryo&lt;/a&gt;,而且它也提供Akka使用的相关包，这里我们就使用它作为示例：&lt;/p&gt;
+
+&lt;p&gt;这里我贴上整个项目的build.sbt, kryo的相关依赖也在里面：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;sbt._&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;sbt.Keys._&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;lazy&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;AllLibraryDependencies&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt;
+  &lt;span class=&quot;nc&quot;&gt;Seq&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;s&quot;&gt;&quot;com.typesafe.akka&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%%&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;akka-actor&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;2.5.3&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;s&quot;&gt;&quot;com.typesafe.akka&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%%&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;akka-remote&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;2.5.3&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;s&quot;&gt;&quot;com.twitter&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%%&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;chill-akka&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;0.8.4&quot;&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;lazy&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;commonSettings&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Seq&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;AkkaRemoting&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;version&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;1.0&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;scalaVersion&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;2.11.11&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;libraryDependencies&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;AllLibraryDependencies&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;lazy&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;remote&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;project&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;file&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;remote&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;))&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;settings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;commonSettings&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;settings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// other settings
+&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;lazy&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;local&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;project&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;file&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;local&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;))&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;settings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;commonSettings&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;settings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// other settings
+&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;然后我们只需将application.conf中的actor配置替换成以下的内容：&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;actor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;provider&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;akka.remote.RemoteActorRefProvider&quot;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;serializers&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;kryo&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;com.twitter.chill.akka.AkkaSerializer&quot;&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;serialization&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bindings&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;s&quot;&gt;&quot;java.io.Serializable&quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;none&lt;/span&gt;
+      &lt;span class=&quot;s&quot;&gt;&quot;scala.Product&quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;kryo&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;其实其中的”java.io.Serializable” = none可以省略，因为若是有其他序列化的策略则会替换掉默认的java.io.Serializable的策略，这里只是为了更加仔细的说明。&lt;/p&gt;
+
+&lt;p&gt;至此我们就可以使用kryo了，整个过程是不是很easy，迫不及待开始写demo了，那就快快开始吧。&lt;/p&gt;
+
+&lt;p&gt;整个例子的相关的源码已经上传到akka-demo中：&lt;a href=&quot;https://github.com/godpan/akka-demo/tree/master/Example_06&quot;&gt;源码链接&lt;/a&gt;&lt;/p&gt;</content><summary type="html">Akka作为一个天生用于构建分布式应用的工具，当然提供了用于分布式组件即Akka Remote，那么我们就来看看如何用Akka Remote以及Akka Serialization来构建分布式应用。</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="{&quot;feature&quot;=&gt;nil}" /></entry><entry><title type="html">Akka系列（八）：Akka persistence设计理念之CQRS</title><link href="/blog/akka-8/" rel="alternate" type="text/html" title="Akka系列（八）：Akka persistence设计理念之CQRS" /><published>2017-07-29T00:00:00+08:00</published><updated>2017-07-29T00:00:00+08:00</updated><id>/blog/akka-8</id><content type="html" xml:base="/blog/akka-8/">&lt;p&gt;这一篇文章主要是讲解Akka persistence的核心设计理念，也是CQRS（Command Query Responsibility Segregation）架构设计的典型应用，就让我们来看看为什么Akka persistence会采用CQRS架构设计。&lt;/p&gt;
 
 &lt;h3 id=&quot;cqrs&quot;&gt;CQRS&lt;/h3&gt;
 

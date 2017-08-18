@@ -2,6 +2,14 @@
 
   
     {
+      "title"			: "Akka系列（九）：Akka分布式之Akka Remote以及Akka Serialization",
+      "link"			: "/blog/akka-9/",
+      "excerpt"		: "Akka作为一个天生用于构建分布式应用的工具，当然提供了用于分布式组件即Akka Remote，那么我们就来看看如何用Akka Remote以及Akka Serialization来构建分布式应用。"
+    }
+  
+
+  
+    ,{
       "title"			: "Akka系列（八）：Akka persistence设计理念之CQRS",
       "link"			: "/blog/akka-8/",
       "excerpt"		: "这一篇文章主要是讲解Akka persistence的核心设计理念，也是CQRS（Command Query Responsibility Segregation）架构设计的典型应用，就让我们来看看为什么Akka persistence会采用CQRS架构设计。"
