@@ -2,7 +2,7 @@
 
   
     {
-      "title"			: "Akka系列（九）：Akka分布式之Akka Remote以及Akka Serialization",
+      "title"			: "Akka系列（九）：Akka分布式之Remote已及Serialization",
       "link"			: "/blog/akka-9/",
       "excerpt"		: "Akka作为一个天生用于构建分布式应用的工具，当然提供了用于分布式组件即Akka Remote，那么我们就来看看如何用Akka Remote以及Akka Serialization来构建分布式应用。"
     }
