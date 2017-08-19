@@ -278,20 +278,17 @@ var _hmt = _hmt || [];
 
   <span class="k">val</span> <span class="n">path</span> <span class="k">=</span> <span class="nc">ConfigFactory</span><span class="o">.</span><span class="n">defaultApplication</span><span class="o">().</span><span class="n">getString</span><span class="o">(</span><span class="s">"remote.actor.name.test"</span><span class="o">)</span>
   <span class="k">implicit</span> <span class="k">val</span> <span class="n">timeout</span> <span class="k">=</span> <span class="nc">Timeout</span><span class="o">(</span><span class="mf">4.</span><span class="n">seconds</span><span class="o">)</span>
+  <span class="k">val</span> <span class="n">remoteActor</span> <span class="k">=</span> <span class="n">context</span><span class="o">.</span><span class="n">actorSelection</span><span class="o">(</span><span class="n">path</span><span class="o">)</span>
 
   <span class="k">def</span> <span class="n">receive</span><span class="k">:</span> <span class="kt">Receive</span> <span class="o">=</span> <span class="o">{</span>
     <span class="k">case</span> <span class="nc">Init</span> <span class="k">=&gt;</span> <span class="s">"init local actor"</span>
-    <span class="k">case</span> <span class="nc">SendNoReturn</span> <span class="k">=&gt;</span>
-      <span class="k">for</span> <span class="o">{</span>
-        <span class="n">remoteActor</span> <span class="k">&lt;-</span> <span class="n">context</span><span class="o">.</span><span class="n">actorSelection</span><span class="o">(</span><span class="n">path</span><span class="o">).</span><span class="n">resolveOne</span><span class="o">()</span>
-        <span class="n">r</span> <span class="k">=</span> <span class="n">remoteActor</span> <span class="o">!</span> <span class="s">"hello remote actor"</span>
-      <span class="o">}</span> <span class="k">yield</span> <span class="n">r</span>
+    <span class="k">case</span> <span class="nc">SendNoReturn</span> <span class="k">=&gt;</span> <span class="n">remoteActor</span> <span class="o">!</span> <span class="s">"hello remote actor"</span>
   <span class="o">}</span>
 <span class="o">}</span>
 </code></pre>
 </div>
 
-<p>其中的<code class="highlighter-rouge">remote.actor.name.test</code>的值为：“akka.tcp://RemoteDemoSystem@127.0.0.1:4444/user/RemoteActor”，另外我们可以看到我们使用了<code class="highlighter-rouge">context.actorSelection(path).resolveOne()</code>来获取一个ActorRef，这里是不是很熟悉，因为它跟本地获取Actor方式是一样的，因为Akka中Actor是位置透明的，获取本地Actor和远程Actor是一样的。</p>
+<p>其中的<code class="highlighter-rouge">remote.actor.name.test</code>的值为：“akka.tcp://RemoteDemoSystem@127.0.0.1:4444/user/RemoteActor”，另外我们可以看到我们使用了<code class="highlighter-rouge">context.actorSelection(path)</code>来获取的是一个ActorSelection对象，若是需要获得ActorRef，我们可以调用它的resolveOne(),它返回的是是一个Future[ActorRef],这里是不是很熟悉，因为它跟本地获取Actor方式是一样的，因为Akka中Actor是位置透明的，获取本地Actor和远程Actor是一样的。</p>
 
 <p>最后我们首先启动远程Actor的系统：</p>
 
