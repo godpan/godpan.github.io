@@ -147,11 +147,10 @@ var _hmt = _hmt || [];
 <ul>
   <li>RPC（Remote Procedure Call Protocol）</li>
   <li>Web Service</li>
-  <li>RMI （Remote Method Invocation）</li>
   <li>JMS（Java Messaging Service）</li>
 </ul>
 
-<p>这几种方式都是被采用比较广泛的通信方案，有兴趣的同学可以自己去了解一下，这里我会讲一下RMI和JMS。</p>
+<p>这几种方式都是被采用比较广泛的通信方案，有兴趣的同学可以自己去了解一下，这里我会讲一下Java中的RPC即RMI （Remote Method Invocation）和JMS。</p>
 
 <h3 id="java">JAVA远程调用</h3>
 
@@ -218,6 +217,120 @@ var _hmt = _hmt || [];
 <p><strong>RMI可以看成是用打电话的方式进行信息交流，而JMS更像是发短信。</strong></p>
 
 <p>总的来说两种方式没有孰优孰劣，我们也不用比较到底哪种方式比较好，存在即合理，更重要的是哪种选择可能更适合你的系统。</p>
+
+<h3 id="rmi-example">RMI Example</h3>
+
+<p>这里我写一个RMI的例子，一方面来看一下它的使用方式，另一方面用于和后续的Akka Remote做一些比较：</p>
+
+<p>首先我们来编写相应的传输对象和通信接口：</p>
+
+<p>1.JoinRmiEvt：</p>
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">JoinRmiEvt</span> <span class="kd">implements</span> <span class="n">Remote</span> <span class="o">,</span> <span class="n">Serializable</span><span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">long</span> <span class="n">serialVersionUID</span> <span class="o">=</span> <span class="mi">1L</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="n">Long</span> <span class="n">id</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="n">String</span> <span class="n">name</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="nf">JoinRmiEvt</span><span class="o">(</span><span class="n">Long</span> <span class="n">id</span><span class="o">,</span> <span class="n">String</span> <span class="n">name</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">id</span> <span class="o">=</span> <span class="n">id</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="n">Long</span> <span class="nf">getId</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">id</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setId</span><span class="o">(</span><span class="n">Long</span> <span class="n">id</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">id</span> <span class="o">=</span> <span class="n">id</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="n">String</span> <span class="nf">getName</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">name</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setName</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>2.RemoteRmi:</p>
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">RemoteRmi</span> <span class="kd">extends</span> <span class="n">Remote</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">sendNoReturn</span><span class="o">(</span><span class="n">String</span> <span class="n">message</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">RemoteException</span><span class="o">,</span> <span class="n">InterruptedException</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="n">String</span> <span class="nf">sendHasReturn</span><span class="o">(</span><span class="n">JoinRmiEvt</span> <span class="n">joinRmiEvt</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">RemoteException</span><span class="o">;</span>
+<span class="o">}</span>
+
+</code></pre>
+</div>
+
+<p>然后在服务端对该接口进行实现：</p>
+
+<p>3.RemoteRmiImpl:</p>
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">RemoteRmiImpl</span> <span class="kd">extends</span> <span class="n">UnicastRemoteObject</span> <span class="kd">implements</span> <span class="n">RemoteRmi</span> <span class="o">{</span>
+
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">long</span> <span class="n">serialVersionUID</span> <span class="o">=</span> <span class="mi">1L</span><span class="o">;</span>
+
+    <span class="kd">public</span>  <span class="nf">RemoteRmiImpl</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">RemoteException</span> <span class="o">{};</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">sendNoReturn</span><span class="o">(</span><span class="n">String</span> <span class="n">message</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">RemoteException</span><span class="o">,</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+        <span class="n">Thread</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">2000</span><span class="o">);</span>
+        <span class="c1">//throw new RemoteException(); </span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">String</span> <span class="nf">sendHasReturn</span><span class="o">(</span><span class="n">JoinRmiEvt</span> <span class="n">joinRmiEvt</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">RemoteException</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">joinRmiEvt</span><span class="o">.</span><span class="na">getId</span><span class="o">()</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">)</span>
+          <span class="k">return</span> <span class="k">new</span> <span class="nf">StringBuilder</span><span class="o">(</span><span class="s">"the"</span><span class="o">).</span><span class="na">append</span><span class="o">(</span><span class="n">joinRmiEvt</span><span class="o">.</span><span class="na">getName</span><span class="o">()).</span><span class="na">append</span><span class="o">(</span><span class="s">"has join"</span><span class="o">).</span><span class="na">toString</span><span class="o">();</span>
+      <span class="k">else</span> <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>接着我们在Server端绑定相应端口并发布服务，然后启动：</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">RemoteRMIServer</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">RemoteException</span><span class="o">,</span> <span class="n">AlreadyBoundException</span><span class="o">,</span> <span class="n">MalformedURLException</span><span class="o">,</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"the RemoteRMIServer is Starting ..."</span><span class="o">);</span>
+        <span class="n">RemoteRmiImpl</span> <span class="n">remoteRmi</span> <span class="o">=</span> <span class="k">new</span> <span class="n">RemoteRmiImpl</span><span class="o">();</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Binding server implementation to registry"</span><span class="o">);</span>
+        <span class="n">LocateRegistry</span><span class="o">.</span><span class="na">createRegistry</span><span class="o">(</span><span class="mi">2553</span><span class="o">);</span>
+        <span class="n">Naming</span><span class="o">.</span><span class="na">bind</span><span class="o">(</span><span class="s">"rmi://127.0.0.1:2553/remote_rmi"</span><span class="o">,</span><span class="n">remoteRmi</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"the RemoteRMIServer is Started"</span><span class="o">);</span>
+        <span class="n">Thread</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">10000000</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>下面我们在Client端调用Server端的服务：</p>
+
+<div class="language-java highlighter-rouge"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">RemoteRmiClient</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">RemoteException</span><span class="o">,</span> <span class="n">NotBoundException</span><span class="o">,</span> <span class="n">MalformedURLException</span><span class="o">,</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"the client has started"</span><span class="o">);</span>
+        <span class="n">String</span> <span class="n">url</span> <span class="o">=</span> <span class="s">"rmi://127.0.0.1:2553/remote_rmi"</span><span class="o">;</span>
+        <span class="n">RemoteRmi</span> <span class="n">remoteRmi</span> <span class="o">=</span> <span class="o">(</span><span class="n">RemoteRmi</span><span class="o">)</span> <span class="n">Naming</span><span class="o">.</span><span class="na">lookup</span><span class="o">(</span><span class="n">url</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"the client has running"</span><span class="o">);</span>
+        <span class="n">remoteRmi</span><span class="o">.</span><span class="na">sendNoReturn</span><span class="o">(</span><span class="s">"send no return"</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">remoteRmi</span><span class="o">.</span><span class="na">sendHasReturn</span><span class="o">(</span><span class="k">new</span> <span class="n">JoinRmiEvt</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span><span class="s">"godpan"</span><span class="o">)));</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"the client has end"</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre>
+</div>
+
+<p>运行结果：</p>
+
+<p><img src="/images/2017/08/java-rmi-result.png" alt="java-rmi-result" /></p>
+
+<p>从运行结果和代码上分析可得：</p>
+
+<ul>
+  <li>Java Rmi调用是一个阻塞的过程，这会导致一个问题，假如服务端的服务奔溃了，会导致客户端没有反应；</li>
+  <li>Java Rmi使用的是Java默认的序列化方式,性能并不是很好，而且并不提供支持使用其他序列化的接口，在一些性能要求高的系统会有一定的瓶颈；</li>
+  <li>在Rmi中使用的相应的接口和对象必须实现相应的接口，必须制定抛出相应的Exception，导致代码看起来异常的繁琐；</li>
+</ul>
 
 <h3 id="akka-remote">Akka Remote</h3>
 
@@ -429,6 +542,16 @@ def receive: Receive = {
 <p>其实其中的”java.io.Serializable” = none可以省略，因为若是有其他序列化的策略则会替换掉默认的java.io.Serializable的策略，这里只是为了更加仔细的说明。</p>
 
 <p>至此我们就可以使用kryo了，整个过程是不是很easy，迫不及待开始写demo了，那就快快开始吧。</p>
+
+<p>从运行结果和代码上分析可得：</p>
+
+<ul>
+  <li>Akka Remote使用内置的序列化工具，并支持配置指定的序列化方式，可以按需配置；</li>
+  <li>Akka Remote使用的过程是一个异步非阻塞的过程，客户端能尽量减少对服务端的依赖；</li>
+  <li>Akka Remote的代码实现相对Java Rmi实现来说简单的多，非常简洁；</li>
+</ul>
+
+<p>1.Akka Remote</p>
 
 <p>整个例子的相关的源码已经上传到akka-demo中：<a href="https://github.com/godpan/akka-demo/tree/master/Example_06">源码链接</a></p>
 
