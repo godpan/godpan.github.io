@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-09-10T11:59:14+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（十）：Akka集群之Akka Cluster</title><link href="/blog/akka-10/" rel="alternate" type="text/html" title="Akka系列（十）：Akka集群之Akka Cluster" /><published>2017-09-05T00:00:00+08:00</published><updated>2017-09-05T00:00:00+08:00</updated><id>/blog/akka-10</id><content type="html" xml:base="/blog/akka-10/">&lt;p&gt;上一篇文章我们讲了Akka Remote，理解了Akka中的远程通信，其实Akka Cluster可以看成Akka Remote的扩展，由原来的两点变成由多点组成的通信网络，这种模式相信大家都很了解，就是集群，它的优势主要有两点：系统伸缩性高，容错性更好。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xml" href="/feed.xslt.xml"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-09-10T11:59:16+08:00</updated><id>/</id><title type="html">GodPan</title><subtitle>god-oriented coding.</subtitle><entry><title type="html">Akka系列（十）：Akka集群之Akka Cluster</title><link href="/blog/akka-10/" rel="alternate" type="text/html" title="Akka系列（十）：Akka集群之Akka Cluster" /><published>2017-09-05T00:00:00+08:00</published><updated>2017-09-05T00:00:00+08:00</updated><id>/blog/akka-10</id><content type="html" xml:base="/blog/akka-10/">&lt;p&gt;上一篇文章我们讲了Akka Remote，理解了Akka中的远程通信，其实Akka Cluster可以看成Akka Remote的扩展，由原来的两点变成由多点组成的通信网络，这种模式相信大家都很了解，就是集群，它的优势主要有两点：系统伸缩性高，容错性更好。&lt;/p&gt;
 
 &lt;h3 id=&quot;section&quot;&gt;集群概念&lt;/h3&gt;
 
@@ -28,7 +28,7 @@
 
 &lt;p&gt;在前面的文章Akka Actor的工作方式，我们可以将一个任务分解成一个个小任务，然后分配给它的子Actor执行，其实这就可以看成一个小的分布式系统，那么在Akka中，集群又是一种怎样的概念呢？&lt;/p&gt;
 
-&lt;p&gt;其实往简单里说，就是一些相同的ActorSystem的组合，它们具有着相同的功能，我们需要执行的任务可以随机的分配到目前可用的ActorSystem上，这点跟Nginx的负载均衡很类似，根据算法和配置将请求转发给运行正常的服务器去，Akka集群的表现形式也是这样，当然它背后的理论基础是基于gossip协议的，目前很多分布式的数据库的数据同步都采用这个协议，有兴趣的同学可以自己去研究研究，目前很多分布式的数据库的数据同步都采用这个协议，只是我也是一知半解，这里就不写了，怕误导了大家。&lt;/p&gt;
+&lt;p&gt;其实往简单里说，就是一些相同的ActorSystem的组合，它们具有着相同的功能，我们需要执行的任务可以随机的分配到目前可用的ActorSystem上，这点跟Nginx的负载均衡很类似，根据算法和配置将请求转发给运行正常的服务器去，Akka集群的表现形式也是这样，当然它背后的理论基础是基于gossip协议的，目前很多分布式的数据库的数据同步都采用这个协议，有兴趣的同学可以自己去研究研究，只是我也是一知半解，这里就不写了，怕误导了大家。&lt;/p&gt;
 
 &lt;p&gt;下面我来讲讲Akka Cluster中比较重要的几个概念：&lt;/p&gt;
 
