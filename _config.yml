@@ -9,7 +9,7 @@ markdown: rdiscount
 # disqus: "gopherwood"
 
 navigations:
-  - title: Archive
+  - title: Blog
     class: fa fa-list-ul
     href: /blog.html
   - title: Tags
@@ -18,7 +18,7 @@ navigations:
   - title: About
     class: fa fa-user
     href: /about.html
-  - title: Subscribe
-    class: fa fa-rss
-    href: https://github.com/godpan
+  # - title: Subscribe
+  #   class: fa fa-rss
+  #   href: https://github.com/godpan
 

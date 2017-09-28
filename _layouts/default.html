@@ -35,7 +35,8 @@
           </div>
           <nav>
             {% for nav in site.navigations %}
-            <span><a title="{{ nav.title }}" href="{{ nav.href }}"><i class="{{ nav.class }}"></i></a></span>
+            <!-- <span><a title="{{ nav.title }}" href="{{ nav.href }}"><i class="{{ nav.class }}"></i></a></span> -->
+            <span><a title="{{ nav.title }}" href="{{ nav.href }}">{{ nav.title }}</a></span>
             {% endfor %}
           </nav>
         </header>
