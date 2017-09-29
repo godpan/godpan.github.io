@@ -4,7 +4,7 @@
  <title>泮</title>
  <link href="/atom.xml" rel="self"/>
  <link href=""/>
- <updated>2017-09-29T08:58:16+08:00</updated>
+ <updated>2017-09-29T09:01:57+08:00</updated>
  <id>/</id>
  <author>
    <name></name>
@@ -371,73 +371,68 @@ class TransformationFrontend extends Actor {
 
 &lt;p&gt;首先我们来编写相应的传输对象和通信接口：&lt;/p&gt;
 
-&lt;p&gt;1.JoinRmiEvt：
-```java
-public class JoinRmiEvt implements Remote , Serializable{
+&lt;p&gt;1.JoinRmiEvt：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public class JoinRmiEvt implements Remote , Serializable{
     private static final long serialVersionUID = 1L;
     private Long id;
-    private String name;&lt;/p&gt;
+    private String name;
 
-&lt;pre&gt;&lt;code&gt;public JoinRmiEvt(Long id, String name) {
-    this.id = id;
-    this.name = name;
-}
+    public JoinRmiEvt(Long id, String name) {
+        this.id = id;
+        this.name = name;
+    }
 
-public Long getId() {
-    return id;
-}
+    public Long getId() {
+        return id;
+    }
 
-public void setId(Long id) {
-    this.id = id;
-}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-public String getName() {
-    return name;
-}
+    public String getName() {
+        return name;
+    }
 
-public void setName(String name) {
-    this.name = name;
+    public void setName(String name) {
+        this.name = name;
+    }
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;}
-```&lt;/p&gt;
+&lt;p&gt;2.RemoteRmi:&lt;/p&gt;
 
-&lt;p&gt;2.RemoteRmi:
-```java
-public interface RemoteRmi extends Remote {
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public interface RemoteRmi extends Remote {
     public void sendNoReturn(String message) throws RemoteException, InterruptedException;
     public String sendHasReturn(JoinRmiEvt joinRmiEvt) throws RemoteException;
-}&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;
-然后在服务端对该接口进行实现：
-
-3.RemoteRmiImpl:
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;public class RemoteRmiImpl extends UnicastRemoteObject implements RemoteRmi {&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;private static final long serialVersionUID = 1L;
-
-public  RemoteRmiImpl() throws RemoteException {};
-
-@Override
-public void sendNoReturn(String message) throws RemoteException, InterruptedException {
-    Thread.sleep(2000);
-    //throw new RemoteException(); 
-}
-
-@Override
-public String sendHasReturn(JoinRmiEvt joinRmiEvt) throws RemoteException {
-  if (joinRmiEvt.getId() &amp;gt;= 0)
-      return new StringBuilder(&quot;the&quot;).append(joinRmiEvt.getName()).append(&quot;has join&quot;).toString();
-  else return null;
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;}
-```&lt;/p&gt;
+&lt;p&gt;然后在服务端对该接口进行实现：&lt;/p&gt;
+
+&lt;p&gt;3.RemoteRmiImpl:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public class RemoteRmiImpl extends UnicastRemoteObject implements RemoteRmi {
+
+    private static final long serialVersionUID = 1L;
+
+    public  RemoteRmiImpl() throws RemoteException {};
+
+    @Override
+    public void sendNoReturn(String message) throws RemoteException, InterruptedException {
+        Thread.sleep(2000);
+        //throw new RemoteException(); 
+    }
+
+    @Override
+    public String sendHasReturn(JoinRmiEvt joinRmiEvt) throws RemoteException {
+      if (joinRmiEvt.getId() &amp;gt;= 0)
+          return new StringBuilder(&quot;the&quot;).append(joinRmiEvt.getName()).append(&quot;has join&quot;).toString();
+      else return null;
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;接着我们在Server端绑定相应端口并发布服务，然后启动：&lt;/p&gt;
 

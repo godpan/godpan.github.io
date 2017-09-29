@@ -79,6 +79,7 @@ RMI和JMS相信很多写过Java程序的同学都知道，是Java程序用来远
 首先我们来编写相应的传输对象和通信接口：
 
 1.JoinRmiEvt： 
+
 ```java
 public class JoinRmiEvt implements Remote , Serializable{
     private static final long serialVersionUID = 1L;
@@ -109,6 +110,7 @@ public class JoinRmiEvt implements Remote , Serializable{
 ```
 
 2.RemoteRmi:
+
 ```java
 public interface RemoteRmi extends Remote {
     public void sendNoReturn(String message) throws RemoteException, InterruptedException;
@@ -120,6 +122,7 @@ public interface RemoteRmi extends Remote {
 然后在服务端对该接口进行实现：
 
 3.RemoteRmiImpl:
+
 ```java
 public class RemoteRmiImpl extends UnicastRemoteObject implements RemoteRmi {
 
