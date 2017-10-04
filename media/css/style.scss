@@ -79,6 +79,12 @@ header {
   .main-listing { margin-bottom: 2em; }
 }
 
+#content table td {
+  padding: 5px 15px;
+  border: 1px double #f0f0f0;
+  text-align: left;
+}
+
 ul.listing {
   margin-top: 1em;
   li {

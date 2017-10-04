@@ -133,6 +133,19 @@ header {
       width: 750px; } }
   #content .main-listing {
     margin-bottom: 2em; }
+.post table {
+  border-collapse: collapse;
+}
+.post table td {
+  padding: 5px 15px;
+  border: 1px double #f0f0f0;
+  text-align: left;
+}
+.post table th {
+  padding: 5px 15px;
+  border: 1px double #f0f0f0;
+  text-align: left;
+}
 
 ul.listing {
   margin-top: 1em; }
