@@ -3,7 +3,7 @@ title: MySQL几个简单的SQL的优化
 layout: post
 guid: urn:uuid:8d2f2b63-g930-3d54-8ca7-fbvbds2a4fge
 tags:
-  - MySQL
+  - mysql
 ---
 
 最近在做项目的时候，遇到了一些大数据量的操作，有大批量的CRUD的操作，一开始的实现的方案经过性能测试，发现性能并不是很好，然后开始审查代码，对相关可以提升性能的操作进行了优化，这里分享给大家。
