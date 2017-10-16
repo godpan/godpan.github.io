@@ -1,5 +1,5 @@
 ---
-title: MySQL几个简单的SQL的优化
+title: MySQL几个简单SQL的优化
 layout: post
 guid: urn:uuid:8d2f2b63-g930-3d54-8ca7-fbvbds2a4fge
 tags:
