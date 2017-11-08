@@ -4,12 +4,169 @@
  <title>泮</title>
  <link href="/atom.xml" rel="self"/>
  <link href=""/>
- <updated>2017-10-22T20:38:37+08:00</updated>
+ <updated>2017-11-08T21:26:43+08:00</updated>
  <id>/</id>
  <author>
    <name></name>
  </author>
 
+ 
+ <entry>
+   <title>Java IO之NIO</title>
+   <link href="/2017/11/05/java-nio.html"/>
+   <updated>2017-11-05T00:00:00+08:00</updated>
+   <id>urn:uuid:8d2f2b63-g930-3d54-8ca7-fbvbds2a4fge</id>
+   <content type="html">&lt;p&gt;上篇说了最基础的五种IO模型，相信大家对IO相关的概念应该有了一定的了解，这篇文章主要讲讲基于多路复用IO的Java NIO。&lt;/p&gt;
+
+&lt;h3&gt;背景&lt;/h3&gt;
+
+&lt;p&gt;Java诞生至今，有好多种IO模型，从最早的Java IO到后来的Java NIO以及最新的Java AIO，每种IO模型都有它自己的特点，详情请看我的上篇文章&lt;a href=&quot;&quot;&gt;Java IO初探&lt;/a&gt;，而其中的的Java NIO应用非常广泛，尤其是在高并发领域，比如我们常见的Netty，Mina等框架，都是基于它实现的，相信大家都有所了解，下面让我们来看看Java NIO的具体架构。&lt;/p&gt;
+
+&lt;h3&gt;Java NIO架构&lt;/h3&gt;
+
+&lt;p&gt;其实Java NIO模型相对来说也还是比较简单的，它的核心主要有三个，分别是：Selector、Channel和Buffer,我们先来看看它们之间的关系：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/java-nio.png&quot; alt=&quot;java-nio&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;它们之间的关系很清晰，一个线程对应着一个Selecter，一个Selecter对应着多个Channel，一个Channel对应着一个Buffer，当然这只是通常的做法，一个Channel也可以对应多个Selecter，一个Channel对应着多个Buffer。&lt;/p&gt;
+
+&lt;h4&gt;Selecter&lt;/h4&gt;
+
+&lt;p&gt;个人认为Selecter是Java NIO的最大特点，之前我们说过，传统的Java IO在面对大量IO请求的时候有心无力，因为每个维护每一个IO请求都需要一个线程，这带来的问题就是，系统资源被极度消耗，吞吐量直线下降，引起系统相关问题，那么Java NIO是如何解决这个问题的呢？答案就是Selecter，简单来说它对应着多路IO复用中的监管角色，它负责统一管理IO请求，监听相应的IO事件，并通知对应的线程进行处理，这种模式下就无需为每个IO请求单独分配一个线程，另外也减少线程大量阻塞，资源利用率下降的情况，所以说Selecter是Java NIO的精髓，在Java中我们可以这么写：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;// 打开服务器套接字通道
+ServerSocketChannel ssc = ServerSocketChannel.open();
+// 服务器配置为非阻塞
+ssc.configureBlocking(false);
+// 进行服务的绑定
+ssc.bind(new InetSocketAddress(&quot;localhost&quot;, 8001));
+
+// 通过open()方法找到Selector
+Selector selector = Selector.open();
+// 注册到selector，等待连接
+ssc.register(selector, SelectionKey.OP_ACCEPT);
+...
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4&gt;Channel&lt;/h4&gt;
+
+&lt;p&gt;Channel本意是通道的意思，简单来说，它在Java NIO中表现的就是一个数据通道，但是这个通道有一个特点，那就是它是双向的，也就是说，我们可以从通道里接收数据，也可以向通道里写数据，不用像Java BIO那样，读数据和写数据需要不同的数据通道，比如最常见的Inputstream和Outputstream，但是它们都是单向的，Channel作为一种全新的设计，它帮助系统以相对小的代价来保持IO请求数据传输的处理，但是它并不真正存放数据，它总是结合着缓存区（Buffer）一起使用，另外Channel主要有以下四种：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;FileChannel：读写文件时使用的通道&lt;/li&gt;
+&lt;li&gt;DatagramChannel：传输UDP连接数据时的通道,与Java IO中的DatagramSocket对应&lt;/li&gt;
+&lt;li&gt;SocketChannel：传输TCP连接数据时的通道，与Java IO中的Socket对应&lt;/li&gt;
+&lt;li&gt;ServerSocketChannel: 监听套接词连接时的通道，与Java IO中的ServerSocket对应&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;当然其中最重要以及最常用的就是SocketChannel和ServerSocketChannel，也是Java NIO的精髓，ServerSocketChannel可以设置成非阻塞模式，然后结合Selecter就可以实现多路复用IO，使用一个线程管理多个Socket连接，具体使用可以参数上面的代码。&lt;/p&gt;
+
+&lt;h4&gt;Buffer&lt;/h4&gt;
+
+&lt;p&gt;顾名思义，Buffer的含义是缓冲区，它在Java NIO中的主要作用就是作为数据的缓冲区域，Buffer对应着某一个Channel，从Channel中读取数据或者向Channel中写数据，Buffer与数组很类似，但是它提供了更多的特性，方便我们对Buffer中的数据进行操作，后面我也会主要分析它的三个属性capacity，position和limit，我们先来看一下Buffer分配时的类别（这里不是指Buffer的具体数据类型）即Direct Buffer和Heap Buffer，那么为什么要有这两种类别的Buffer呢？我们先来看看它们的特性：&lt;/p&gt;
+
+&lt;p&gt;Direct Buffer：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;直接分配在系统内存中；&lt;/li&gt;
+&lt;li&gt;不需要花费将数据库从内存拷贝到Java内存中的成本；&lt;/li&gt;
+&lt;li&gt;虽然Direct Buffer是直接分配中系统内存中的，但当它被重复利用时，只有真正需要数据的那一页数据会被装载到真是的内存中，其它的还存在在虚拟内存中，不会造成实际内存的资源浪费；&lt;/li&gt;
+&lt;li&gt;可以结合特定的机器码，一次可以有顺序的读取多字节单元；&lt;/li&gt;
+&lt;li&gt;因为直接分配在系统内存中，所以它不受Java GC管理，不会自动回收；&lt;/li&gt;
+&lt;li&gt;创建以及销毁的成本比较高；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;Heap Buffer：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;分配在Java Heap，受Java GC管理生命周期，不需要额外维护；&lt;/li&gt;
+&lt;li&gt;创建成本相对较低；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;根据它们的特性，我们可以大致总结出它们的适用场景：&lt;/p&gt;
+
+&lt;p&gt;如果这个Buffer可以重复利用，而且你也想多个字节操作，亦或者你对性能要求很高，可以选择使用Direct Buffer，但其编码相对来说会比较复杂，需要注意的点也更多，反之则用Heap Buffer，Buffer的相应创建方法：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;//创建Heap Buffer
+ByteBuffer heapBuffer = ByteBuffer.allocate(1024);
+
+//创建Direct Buffer
+ByteBuffer directBuffer = ByteBuffer.allocateDirect(1024);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;下面我们来看看它的三个属性：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Capacity：顾名思义它的含义是容量，代表着Buffer的最大容量，与数组的Size很类似，初始化不可更改，除非你改变的Buffer的结构；&lt;/li&gt;
+&lt;li&gt;Limit：顾名思义它的含义是界限，代表着Buffer的目前可使用的最大限制，写模式下，一般Limit等于Capacity，读模式下需要你自己控制它的值结合position读取想要的数据；&lt;/li&gt;
+&lt;li&gt;Position：顾名思义它的含义是位置，代表着Buffer目前操作的位置，通俗来说，就是你下次对Buffer进行操作的起始位置；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;接下来我会用一个图解的列子帮助大家理解,现在我们假设有一个容量为10的Buffer，我们先往里面写入一定字节的数据，然后再根据编码规则从其中读取我们需要的数据：&lt;/p&gt;
+
+&lt;p&gt;1.初始Buffer：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;ByteBuffer buffer = ByteBuffer.allocate(10);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/init-buffer.png&quot; alt=&quot;init-buffer&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;2.向Buffer中写入两个字节：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;buffer.put(&quot;my&quot;.getBytes());
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/write-buffer-1.png&quot; alt=&quot;write-buffer-1&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;3.再Buffer中写入四个字节：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;buffer.put(&quot;blog&quot;.getBytes());
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/write-buffer-2.png&quot; alt=&quot;write-buffer-2&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;4.现在我们需要从Buffer中获取数据，首先我们先将写模式转换为读模式：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;  buffer.flip();
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;我们来看看flip()方法到底做了什么事？&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public final Buffer flip() {
+    limit = position;
+    position = 0;
+    mark = -1;
+    return this;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;从源码中可以看出，flip方法根据Buffer目前的相应属性来修改对应的属性，所以flip()方法之后，Buffer目前的状态：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/read-buffer.png&quot; alt=&quot;read-buffer&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;5.接着我们从Buffer中读取数据&lt;/p&gt;
+
+&lt;p&gt;从Buffer中读取数据有多种方式，比如get(),get(byte [])等，相关的具体方法使用可以参考Buffer的官方API文档，这里我们用最简单的get()来获取数据:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;  byte a = buffer.get();
+  byte b = buffer.get();
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;此时Buffer的状态如下图所示：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/read-buffer-2.png&quot; alt=&quot;read-buffer-2&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;我们可以按照这种方式读取完我们所需数据，最终调用clear()方法将Buffer置为初始状态。&lt;/p&gt;
+
+&lt;h3&gt;总结&lt;/h3&gt;
+
+&lt;p&gt;这篇文章主要讲解了Java NIO中重要的三个组成部分，在实际使用过程也是比较重要的，掌握它们之间的关系，可以让你对Java NIO的整个架构更加熟悉，理解相对来说也会更加深刻，并分析了这种模式是如何与多路复用IO模型的映射，了解Java NIO在高并发场景下优势的原因。&lt;/p&gt;
+</content>
+ </entry>
  
  <entry>
    <title>Java IO初探</title>
@@ -118,7 +275,7 @@ while (true) {
 
 &lt;p&gt;小明信号驱动IO吃饭：&lt;/p&gt;
 
-&lt;p&gt;又了一段时间，外婆家通过使用复用IO模式缓解了排队拥挤的情况，但是觉得还要请一个人专门维护队列，感觉不划算，那么有没有一种更好的方式呢？经过一天的苦思冥想，外婆家的经理又想出一个好办法，让每个顾客在领完号后，关注一下外婆家的公众号，然后顾客就可以去做别的事了，定时或者当排队信息发生改变时给顾客发送通知，告知他现在的排队序号或者轮到他吃饭了，顾客可以根据相应的信息做相应的行为，比如快轮到了就开始往店里走（实际程序中并不一定有这种状态，这里只是大概模拟），或者进店吃饭，他们仍然不用排队等位，而是去做一些其他的事。&lt;/p&gt;
+&lt;p&gt;又了一段时间，外婆家通过使用复用IO模式缓解了排队拥挤的情况，但是觉得还要请一个人专门维护队列，感觉不划算，那么有没有一种更好的方式呢？经过一天的苦思冥想，外婆家的经理又想出一个好办法，让每个顾客在领完号后，关注一下外婆家的公众号，然后顾客就可以去做别的事了，定时或者当排队信息发生改变时给顾客发送通知，告知他现在的排队序号或者轮到他吃饭了，顾客可以根据相应的信息做相应的行为，比如快轮到了就开始往店里走（实际程序中并不一定有这种状态，这里只是大概模拟），或者轮到自己了然后进店吃饭，他们仍然不用排队等位，而是去做一些其他的事。&lt;/p&gt;
 
 &lt;p&gt;关键部分：&lt;/p&gt;
 
@@ -144,7 +301,7 @@ while (true) {
 
 &lt;p&gt;小明异步IO吃饭：&lt;/p&gt;
 
-&lt;p&gt;有过了一段时间，小明又想吃外婆家了，但是这个周末他并不想出门，他突然在网上看到新闻说外婆家竟然可以叫外婆，小明高兴坏了，他马上打电话给外婆家，告诉它自己想要吃哪些菜（相当于IO请求所需要的数据），然后将自己的联系号码（相当于回调通知）和住址（相当于数据缓冲区）也告诉它，然后就挂掉电话，开心的做去打游戏了，过了半个小时后，手机响起，告知外卖已经到了，小明开门取外卖就可以直接开吃了。整个过程小明直到吃饭都没有等待阻塞。&lt;/p&gt;
+&lt;p&gt;有过了一段时间，小明又想吃外婆家了，但是这个周末他并不想出门，他突然在网上看到新闻说外婆家竟然可以叫外卖，小明高兴坏了，他马上打电话给外婆家，告诉它自己想要吃哪些菜（相当于IO请求所需要的数据），然后将自己的联系号码（相当于回调通知）和住址（相当于数据缓冲区）也告诉它，然后就挂掉电话，开心的做去打游戏了，过了半个小时后，手机响起，告知外卖已经到了，小明开门取外卖就可以直接开吃了。整个过程小明直到吃饭都没有等待阻塞。&lt;/p&gt;
 
 &lt;p&gt;关键部分：&lt;/p&gt;
 
@@ -1983,236 +2140,6 @@ v1 foreach {
 &lt;h2&gt;总结&lt;/h2&gt;
 
 &lt;p&gt;这篇文章主要讲解了JVM生态上两大语言Java和Scala在异步编程上的一些表现，这里主要是Future机制，在清楚明白它的概念后，我们才能写出更好的程序，虽然本篇文章没有涉及到Akka相关的内容，但是Akka本身是用Scala写的，而且大量使用了Scala中的Future，相信通过对Future的学习，对Akka的理解会有一定的帮助。&lt;/p&gt;
-</content>
- </entry>
- 
- <entry>
-   <title>Akka系列（四）：Akka中的共享内存模型</title>
-   <link href="/2017/05/01/learning-akka-4.html"/>
-   <updated>2017-05-01T00:00:00+08:00</updated>
-   <id>urn:uuid:8ecf4b63-e920-3d54-8ca7-fbvbdc2a2fad</id>
-   <content type="html">&lt;p&gt;通过前几篇的学习，相信大家对Akka应该有所了解了，都说解决并发哪家强，JVM上面找Akka，那么Akka到底在解决并发问题上帮我们做了什么呢？&lt;/p&gt;
-
-&lt;h2&gt;共享内存&lt;/h2&gt;
-
-&lt;p&gt;众所周知，在处理并发问题上面，最核心的一部分就是如何处理共享内存，很多时候我们都需要花费很多时间和精力在共享内存上，那么在学习Akka对共享内存是如何管理之前，我们先来看看Java中是怎么处理这个问题的。&lt;/p&gt;
-
-&lt;h3&gt;Java共享内存&lt;/h3&gt;
-
-&lt;p&gt;相信对Java并发有所了解的同学都应该知道在Java5推出JSR 133后，Java对内存管理有了更高标准的规范了，这使我们开发并发程序也有更好的标准了，不会有一些模糊的定义导致的无法确定的错误。&lt;/p&gt;
-
-&lt;p&gt;首先来看看一下Java内存模型的简单构图：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/05/java-memory.png&quot; alt=&quot;Java Memory&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;从图中我们可以看到我们线程都有自己的一个工作内存，这就好比高速缓存，它是对主内存部分数据的拷贝，线程对自己工作内存的操作速度远远快于对主内存的操作，但这也往往会引起共享变量不一致的问题，比如以下一个场景：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;int a = 0;
-public void setA() {
-  a = a + 1;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;上面是一个很简单的例子，a是一个全局变量，然后我们有一个方法去修改这个值，每次增加一，假如我们用100个线程去运行这段代码，那a最终的结果会是多少呢？
-100？显然不一定，它可能是80，90，或者其他数，这就造成共享变量不一致的问题，那么为什么会导致这个问题呢，就是我们上面所说的，线程去修改a的时候可能就只是修改了自己工作内存中a的副本，但并没有将a的值及时的刷新到主内存中，这便会导致其他线程可能读到未被修改a的值，最终出现变量不一致问题。&lt;/p&gt;
-
-&lt;p&gt;那么Java中是怎么处理这种问题，如何保证共享变量的一致性的呢？&lt;/p&gt;
-
-&lt;h4&gt;同步机制&lt;/h4&gt;
-
-&lt;p&gt;大体上Java中有3类同步机制，但它们所解决的问题并不相同，我们先来看一看这三种机制：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;final关键词&lt;/li&gt;
-&lt;li&gt;volatile关键词&lt;/li&gt;
-&lt;li&gt;synchronized关键词（这里代表了所有类似监视锁的机制）&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h5&gt;1.final关键词&lt;/h5&gt;
-
-&lt;p&gt;写过Java程序的同学对这个关键词应该再熟悉不过了，其基本含义就是&lt;strong&gt;不可变&lt;/strong&gt;，不可变变量，比如：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;final int a = 10;
-final String b = &quot;hello&quot;;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;不可变的含义在于当你对这些变量或者对象赋初值后，不能再重新去赋值，但对于对象来说，我们不能修改的是它的引用，但是对象内的内容还是可以修改的。下面是一个简单的例子：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;final User u = new User(1,&quot;a&quot;);
-u.id = 2; //可以修改
-u = new User(2,&quot;b&quot;); //不可修改
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;所以在利用final关键词用来保证共享变量的一致性时一定要了解清楚自己的需求，选择合适的方法，另外final变量必须在定义或者构建对象的时候进行初始化，不然会报错。&lt;/p&gt;
-
-&lt;h4&gt;2.volatile关键词&lt;/h4&gt;
-
-&lt;p&gt;很多同学在遇到共享变量不一致的问题后，都会说我在声明变量前加一个volatile就好了，但事实真是这样嘛？答案显然不是。那我们来看看volatile到底为我们做了什么。&lt;/p&gt;
-
-&lt;p&gt;前面我们说过每个线程都有自己的工作内存，很多时候线程去修改一个变量的值只是修改了自己工作内存中副本的值，这便会导致主内存的值并不是最新的，其他线程读取到的变量便会出现问题。volatile帮我们解决了这个问题，它有两个特点：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;线程每次都会去主内存中读取变量&lt;/li&gt;
-&lt;li&gt;线程每次修改变量后的值都会及时更新到主内存中去&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;举个例子：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;volatile int a = 0;
-public void setA() {
-  a = a + 1;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;现在线程在执行这段代码时，都会强制去主内存中读取变量的值，修改后也会马上更新到主内存中去，但是这真的能解决共享变量不一致的问题嘛，其实不然，比如我们有这么一个场景：两个线程同时读取了主内存中变量最新的值，这是我们两个线程都去执行修改操作，最后结果会是什么呢？这里就留给大家自己去思考了，其实也很简单的。&lt;/p&gt;
-
-&lt;p&gt;那么volatile在什么场景下能保证线程安全，按照官方来说，有以下两个条件：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;对变量的写操作不依赖于当前值&lt;/li&gt;
-&lt;li&gt;该变量没有包含在具有其他变量的不变式中&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;多的方面这里我就不展开了，推荐两篇我觉得写的还不错的文章：&lt;a href=&quot;http://www.cnblogs.com/paddix/p/5428507.html&quot;&gt;volatile的使用及其原理&lt;/a&gt;&lt;a href=&quot;http://blog.csdn.net/vking_wang/article/details/9982709&quot;&gt;volatile的适用场景&lt;/a&gt;&lt;/p&gt;
-
-&lt;h4&gt;3.synchronized关键词&lt;/h4&gt;
-
-&lt;p&gt;很多同学在学习Java并发过程中最先接触的就是synchronized关键词了，它确实能解决我们上述的并发问题，那它到时如何帮我们保证共享变量的一致性的呢？&lt;/p&gt;
-
-&lt;p&gt;简而言之的说，线程在访问请求用synchronized关键词修饰的方法，代码块都会要求获得一个监视器锁，当线程获得了监视器锁后，它才有权限去执行相应的方法或代码块，并在执行结束后释放监视器锁，这便能保证共享内存的一致性了，因为本文主要是讲Akka的共享内存，过多的篇幅就不展开了，这里推荐一篇解析synchronized原理很不错的文章，有兴趣的同学可以去看看：&lt;a href=&quot;http://www.cnblogs.com/paddix/p/5367116.html&quot;&gt;Synchronized及其实现原理&lt;/a&gt;&lt;/p&gt;
-
-&lt;h3&gt;Akka共享内存&lt;/h3&gt;
-
-&lt;p&gt;Akka中的共享内存是基于Actor模型的，Actor模型提倡的是：&lt;strong&gt;通过通讯来实现共享内存，而不是用共享内存来实现通讯&lt;/strong&gt;，这点是跟Java解决共享内存最大的区别，举个例子：
-在Java中我们要去操作共享内存中数据时，每个线程都需要不断的获取共享内存的监视器锁，然后将操作后的数据暴露给其他线程访问使用，用共享内存来实现各个线程之间的通讯，而在Akka中我们可以将共享可变的变量作为一个Actor内部的状态，利用Actor模型本身串行处理消息的机制来保证变量的一致性。&lt;/p&gt;
-
-&lt;p&gt;当然要使用Akka中的机制也必须满足一下两条原则：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;消息的发送必须先于消息的接收&lt;/li&gt;
-&lt;li&gt;同一个Actor对一条消息的处理先于下一条消息处理&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;第二个原则很好理解，就是上面我们说的Actor内部是串行处理消息，那我们来看看第一个原则，为什么要保证消息的发送先于消息的接收，是为了防止我们在创建消息的时候发生了不确定的错误，接收者将可能接收到不正确的消息，导致发生奇怪的异常，主要表现为消息对象未初始化完整时，若没有这条规则保证，Actor收到的消息便会不完整。&lt;/p&gt;
-
-&lt;p&gt;通过前面的学习我们知道Actor是一种比线程更轻量级，抽象程度更高的一种结构，它帮我们规避了我们自己去操作线程，那么Akka底层到底是怎么帮我们去保证共享内存的一致性的呢？&lt;/p&gt;
-
-&lt;p&gt;一个Actor它可能会有很多线程同时向它发送消息，之前我们也说到Actor本身是串行处理的消息的，那它是如何保障这种机制的呢？&lt;/p&gt;
-
-&lt;h4&gt;Mailbox&lt;/h4&gt;
-
-&lt;p&gt;Mailbox在Actor模型是一个很重要的概念，我们都知道向一个Actor发送的消息首先都会被存储到它所对应的Mailbox中，那么我们先来看看MailBox的定义结构(本文所引用的代码都在akka.dispatch.Mailbox.scala中，有兴趣的同学也可以去研究一下）：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;private[akka] abstract class Mailbox(val messageQueue: MessageQueue)
-  extends ForkJoinTask[Unit] with SystemMessageQueue with Runnable {}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;很清晰Mailbox内部维护了一个messageQueue这样的消息队列，并继承了Scala自身定义的ForkJoinTask任务执行类和我们很熟悉的Runnable接口，由此可以看出，Mailbox底层还是利用Java中的线程进行处理的。那么我们先来看看它的run方法：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;override final def run(): Unit = {
-    try {
-      if (!isClosed) { //Volatile read, needed here
-        processAllSystemMessages() //First, deal with any system messages
-        processMailbox() //Then deal with messages
-      }
-    } finally {
-      setAsIdle() //Volatile write, needed here
-      dispatcher.registerForExecution(this, false, false)
-    }
-  }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;为了配合理解，我们这里先来看一下定义：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;@inline
-  final def currentStatus: Mailbox.Status = Unsafe.instance.getIntVolatile(this, AbstractMailbox.mailboxStatusOffset)
-
-@inline
-  final def isClosed: Boolean = currentStatus == Closed
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;这里我们可以看出Mailbox本身会维护一个状态Mailbox.Status，是一个Int变量,而且是可变的，并且用到volatile来保证了它的可见性：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;@volatile
-  protected var _statusDoNotCallMeDirectly: Status = _ //0 by default
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;现在我们在回去看上面的代码，run方法的执行过程，首先它会去读取MailBox此时的状态，因为是一个Volatile read，所以能保证读取到的是最新的值，然后它会先处理任何的系统消息，这部分不需要我们太过关心，之后便是执行我们发送的消息，这里我们需要详细看一下processMailbox()的实现：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;
-@tailrec private final def processMailbox(
-    left:       Int  = java.lang.Math.max(dispatcher.throughput, 1),
-    deadlineNs: Long = if (dispatcher.isThroughputDeadlineTimeDefined == true) System.nanoTime + dispatcher.throughputDeadlineTime.toNanos else 0L): Unit =
-    if (shouldProcessMessage) {
-      val next = dequeue()  //去出下一条消息
-      if (next ne null) {
-        if (Mailbox.debug) println(actor.self + &quot; processing message &quot; + next)
-        actor invoke next
-        if (Thread.interrupted())
-          throw new InterruptedException(&quot;Interrupted while processing actor messages&quot;)
-        processAllSystemMessages()
-        if ((left &amp;gt; 1) &amp;amp;&amp;amp; ((dispatcher.isThroughputDeadlineTimeDefined == false) || (System.nanoTime - deadlineNs) &amp;lt; 0))
-          processMailbox(left - 1, deadlineNs) //递归处理下一条消息
-      }
-    }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;从上述代码中我们可以清晰的看到，当满足消息处理的情况下就会进行消息处理，从消息队列列取出下一条消息就是上面的&lt;code&gt;dequeue()&lt;/code&gt;,然后将消息发给具体的Actor进行处理，接下去又是处理系统消息，然后判断是否还有满足情况需要下一条消息，若有则再次进行处理，可以看成一个递归操作,&lt;code&gt;@tailrec&lt;/code&gt;也说明了这一点，它表示的是让编译器进行尾递归优化。&lt;/p&gt;
-
-&lt;p&gt;现在我们来看一下一条消息从发送到最终处理在Akka中到底是怎么执行的，下面的内容是我通过阅读Akka源码加自身理解得出的，这里先画了一张流程图：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/05/actor-process.png&quot; alt=&quot;Actor process&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;消息的大致流程我都在图中给出，还有一些细节，必须序列化消息，获取状态等就没有具体说明了，有兴趣的同学可以自己去阅读以下Akka的源码，个人觉得Akka的源码阅读性还是很好的，比如：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;基本没有方法超过20行&lt;/li&gt;
-&lt;li&gt;不会有过多的注释，但关键部分会给出，更能加深自己的理解&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;当然也有一些困扰，我们在不了解各个类，接口之间的关系时，阅读体验就会变得很糟糕，当然我用IDEA很快就解决了这个问题。&lt;/p&gt;
-
-&lt;p&gt;我们这里来看看关键的部分：&lt;strong&gt;Actor是如何保证串行处理消息的？&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;上图中有一根判定，是否已有线程在执行任务？我们来看看这个判定的具体逻辑：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;@tailrec
-  final def setAsScheduled(): Boolean = {  //是否有线程正在调度执行该MailBox的任务
-    val s = currentStatus
-    /*
-     * Only try to add Scheduled bit if pure Open/Suspended, not Closed or with
-     * Scheduled bit already set.
-     */
-    if ((s &amp;amp; shouldScheduleMask) != Open) false
-    else updateStatus(s, s | Scheduled) || setAsScheduled()
-  }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;从注释和代码的逻辑上我们可以看出当已有线程在执行返回false，若没有则去更改状态为以调度，直到被其他线程抢占或者更改成功，其中updateStatus()是线程安全的，我们可以看一下它的实现,是一个CAS操作：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;@inline
-  protected final def updateStatus(oldStatus: Status, newStatus: Status): Boolean =
-    Unsafe.instance.compareAndSwapInt(this, AbstractMailbox.mailboxStatusOffset, oldStatus, newStatus)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;到这里我们应该可以大致清楚Actor内部是如何保证共享内存的一致性了，Actor接收消息是多线程的，但处理消息是单线程的，利用MailBox中的Status来保障这一机制。&lt;/p&gt;
-
-&lt;h2&gt;总结&lt;/h2&gt;
-
-&lt;p&gt;通过上面的内容我们可以总结出以下几点：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Akka并不是说用了什么特殊魔法来保证并发的，底层使用的还是Java和JVM的同步机制&lt;/li&gt;
-&lt;li&gt;Akka并没有使用任何的锁机制，这就避免了死锁的可能性&lt;/li&gt;
-&lt;li&gt;Akka并发执行的处理并没有使用线程切换，不仅提高了线程的使用效率，也大大减少了线程切换消耗&lt;/li&gt;
-&lt;li&gt;Akka为我们提供了更高层次的并发抽象模型，让我们不必关心底层的实现，只需着重实现业务逻辑就行，遵循它的规范，让框架帮我们处理一切难点&lt;/li&gt;
-&lt;/ul&gt;
-
 </content>
  </entry>
  
