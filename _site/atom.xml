@@ -4,12 +4,1247 @@
  <title>泮</title>
  <link href="/atom.xml" rel="self"/>
  <link href=""/>
- <updated>2017-11-09T19:47:25+08:00</updated>
+ <updated>2017-11-23T21:01:31+08:00</updated>
  <id>/</id>
  <author>
    <name></name>
  </author>
 
+ 
+ <entry>
+   <title>MySQL网络协议分析</title>
+   <link href="/2017/11/10/mysql-protocol.html"/>
+   <updated>2017-11-10T00:00:00+08:00</updated>
+   <id>urn:uuid:8d2f2b63-g930-3d54-8ca7-fbgbds2a4fge</id>
+   <content type="html">&lt;p&gt;MySQL对大家来说，都应该很熟悉了，从大学里的课程到实际工作中数据的存储查询，很多时候都需要用到数据库，很多人也写过与数据库交互的程序，在Java中你可能一开始会使用原生mysql-connector-java来进行操作，后来你会接触到Hibernate，Mybatis等ORM框架，其实它们底层也是基于mysql-connector-java，但很多时候我们并不清楚程序是怎么跟数据库具体交互的，比如执行一个SQL查询，程序是如何从MySQL中获取数据的呢？今天就让我们来看看最基础的MySQL网络协议分析。&lt;/p&gt;
+
+&lt;h1&gt;引言&lt;/h1&gt;
+
+&lt;p&gt;阅读本文之前你需要对网络协议需要有基本的了解，比如两台机子之间的数据是如何通信的，硬件层可以暂时不需了解，但网络层和传输层的协议要有一定的理解，比如IP数据包，TCP/IP协议，UDP协议等相关概念，有了这些基础，有利于你阅读本文。&lt;/p&gt;
+
+&lt;h1&gt;背景&lt;/h1&gt;
+
+&lt;p&gt;在历史悠久的时代，数据库只作为单机存储，也不怎么需要与程序进行交互的时候的首，它的网络通信并不是那么重要，但随着时代的发展，数据库不再只是单纯的作为一个数据的仓库了，它需要提供与外界的交互，比如远程连接，程序操作数据库等，这时候一份规范的网络通信的协议就非常重要了，比如它是如何校验权限，如何解析SQL语句，如何返回执行结果都需要用到相应的协议，很多时候我们并不需要接触这些内容，因为它太底层了，我们直接使用把它们封装好的第三方包就可以了，为什么还要去学习它的网络协议呢？确实对于一开始学习编程的人来说，这有点操之过急，反而有时候会适得其反，但当你对这一方面有了一定的了解之后，你便会迫不及待得想去探索更深层的奥秘，去了解并学习我们平常用的第三方类库是怎么去实现，明白它的底层原理，甚至对一些莫名其妙的bug也不会再害怕。&lt;/p&gt;
+
+&lt;h1&gt;MySQL连接方式&lt;/h1&gt;
+
+&lt;p&gt;分析协议，我们首先要了解如何与数据库连接，说到MySQL连接方式，大家突然可能有点懵，其实它一直伴随着我们，比如我们第一次装数据库完成后执行的第一次登录，比如你没有设置密码：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;mysql -uroot
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这是最基本的一种数据库连接方式，那么MySQL连接方式到底有几种呢？到MySQL5.7为止，总共有五种，分别是TCP/IP，TLS/SSL，Unix Sockets，Shared Memory，Named pipes，下面我们就来看看这五种的区别：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;方式&lt;/th&gt;
+&lt;th&gt;默认开启&lt;/th&gt;
+&lt;th&gt;支持系统&lt;/th&gt;
+&lt;th&gt;只支持本机&lt;/th&gt;
+&lt;th&gt;如何开启&lt;/th&gt;
+&lt;th&gt;参数配置&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;TCP/IP &lt;/td&gt;
+&lt;td&gt; 是 &lt;/td&gt;
+&lt;td&gt; 所有系统 &lt;/td&gt;
+&lt;td&gt; 否 &lt;/td&gt;
+&lt;td&gt;--skip-networking=yes/no. &lt;/td&gt;
+&lt;td&gt; --port&lt;br&gt;--bind-address&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;TLS/SSL &lt;/td&gt;
+&lt;td&gt; 是 &lt;/td&gt;
+&lt;td&gt; 所有系统（基于TCP/IP)之上 &lt;/td&gt;
+&lt;td&gt; 否 &lt;/td&gt;
+&lt;td&gt;--ssl=yes/no. &lt;/td&gt;
+&lt;td&gt; --ssl-* options&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Unix Sockets &lt;/td&gt;
+&lt;td&gt; 是 &lt;/td&gt;
+&lt;td&gt; 类Unix系统 &lt;/td&gt;
+&lt;td&gt; 是 &lt;/td&gt;
+&lt;td&gt; 设置--socket=&amp;lt;empty&gt; 来关闭. &lt;/td&gt;
+&lt;td&gt; --socket=socket path&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Shared Memory &lt;/td&gt;
+&lt;td&gt; 否 &lt;/td&gt;
+&lt;td&gt; Windows系统 &lt;/td&gt;
+&lt;td&gt; 是 &lt;/td&gt;
+&lt;td&gt;--shared-memory=on/off. &lt;/td&gt;
+&lt;td&gt; --shared-memory-base-name=&amp;lt;name&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Named pipes &lt;/td&gt;
+&lt;td&gt; 否 &lt;/td&gt;
+&lt;td&gt; Windows系统 &lt;/td&gt;
+&lt;td&gt; 否 &lt;/td&gt;
+&lt;td&gt;--enable-named-pipe=on/off. &lt;/td&gt;
+&lt;td&gt;  --socket=&amp;lt;name&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;从上表中我们可以清晰看出每种连接方式的区别，接下里我会具体说明几种连接是怎么操作的，由于我的机子是Mac OS系统，这里只模拟非Windows系统下的三种方式,因为这三种方式都是默认开启的，我们不需要进行任何配置：&lt;/p&gt;
+
+&lt;h2&gt;1.Unix Sockets：&lt;/h2&gt;
+
+&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;mysql -uroot
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;若你在本机使用这种方式连接MySQL数据库的话，它默认会使用Unix Sockets。&lt;/p&gt;
+
+&lt;h2&gt;2.TCP/IP：&lt;/h2&gt;
+
+&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;mysql --protocol=tcp -uroot
+mysql -P3306 -h127.0.0.1 -uroot
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;连接的时候我们指定连接协议，或者指定相应的IP及端口，我们的连接方式就变成了TCP/IP方式。&lt;/p&gt;
+
+&lt;h2&gt;3.TLS/SSL：&lt;/h2&gt;
+
+&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;mysql --protocol=tcp -uroot --ssl=on
+mysql -P3306 -h127.0.0.1 -uroot --ssl=on
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;上表说过，TLS/SSL是基于TCP/IP的，所以我们只需再指定打开ssl配置即可。&lt;/p&gt;
+
+&lt;p&gt;然后我们可以通过以下语句来查询目前数据库的连接情况：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;SELECT DISTINCT connection_type from performance_schema.threads where connection_type is not null
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;那么我们如何选择连接方式呢？个人总结了以下几个原则：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;若是你能确定程序和数据库在同一台机子(类Unix系统)上，推荐使用Unix Sockets，因为它效率更高；&lt;/li&gt;
+&lt;li&gt;若数据库分布在不同的机子上，且能确保连接安全或者安全性要求不是那么高，推荐使用TCP/IP，反之使用TLS/SSL；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;MySQL数据包&lt;/h1&gt;
+
+&lt;p&gt;通信中最重要的就是数据，那么程序是如何和MySQL Server进行通信，并交互数据的呢？比如如何验证账户，发送查询语句，返回执行结果等，我先画一个流程图来模拟一下整个过程，帮助大家理解：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/mysql-process.png&quot; alt=&quot;mysql-process&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;整个过程相对来说还是比较清晰的，我们对连接请求和断开请求不需要过分关心，只需要了解这一点就可以了，重要的是其他几点，那么在这几步中，数据是怎么进行交互的呢？&lt;/p&gt;
+
+&lt;p&gt;其实主要就是两步，&lt;strong&gt;Client将执行命令编码成Server要求的格式传输给Server端执行，Server端将执行结果传输给Client端，Client端再根据相应的数据包格式解析获得所需的数据&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;h2&gt;1.基本数据类型&lt;/h2&gt;
+
+&lt;p&gt;虽然网络中的数据是用字节传输的，但它背后的数据源都是有类型的数据，MySQL协议也有基本的数据类型，好比Java中的8种基本数据类型，但MySQL协议中简单的多，它只有两种基本数据类型，分别为Integer(整型)，String(字符串)，下面我们就来看看这两种类型。&lt;/p&gt;
+
+&lt;h3&gt;Integer(整型)&lt;/h3&gt;
+
+&lt;p&gt;首先Integer在MySQL协议中有两种编码方式，分别为FixedLengthInteger和LengthEncodedInteger
+,其中前者用于存储无符号定长整数，实际中使用的不多，这里着重讲一下后者。&lt;/p&gt;
+
+&lt;p&gt;使用LengthEncodedInteger编码的整数可能会使用1, 3, 4, 或者9 个字节，具体使用字节取决于数值的大小，下表是不同的数据长度的整数所使用的字节数：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;最小值（包含）&lt;/th&gt;
+&lt;th&gt;最大值（不包含）&lt;/th&gt;
+&lt;th&gt;存储方式&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0 &lt;/td&gt;
+&lt;td&gt;251&lt;/td&gt;
+&lt;td&gt; 1个字节&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;251 &lt;/td&gt;
+&lt;td&gt;2&lt;sup&gt;16&lt;/sup&gt;&lt;/td&gt;
+&lt;td&gt; 3个字节(0xFC + 2个字节具体数据)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;sup&gt;16&lt;/sup&gt; &lt;/td&gt;
+&lt;td&gt;2&lt;sup&gt;24&lt;/sup&gt;&lt;/td&gt;
+&lt;td&gt; 4个字节(0xFD + 3个字节具体数据)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;sup&gt;24&lt;/sup&gt; &lt;/td&gt;
+&lt;td&gt;2&lt;sup&gt;64&lt;/sup&gt;&lt;/td&gt;
+&lt;td&gt; 9个字节(0xFE + 8个字节具体数据)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;举个简单的例子，比如1024的编码为：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;0xFC 0x00 0x04
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;其中0x代表16进制，实际数据传输中并没有该标识，第一位代表这是一个251~2&lt;sup&gt;16&lt;/sup&gt;之间的数值，所以后面两位为数值具体的值，这里使用的是小端字节序，MySQL默认使用的也是这种编码次序，所以这里1024是0x00 0x04，字节序相关知识可以参考：&lt;a href=&quot;http://www.ruanyifeng.com/blog/2016/11/byte-order.html&quot;&gt;理解字节序&lt;/a&gt;，到这里大家应该对这种编码格式有了一定的了解了，下面我们就来看看String。&lt;/p&gt;
+
+&lt;h3&gt;String(字符串)&lt;/h3&gt;
+
+&lt;p&gt;String的编码格式相对Integer来说会复杂一点，主要有以下几种：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;FixedLengthString（定长方式）：需先知道String的长度，MySQL中的一个例子就是ERR_Packet包（后续会讲到）就使用了这种编码方式，因为它的长度固定，用5个字节存储所有数据。&lt;/li&gt;
+&lt;li&gt;NullTerminatedString（Null结尾方式）: 字符串以遇到Null作为结束标志，相应的字节为00。&lt;/li&gt;
+&lt;li&gt;VariableLengthString（动态计算字符串长度方式）: 字符串的长度取决于其他变量计算而定，比如一个字符串由Integer + Value组成，我们通过计算Integer的值来获取Value的具体的长度。&lt;/li&gt;
+&lt;li&gt;LengthEncodedString（指定字符串长度方式）： 与VariableLengthString原理相似，是它的一种特殊情况，具体例子就是我上条举的这个例子。&lt;/li&gt;
+&lt;li&gt;RestOfPacketString（包末端字符串方式）：一个包末端的字符串，可根据包的总长度金和当前位置得到字符串的长度，实际中并不常用。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;总的来说String的编码格式种类相对比较多，不同方式之间的区别也比较大，若要深刻理解还需从实际的例子里去学习，后续文章中我会写几个demo带大家一起去探索。&lt;/p&gt;
+
+&lt;h2&gt;2.基本数据包格式&lt;/h2&gt;
+
+&lt;p&gt;数据包格式也主要分为两种，一种是Server端向Client端发送的数据包格式，另一种则是Client向Server端发送的数据包。&lt;/p&gt;
+
+&lt;h3&gt;Server to Client&lt;/h3&gt;
+
+&lt;p&gt;Server向Client发送的数据包有两个原则：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;每个数据包大小不能超过2&lt;sup&gt;24&lt;/sup&gt;字节(16MB);&lt;/li&gt;
+&lt;li&gt;每个数据包前都需要加上数据包信息；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;每个包的基本格式：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Type &lt;/th&gt;
+&lt;th&gt;Name&lt;/th&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;int&lt;3&gt; &lt;/td&gt;
+&lt;td&gt;payload_length(包数据长度)&lt;/td&gt;
+&lt;td&gt; 具体数据包的内容长度，从出去头部四个字节后开始的内容&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;int&lt;1&gt; &lt;/td&gt;
+&lt;td&gt;sequence_id(包序列id)&lt;/td&gt;
+&lt;td&gt; 每个包的序列id，总数据内容大于16MB时需要用，从0开始，依次增加，新的命令执行会重载为0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;string &lt;/td&gt;
+&lt;td&gt;payload(具体数据)&lt;/td&gt;
+&lt;td&gt; 包中除去头部后的具体数据内容&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;举个列子：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;例子 &lt;/th&gt;
+&lt;th&gt;解释&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;01 00 00 00 01&lt;/td&gt;
+&lt;td&gt; &lt;li&gt;payload_length: 1&lt;/li&gt; &lt;li&gt;sequence_id: 0x00&lt;/li&gt;&lt;li&gt;payload: 0x01&lt;/li&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;若是数据内容大于或者等于2&lt;sup&gt;24&lt;/sup&gt;-1个字节，将会拆分发送，举个例子，比如发送16 777 215 (2&lt;sup&gt;24&lt;/sup&gt;-1) 字节的内容，则会按一下这种方式发送&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ff ff ff 00 ...
+00 00 00 01
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;第一个数据包满载，第二个数据包是一个空数据包（一种临界情况）。&lt;/p&gt;
+
+&lt;h3&gt;Client to Server&lt;/h3&gt;
+
+&lt;p&gt;Client向Server端发送的格式相对来说就简单一点了&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Type &lt;/th&gt;
+&lt;th&gt;Name&lt;/th&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;int&lt;1&gt; &lt;/td&gt;
+&lt;td&gt;执行命令&lt;/td&gt;
+&lt;td&gt; 执行的操作，比如切换数据库，查询表等操作&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;string &lt;/td&gt;
+&lt;td&gt;参数&lt;/td&gt;
+&lt;td&gt; 命令相应的参数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;命令列表（摘抄自胡桃夹子的博客）：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;类型值 &lt;/th&gt;
+&lt;th&gt;命令&lt;/th&gt;
+&lt;th&gt;功能&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0x00&lt;/td&gt;
+&lt;td&gt;    COM_SLEEP&lt;/td&gt;
+&lt;td&gt;   （内部线程状态)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x01&lt;/td&gt;
+&lt;td&gt;    COM_QUIT &lt;/td&gt;
+&lt;td&gt;   关闭连接&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x02&lt;/td&gt;
+&lt;td&gt;    COM_INIT_DB &lt;/td&gt;
+&lt;td&gt; 切换数据库&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x03&lt;/td&gt;
+&lt;td&gt;    COM_QUERY   &lt;/td&gt;
+&lt;td&gt;SQL查询请求&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x04&lt;/td&gt;
+&lt;td&gt;   COM_FIELD_LIST&lt;/td&gt;
+&lt;td&gt;  获取数据表字段信息&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x05&lt;/td&gt;
+&lt;td&gt;    COM_CREATE_DB &lt;/td&gt;
+&lt;td&gt;  创建数据库&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x06&lt;/td&gt;
+&lt;td&gt;    COM_DROP_DB&lt;/td&gt;
+&lt;td&gt; 删除数据库&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x07&lt;/td&gt;
+&lt;td&gt;    COM_REFRESH&lt;/td&gt;
+&lt;td&gt; 清除缓存&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x08&lt;/td&gt;
+&lt;td&gt;   COM_SHUTDOWN &lt;/td&gt;
+&lt;td&gt;   停止服务器&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x09&lt;/td&gt;
+&lt;td&gt;    COM_STATISTICS&lt;/td&gt;
+&lt;td&gt;  获取服务器统计信息&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x0A&lt;/td&gt;
+&lt;td&gt;    COM_PROCESS_INFO&lt;/td&gt;
+&lt;td&gt;    获取当前连接的列表&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x0B&lt;/td&gt;
+&lt;td&gt;    COM_CONNECT&lt;/td&gt;
+&lt;td&gt; （内部线程状态)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x0C&lt;/td&gt;
+&lt;td&gt;    COM_PROCESS_KILL&lt;/td&gt;
+&lt;td&gt;    中断某个连接&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x0D&lt;/td&gt;
+&lt;td&gt;    COM_DEBUG&lt;/td&gt;
+&lt;td&gt;   保存服务器调试信息&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x0E&lt;/td&gt;
+&lt;td&gt;    COM_PING&lt;/td&gt;
+&lt;td&gt;    测试连通性&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x0F&lt;/td&gt;
+&lt;td&gt;    COM_TIME&lt;/td&gt;
+&lt;td&gt;    （内部线程状态）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x10&lt;/td&gt;
+&lt;td&gt;    COM_DELAYED_INSERT&lt;/td&gt;
+&lt;td&gt;  （内部线程状态）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x11&lt;/td&gt;
+&lt;td&gt;    COM_CHANGE_USER&lt;/td&gt;
+&lt;td&gt; 重新登陆（不断连接）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x12&lt;/td&gt;
+&lt;td&gt;    COM_BINLOG_DUMP&lt;/td&gt;
+&lt;td&gt; 获取二进制日志信息&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x13&lt;/td&gt;
+&lt;td&gt;    COM_TABLE_DUMP&lt;/td&gt;
+&lt;td&gt;  获取数据表结构信息&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x14&lt;/td&gt;
+&lt;td&gt;    COM_CONNECT_OUT&lt;/td&gt;
+&lt;td&gt; （内部线程状态)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x15&lt;/td&gt;
+&lt;td&gt;    COM_REGISTER_SLAVE&lt;/td&gt;
+&lt;td&gt;  从服务器向主服务器进行注册&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x16&lt;/td&gt;
+&lt;td&gt;    COM_STMT_PREPARE&lt;/td&gt;
+&lt;td&gt;    预处理SQL语句&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x17&lt;/td&gt;
+&lt;td&gt;    COM_STMT_EXECUTE&lt;/td&gt;
+&lt;td&gt;    执行预处理语句&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x18&lt;/td&gt;
+&lt;td&gt;    COM_STMT_SEND_LONG_DATA&lt;/td&gt;
+&lt;td&gt; 发送BLOB类型的数据&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x19&lt;/td&gt;
+&lt;td&gt;    COM_STMT_CLOSE&lt;/td&gt;
+&lt;td&gt;  销毁预处理语句&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x1A&lt;/td&gt;
+&lt;td&gt;    COM_STMT_RESET&lt;/td&gt;
+&lt;td&gt;  清除预处理语句参数缓存&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x1B&lt;/td&gt;
+&lt;td&gt;    COM_SET_OPTION&lt;/td&gt;
+&lt;td&gt;  设置语句选项&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x1C&lt;/td&gt;
+&lt;td&gt;    COM_STMT_FETCH&lt;/td&gt;
+&lt;td&gt;  获取预处理语句的执行结果&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;这里距一个常见的的例子，比如切换数据库：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;mysql&quot;&gt;use godpan
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;相应的报文格式则为：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;0x02 0x67 0x6f 0x64 0x70 0x61 0x6e
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;其中0x02代表切换数据库命令，后面的字节则为godpan的16进制表达。&lt;/p&gt;
+
+&lt;h2&gt;数据包类型&lt;/h2&gt;
+
+&lt;p&gt;有了以上的基础，我们基本知道的与MySQL通信之间的方式以及数据格式，那么与其通信间到底有哪几种数据包呢？接下去的内容是建立在MySQL4.1版本以后，之前版本的数据包类型这里不再论述。&lt;/p&gt;
+
+&lt;p&gt;这里主要分为两个阶段，第一个阶段是数据库账户认证阶段，第二个阶段则是执行具体命令阶段，我们先来看看前者。&lt;/p&gt;
+
+&lt;h3&gt;数据库账户认证阶段&lt;/h3&gt;
+
+&lt;p&gt;这个阶段就是我们平常所说的登录，主要步骤如下：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;1.Client与Server进行连接&lt;/li&gt;
+&lt;li&gt;2.Server向Client发送Handshake packet&lt;/li&gt;
+&lt;li&gt;3.Client与Server发送Auth packet&lt;/li&gt;
+&lt;li&gt;4.Server向Client发送OK packet或者ERR packet&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;这里我们来看一看上面的Handshake packet和Auth packet，OK packet和ERR packet放在另一个阶段写。&lt;/p&gt;
+
+&lt;h4&gt;Handshake packet&lt;/h4&gt;
+
+&lt;p&gt;Handshake packet是由Server向Client发送的初始化包，因为所有从Server向Client端发送的包都是一样的格式，所以前面的四个字节是包头，前三位代表Handshake packet具体内容的数据，另外包序列号为0，很显然这个包内容小于16MB，下面是Handshake packet具体内容的格式：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;相对包内容的位置 &lt;/th&gt;
+&lt;th&gt;长度（字节）&lt;/th&gt;
+&lt;th&gt;名称&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0 &lt;/td&gt;
+&lt;td&gt; 1 &lt;/td&gt;
+&lt;td&gt; 协议版本 &lt;/td&gt;
+&lt;td&gt;协议版本的版本号，通常为10（0x0A）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; len = strlen (server_version) + 1 &lt;/td&gt;
+&lt;td&gt; 数据库版本 &lt;/td&gt;
+&lt;td&gt; 使用前面的NullTerminatedString格式编码，长度为数据库版本字符串的长度加上标示结束的的一个字节&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;len + 1 &lt;/td&gt;
+&lt;td&gt; 4 &lt;/td&gt;
+&lt;td&gt; 线程ID &lt;/td&gt;
+&lt;td&gt;此次连接MySQL Server启动的线程ID&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;len + 5 &lt;/td&gt;
+&lt;td&gt; 8 + 1（0x00表示结束) &lt;/td&gt;
+&lt;td&gt; 挑战随机数（第一部分） &lt;/td&gt;
+&lt;td&gt;用于后续账户密码验证&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;len + 14 &lt;/td&gt;
+&lt;td&gt; 2 &lt;/td&gt;
+&lt;td&gt; 协议协商 &lt;/td&gt;
+&lt;td&gt; 用于与客户端协商通讯方式&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;len + 16 &lt;/td&gt;
+&lt;td&gt; 1 &lt;/td&gt;
+&lt;td&gt; 编码格式 &lt;/td&gt;
+&lt;td&gt;标识数据库目前的编码方式&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;len + 17 &lt;/td&gt;
+&lt;td&gt; 2 &lt;/td&gt;
+&lt;td&gt; 服务器状态 &lt;/td&gt;
+&lt;td&gt;用于表示服务器状态，比如是否是事务模式或者自动提交模式&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;len + 19 &lt;/td&gt;
+&lt;td&gt; 13 &lt;/td&gt;
+&lt;td&gt; 保留字节 &lt;/td&gt;
+&lt;td&gt;未来可能会用到，预留字节&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;len + 32 &lt;/td&gt;
+&lt;td&gt; 12 + 1（0x00表示结束) &lt;/td&gt;
+&lt;td&gt; 挑战随机数（第二部分） &lt;/td&gt;
+&lt;td&gt;用于后续账户密码验证&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;上表就是整个Handshake packet的这个包结构，属性的含义以及规范都有相应的说明，下面是我本机解析的某次连接数据库的Handshake packet包，仅供参考：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;{protocolVersion=10, serverVersion='5.7.13', threadId=4055, scramble=[49, 97, 80, 3, 35, 118, 45, 15, 5, 118, 9, 11, 124, 93, 93, 5, 31, 47, 111, 109, 0, 0, 0, 0, 0], serverCapabilities=65535, serverLanguage=33, serverStatus=2}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4&gt;Auth packet&lt;/h4&gt;
+
+&lt;p&gt;Auth packet是由Client向Server发送的认证包，用于验证数据库账户登录，相应内容的格式：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;相对包内容的位置 &lt;/th&gt;
+&lt;th&gt;长度（字节）&lt;/th&gt;
+&lt;th&gt;名称&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0 &lt;/td&gt;
+&lt;td&gt; 4 &lt;/td&gt;
+&lt;td&gt; 协议协商 &lt;/td&gt;
+&lt;td&gt; 用于与服务端协商通讯方式&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4 &lt;/td&gt;
+&lt;td&gt; 4 &lt;/td&gt;
+&lt;td&gt; 消息最长长度 &lt;/td&gt;
+&lt;td&gt; 客户端可以发送或接收的最长长度，0表示不做任何限制&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8 &lt;/td&gt;
+&lt;td&gt; 1 &lt;/td&gt;
+&lt;td&gt; 字符编码 &lt;/td&gt;
+&lt;td&gt; 客服端字符编码方式&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9 &lt;/td&gt;
+&lt;td&gt; 23 &lt;/td&gt;
+&lt;td&gt; 保留字节 &lt;/td&gt;
+&lt;td&gt; 未来可能会用到，预留字节，用0代替&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;32 &lt;/td&gt;
+&lt;td&gt;不定&lt;/td&gt;
+&lt;td&gt; 认证字符串 &lt;/td&gt;
+&lt;td&gt; 主要有三部分内容&lt;br&gt; &lt;li&gt;用户名：NullTerminatedString格式编码&lt;/li&gt;&lt;li&gt;加密后的密码：LengthEncodedString格式编码&lt;/li&gt;&lt;li&gt;数据库名称（可选）：NullTerminatedString格式编码&lt;/li&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;这部分内容是由客户端自己生成，所以说如果我们如果要写一个程序连接数据库，那么这个包就得按照这个格式，不然服务端将会无法识别。&lt;/p&gt;
+
+&lt;h3&gt;命令执行阶段&lt;/h3&gt;
+
+&lt;p&gt;在我们正确连接数据库后，我们就要执行相应的命令了，比如切换数据库，执行CRUD操作等，这个阶段主要分为两步，Client发送命令（上文已经给出，下面不再讨论），Server端接收命令执行相应的操作，我们主要关心Server端向我们发送数据包，可分为4类和一个最基础的报文结构Data Field：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Data Field：包数据的一个基础结构；&lt;/li&gt;
+&lt;li&gt;OK包(包括PREPARE_OK)：Server端发送正确处理信息的包，包头标识为0x00；&lt;/li&gt;
+&lt;li&gt;Error包： Server端发送错误信息的包，包头标识为0xFF；&lt;/li&gt;
+&lt;li&gt;EOF包：用于Server向Client发送结束包，包头标识为0xFE；&lt;/li&gt;
+&lt;li&gt;Result Set包：用于Server向Client发送的查询结果包；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;Data Field&lt;/h4&gt;
+
+&lt;p&gt;Data Field是Server回应包里的一个核心，主要是数据的一种编码结构，跟我之前讲的LengthEncodedInteger和LengthEncodedString很类似，也主要分为三个部分&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;最小数据长度（包含）&lt;/th&gt;
+&lt;th&gt;最大数据长度（不包含）&lt;/th&gt;
+&lt;th&gt;数据长度&lt;/th&gt;
+&lt;th&gt;格式&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt;251&lt;/td&gt;
+&lt;td&gt; 1个字节&lt;/td&gt;
+&lt;td&gt;1字节 + 具体数据&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;251 &lt;/td&gt;
+&lt;td&gt;2&lt;sup&gt;16&lt;/sup&gt;&lt;/td&gt;
+&lt;td&gt; 2个字节 &lt;/td&gt;
+&lt;td&gt; 0xFC + 2个字节数据长度 + 具体数据&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;sup&gt;16&lt;/sup&gt; &lt;/td&gt;
+&lt;td&gt;2&lt;sup&gt;24&lt;/sup&gt;&lt;/td&gt;
+&lt;td&gt; 4个字节 &lt;/td&gt;
+&lt;td&gt; 0xFD + 4个字节数据长度 + 具体数据&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;sup&gt;24&lt;/sup&gt; &lt;/td&gt;
+&lt;td&gt;2&lt;sup&gt;64&lt;/sup&gt;&lt;/td&gt;
+&lt;td&gt; 8个字节 &lt;/td&gt;
+&lt;td&gt; 0xFE + 8个字节数据长度 + 具体数据&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;NULL &lt;/td&gt;
+&lt;td&gt; NULL &lt;/td&gt;
+&lt;td&gt; 0个字节 &lt;/td&gt;
+&lt;td&gt; 0xFB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;要注意的一点是如果出现0xFB（251）开头说明这个数据对应的是MySQL中的NULL。&lt;/p&gt;
+
+&lt;h4&gt;OK 包&lt;/h4&gt;
+
+&lt;p&gt;普通的OK包（PREPARE_OK包后面会讲到）会在以下几种情况下产生，由Server发送给相应的接收方：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;COM_PING: 连接或者测试数据库&lt;/li&gt;
+&lt;li&gt;COM_QUERY： 不需要查询结果集的操作，比如INSERT, UPDATE, or ALTER TABLE&lt;/li&gt;
+&lt;li&gt;COM_REFRESH： 数据刷新&lt;/li&gt;
+&lt;li&gt;COM_REGISTER_SLAVE： 注册从服务器&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;OK 包的主要结构：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;相对包内容的位置 &lt;/th&gt;
+&lt;th&gt;长度（字节）&lt;/th&gt;
+&lt;th&gt;名称&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0 &lt;/td&gt;
+&lt;td&gt; 1 &lt;/td&gt;
+&lt;td&gt; 包头标识 &lt;/td&gt;
+&lt;td&gt;0x00 代表这是一个OK 包&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; rows_len &lt;/td&gt;
+&lt;td&gt; 影响行数 &lt;/td&gt;
+&lt;td&gt; 相应操作影响的行数，比如一个Update操作的记录是5条，那么这个值就为5&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 + rows_len &lt;/td&gt;
+&lt;td&gt; id_len &lt;/td&gt;
+&lt;td&gt; 自增id &lt;/td&gt;
+&lt;td&gt;插入一条记录时，如果是自增id的话，返回的id值&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 + rows_len + id_len &lt;/td&gt;
+&lt;td&gt; 2 &lt;/td&gt;
+&lt;td&gt; 服务器状态 &lt;/td&gt;
+&lt;td&gt;用于表示服务器状态，比如是否是事务模式或者自动提交模式&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3 + rows_len + id_len &lt;/td&gt;
+&lt;td&gt; 2 &lt;/td&gt;
+&lt;td&gt; 警告数 &lt;/td&gt;
+&lt;td&gt;上次命令引起的警告数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5 + rows_len + id_len &lt;/td&gt;
+&lt;td&gt; msg_len &lt;/td&gt;
+&lt;td&gt; 额外信息 &lt;/td&gt;
+&lt;td&gt;此次操作的一些额外信息&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;下面是我本机解析的某次正确连接数据库后的OK packet包，仅供参考：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;OK{affectedRows=0, insertId=0, serverStatus=2, message='....'}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4&gt;Error 包&lt;/h4&gt;
+
+&lt;p&gt;顾名思义Error 包就是当出现错误的时候返回的信息，比如账户验证不通过，查询命令不合法，非空字段未指定值等相关操作，Server端都会向Client端发送Error 包。&lt;/p&gt;
+
+&lt;p&gt;Error 包的主要结构：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;相对包内容的位置 &lt;/th&gt;
+&lt;th&gt;长度（字节）&lt;/th&gt;
+&lt;th&gt;名称&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0 &lt;/td&gt;
+&lt;td&gt; 1 &lt;/td&gt;
+&lt;td&gt; 包头标识 &lt;/td&gt;
+&lt;td&gt;0xFF 代表这是一个Error 包&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; 2 &lt;/td&gt;
+&lt;td&gt; 错误代码 &lt;/td&gt;
+&lt;td&gt;该错误的相应错误代码&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3 &lt;/td&gt;
+&lt;td&gt; 1 &lt;/td&gt;
+&lt;td&gt; 标识位 &lt;/td&gt;
+&lt;td&gt;SQL执行状态标识位，用'#'进行标识&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4 &lt;/td&gt;
+&lt;td&gt; 5 &lt;/td&gt;
+&lt;td&gt; 执行状态 &lt;/td&gt;
+&lt;td&gt;SQL的具体执行状态&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9 &lt;/td&gt;
+&lt;td&gt; msg_len &lt;/td&gt;
+&lt;td&gt; 错误信息 &lt;/td&gt;
+&lt;td&gt;具体的错误信息&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;比如我们现在已经连接了数据库，执行&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;use test_database;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;但是我们数据库中并没有test_database这个数据库，我们将会得到相应的错误信息，下面是我本机解析的Error packet包，仅供参考：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Error{errno=1046, sqlState='3D000', message='No database selected'}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4&gt;EOF Packet&lt;/h4&gt;
+
+&lt;p&gt;EOF Packet是用于标识某个阶段数据结束的标志包，会在一下几种情况中产生：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;结果集中字段信息结束的时候；&lt;/li&gt;
+&lt;li&gt;结果集中列信息结束的时候；&lt;/li&gt;
+&lt;li&gt;服务器确认停止服务的时候；&lt;/li&gt;
+&lt;li&gt;客户端发送COM_SET_OPTION and COM_DEBUG命令后，服务器回应的时候；&lt;/li&gt;
+&lt;li&gt;服务器请求使用MySQL4.1版本之前的认证方式的时候；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;EOF 包的主要结构：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;相对包内容的位置 &lt;/th&gt;
+&lt;th&gt;长度（字节）&lt;/th&gt;
+&lt;th&gt;名称&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0 &lt;/td&gt;
+&lt;td&gt; 1 &lt;/td&gt;
+&lt;td&gt; 包头标识 &lt;/td&gt;
+&lt;td&gt;0xFE 代表这是一个EOF 包&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; 2 &lt;/td&gt;
+&lt;td&gt; 警告数 &lt;/td&gt;
+&lt;td&gt;上次命令引起的警告数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3 &lt;/td&gt;
+&lt;td&gt; 2 &lt;/td&gt;
+&lt;td&gt; 服务器状态&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;这里要注意的一点，我们上面分析了Data Field的结构，发现它是用0xFE作为长度需要8个字节编码值得标识头，所以我们在判断一个包是否是EOF 包的时候，需要下面两个条件：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;标识头（第一个字节）为0xFE；&lt;/li&gt;
+&lt;li&gt;包的总长度小于9个字节；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;Result Set包&lt;/h4&gt;
+
+&lt;p&gt;Result Set包产生于我们每次数据库执行需要返回结果集的时候，Server端发送给我们的包，比如平常的SELECT,SHOW等命令，Result Set包相对比较复杂，主要包含以下五个方面：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;内容 &lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Result Set Header &lt;/td&gt;
+&lt;td&gt; 返回数据的列数量&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Field &lt;/td&gt;
+&lt;td&gt; 返回数据的列信息（多个）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;EOF   &lt;/td&gt;
+&lt;td&gt; 列结束&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Row Data &lt;/td&gt;
+&lt;td&gt; 行数据（多个）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;EOF &lt;/td&gt;
+&lt;td&gt; 数据结束&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;我们逐个来分析，首先我们来看Result Set Header。&lt;/p&gt;
+
+&lt;h5&gt;Result Set Header&lt;/h5&gt;
+
+&lt;p&gt;Result Set Header表示返回数据的列数量以及一些额外的信息，其主要结构为：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;长度 &lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1-9字节 &lt;/td&gt;
+&lt;td&gt; 数据的列数量（LengthEncodedInteger编码格式）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1-9字节 &lt;/td&gt;
+&lt;td&gt; 额外信息（LengthEncodedInteger编码格式）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;h5&gt;Field&lt;/h5&gt;
+
+&lt;p&gt;Field表示Result Set中数据列的具体信息，可出现多次，具体次数取决于Result Set Header中数据的列数量，它的主要结构为：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;长度 &lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;4 &lt;/td&gt;
+&lt;td&gt; 通常为ASCIIz字符串def&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;n &lt;/td&gt;
+&lt;td&gt; 数据库名称（Data Field）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;n &lt;/td&gt;
+&lt;td&gt; 假如查询指定了表别名，就是表别名（Data Field）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;n &lt;/td&gt;
+&lt;td&gt; 原始的表名（Data Field）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;n &lt;/td&gt;
+&lt;td&gt; 假如查询指定了列别名，就是列别名（Data Field）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;n &lt;/td&gt;
+&lt;td&gt; 原始的列名（Data Field）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; 标识位，通常为12，表示接下去的12个字节是具体的field内容&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2 &lt;/td&gt;
+&lt;td&gt; field的编码&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4 &lt;/td&gt;
+&lt;td&gt; field的长度&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; field的类型&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2 &lt;/td&gt;
+&lt;td&gt; field的标识&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2 &lt;/td&gt;
+&lt;td&gt; field值的的小数点精度&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2 &lt;/td&gt;
+&lt;td&gt; 预留字节&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;n &lt;/td&gt;
+&lt;td&gt; 可选元素，如果存在，则表示该field的默认值&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;其中field的类型与标识具体定义和对应变量含义可参考这篇文章：&lt;a href=&quot;http://hutaow.com/blog/2013/11/06/mysql-protocol-analysis/#428-com_shutdown&quot;&gt;MySQL协议分析&lt;/a&gt;&lt;/p&gt;
+
+&lt;h5&gt;EOF 包&lt;/h5&gt;
+
+&lt;p&gt;这里的EOF包是标识这列信息的结束，具体结构信息参考上面的EOF包解释。&lt;/p&gt;
+
+&lt;h5&gt;Row Data&lt;/h5&gt;
+
+&lt;p&gt;Row Data含着的是我们需要获取的数据，一个Result Set包里面包含着多个Row Data结构(得到的数据可能多行)，每个Row Data中包含着多个字段值，它们之间没有间隔，比如我们现在查询到的数据为（id: 1, name: godpan) 那么Row Data内容为（1，godpan),这两个值是连在一起的，对应的值都用LengthEncodedString编码。&lt;/p&gt;
+
+&lt;h5&gt;EOF 包&lt;/h5&gt;
+
+&lt;p&gt;等待Row Data发送完之后，Server最后会向Client端发送一个EOF包，标识所有的行数据已经发送完毕。&lt;/p&gt;
+
+&lt;h4&gt;PREPARE_OK包&lt;/h4&gt;
+
+&lt;p&gt;PREPARE_OK包产生在Client端向Server发送预处理SQL语句，Server进行正确回应的时候，大家写写Java的时候肯定用过PreparedStatement，这里PreparedStatement的功能就是进行SQL的预处理，预处理的优点比较多，比如效率高，防SQL注入等，有兴趣的同学可以自己去学习下。下面是PREPARE_OK包的结构：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;长度 &lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; 0x00（标识是一个OK包）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4 &lt;/td&gt;
+&lt;td&gt; statement_handler_id（预处理语句id）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2 &lt;/td&gt;
+&lt;td&gt; number of columns in result set（结果集中列的数量）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2 &lt;/td&gt;
+&lt;td&gt; number of parameters in query（查询语句中参数的数量）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; 0x00 (填充值)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2 &lt;/td&gt;
+&lt;td&gt; 警告数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;比如我现在执执行下面的语句：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;PreparedStatement ps = connection.prepareStatement(&quot;SELECT * FROM `godpan_fans` where id=?&quot;);
+ps.setInteger(1, 1);
+ps.executeQuery();
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;得到下面的PREPARE_OK包，仅供参考：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;PSOK{statementId=1, columns=5, parameters=1}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;如果上面的columns大于0，以及parameters大于0，则将有额外的两个包传输，分别是columns的信息以及parameters的信息，对应信息结构：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;内容 &lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Field &lt;/td&gt;
+&lt;td&gt; columns信息（多个）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;EOF   &lt;/td&gt;
+&lt;td&gt; columns信息结束&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Field &lt;/td&gt;
+&lt;td&gt; parameters（多个）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;EOF &lt;/td&gt;
+&lt;td&gt; parameters结束&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;到此整个PREPARE_OK包发送完毕。&lt;/p&gt;
+
+&lt;h4&gt;Row Data Binary&lt;/h4&gt;
+
+&lt;p&gt;这个包跟上面提到的Row Data包有什么差别呢？主要有两点：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;用不同的方式定义NULL；&lt;/li&gt;
+&lt;li&gt;数据编码不再单纯的使用LengthEncodedString，而是根据数据类型的不同进行相应的编码；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;后面我会分别解释这两点，我们先来看看它的结构：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;相对包内容的位置 &lt;/th&gt;
+&lt;th&gt;长度（字节）&lt;/th&gt;
+&lt;th&gt;名称&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0 &lt;/td&gt;
+&lt;td&gt; 1 &lt;/td&gt;
+&lt;td&gt; 包头标识 &lt;/td&gt;
+&lt;td&gt;0x00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; (col_count+7+2)/8 &lt;/td&gt;
+&lt;td&gt; Null Bit Map &lt;/td&gt;
+&lt;td&gt; 前两位为预留字节，主要用于区别与其他的几种包（OK，ERROR，EOF），在MySQL 5之后这两个字节都为0X00，其中col_count为列的数量&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;(col_count+7+2)/8 + 1 &lt;/td&gt;
+&lt;td&gt; n &lt;/td&gt;
+&lt;td&gt; column values &lt;/td&gt;
+&lt;td&gt; 具体的列值，重复多次，根据值类型编码&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;现在我们来看一下它的两个特点，首先我们来看它是如何来定义NULL的，首先我们看到他的结构中有一个Null Bit Map，除去两个标识位，真正用于标识数据信息的就是(col_count+7)/8位字节，这里我先给出结论，后面再给大家具体分析：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;参数个数 &lt;/th&gt;
+&lt;th&gt;长度（字节）&lt;/th&gt;
+&lt;th&gt;具体值范围&lt;/th&gt;
+&lt;th&gt;描述&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1-8 &lt;/td&gt;
+&lt;td&gt; 1 &lt;/td&gt;
+&lt;td&gt; -1, 2&lt;sup&gt;n&lt;/sup&gt;组合 &lt;/td&gt;
+&lt;td&gt; 1 = 2&lt;sup&gt;0&lt;/sup&gt;表示第一个参数为NULL，3 = 2&lt;sup&gt;0&lt;/sup&gt; + 2&lt;sup&gt;1&lt;/sup&gt;表示第一个和第二参数为NULL...&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;上面给出了标识NULL的基本算法，原则是哪个参数（次序为n)为NULL，则Null Bit Map相应的值加上2&lt;sup&gt;n&lt;/sup&gt;,8个参数为一个周期，以此类推。&lt;/p&gt;
+
+&lt;p&gt;接着我们来看一下第二点，是如何用具体值类型来对相应的值进行编码的，这里主要分为三类，基本数据类型，时间类型，字符串类型；&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;基本数据类型：比如TINYINT使用一个字节编码，FLOAT使用四个字节，DOUBLE使用8个字节等；&lt;/li&gt;
+&lt;li&gt;时间类型：使用类似LengthEncodedString的编码方式编码，具体可参考&lt;a href=&quot;https://dev.mysql.com/doc/dev/mysql-server/latest/PAGE_PROTOCOL.html&quot;&gt;MySQL_PROTOCOL&lt;/a&gt;；&lt;/li&gt;
+&lt;li&gt;字符串类：不属于上面两类的都属于字符串类型，使用普通的LengthEncodedString；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;Execute包&lt;/h4&gt;
+
+&lt;p&gt;Execute包顾名思义是一个执行包，它是由Client端发送到Server端的，但它和普通的命令又有点不同，它主要是用来执行预处理语句，并会携带相应参数，具体结构如下：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;长度 &lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; COM_EXECUTE（标识是一个Execute包）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4 &lt;/td&gt;
+&lt;td&gt; 预处理语句id&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; 游标类型&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4 &lt;/td&gt;
+&lt;td&gt; 预留字节&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0 &lt;/td&gt;
+&lt;td&gt; 接下去的内容只有在有参数的情况下&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;(param_count+7)/8 &lt;/td&gt;
+&lt;td&gt; null_bit_map（描述参数中NULL的情况）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1 &lt;/td&gt;
+&lt;td&gt; 参数绑定情况&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;n*2 &lt;/td&gt;
+&lt;td&gt; 参数类型（依次存储）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;n &lt;/td&gt;
+&lt;td&gt; 参数具体值（非NULL）（依次存储，使用Row Data Binary方式编码）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;Execute包从Client端发送到Server端后可能会得到以下几个结果：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;OK包&lt;/li&gt;
+&lt;li&gt;ERROR包&lt;/li&gt;
+&lt;li&gt;Result Set包（可能多个）&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;我们需要根据包的不同类型来进行不同的处理。&lt;/p&gt;
+
+&lt;h2&gt;总结&lt;/h2&gt;
+
+&lt;p&gt;本篇文章主要讲述了MySQL的连接方式，通信过程及协议，以及传输包的基本格式和相关传输包的类型，内容相对来说，比较多也比较复杂，我也是将近三周才写完，但总体按照我自学的思路走，不会太绕，有些点可能需要细心思考下，写的有误的地方也希望大家能指正，希望对大家有所帮助，后面可能会写几个实例和大家一起学习。&lt;/p&gt;
+</content>
+ </entry>
  
  <entry>
    <title>Java IO之NIO</title>
@@ -1883,263 +3118,6 @@ akka.actor.serialization-bindings {
 &lt;p&gt;&lt;img src=&quot;/media/images/2017/07/actor-tree-supervision.png&quot; alt=&quot;actor tree supervision&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;监管者可以根据被监管者（子Actor）的失败的错误类型来执行不同的策略，比如重启该Actor或者停止该Actor让其它Actor代替执行任务。一个Actor不会无缘无故的死亡（除非出现死循环之类的情况），而是失败，并可以将失败传递给它的监管者让其做出相应的故障处理策略，当然也可能会被停止（若被停止，也会接收到相应的消息指令）。一个Actor总有监管者就是它的父级Actor。Actor重新启动是不可见的，协作Actor可以帮其代发消息直到目标Actor重启成功。&lt;/p&gt;
-</content>
- </entry>
- 
- <entry>
-   <title>Akka系列（五）：Java和Scala中的Future</title>
-   <link href="/2017/05/15/learning-akka-5.html"/>
-   <updated>2017-05-15T00:00:00+08:00</updated>
-   <id>urn:uuid:85cf4b63-e930-3d54-8ca7-fbvbdc2a4fgd</id>
-   <content type="html">&lt;p&gt;随着CPU的核数的增加，异步编程模型在并发领域中的得到了越来越多的应用，由于Scala是一门函数式语言，天然的支持异步编程模型，今天主要来看一下Java和Scala中的Futrue，带你走入异步编程的大门。&lt;/p&gt;
-
-&lt;h2&gt;Future&lt;/h2&gt;
-
-&lt;p&gt;很多同学可能会有疑问，Futrue跟异步编程有什么关系？从Future的表面意思是未来，一个Future对象可以看出一个将来得到的结果，这就和异步执行的概念很像，你只管自己去执行，只要将最终的结果传达给我就行，线程不必一直暂停等待结果，可以在具体异步任务执行的时候去执行其他操作，举个例子：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/05/async-work.png&quot; alt=&quot;async work&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;我们现在在执行做饭这么一个任务，它需要煮饭，烧菜，摆置餐具等操作，如果我们通过异步这种概念去执行这个任务，比如煮饭可能需要比较久的时间，但煮饭这个过程又不需要我们管理，我们可以利用这段时间去烧菜，烧菜过程中也可能有空闲时间，我们可以去摆置餐具，当电饭锅通知我们饭烧好了，菜也烧好了，最后我们就可以开始吃饭了，所以说，上面的“&lt;strong&gt;煮饭 -&gt; 饭&lt;/strong&gt;”，“&lt;strong&gt;烧菜 -&gt; 菜&lt;/strong&gt;”都可以看成一个Future的过程。&lt;/p&gt;
-
-&lt;h3&gt;Java中的Future&lt;/h3&gt;
-
-&lt;p&gt;在Java的早期版本中，我们不能得到线程的执行结果，不管是继承Thread类还是实现Runnable接口，都无法获取线程的执行结果，所以我们只能在线程执行的run方法里去做相应的一些业务逻辑操作，但随着Java5的发布，它为了我们带来了Callable和Future接口，我们可以利用这两个接口的特性来获取线程的执行结果。&lt;/p&gt;
-
-&lt;h4&gt;Callable接口&lt;/h4&gt;
-
-&lt;p&gt;通俗的讲，Callable接口也是一个线程执行类接口，那么它跟Runnable接口有什么区别呢？我们先来看看它们两个的定义：&lt;/p&gt;
-
-&lt;p&gt;1.Callable接口：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;@FunctionalInterface
-public interface Callable&amp;lt;V&amp;gt; {
-    /**
-     * Computes a result, or throws an exception if unable to do so.
-     *
-     * @return computed result
-     * @throws Exception if unable to compute a result
-     */
-    V call() throws Exception;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;2.Runnable接口：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;@FunctionalInterface
-public interface Runnable {
-    public abstract void run();
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;从上面的定义，我们可以看出，两者最大的区别就是对应的执行方法是否有返回值。Callable接口中call方法具有返回值，这便是为什么我们可以通过Callable接口来得到一个线程执行的返回值或者是异常信息。&lt;/p&gt;
-
-&lt;h4&gt;Future接口&lt;/h4&gt;
-
-&lt;p&gt;上面说到既然Callable接口能返回线程执行的结果，那么为什么还需要Future接口呢？因为Callable接口执行的结果只是一个将来的结果值，我们若是需要得到具体的结果就必须利用Future接口，另外Callable接口需要委托ExecutorService的submit提交任务去执行，我们来看看它是如何定义的：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt; &amp;lt;T&amp;gt; Future&amp;lt;T&amp;gt; submit(Callable&amp;lt;T&amp;gt; task);
-
- public &amp;lt;T&amp;gt; Future&amp;lt;T&amp;gt; submit(Callable&amp;lt;T&amp;gt; task) {
-        if (task == null) throw new NullPointerException();
-        RunnableFuture&amp;lt;T&amp;gt; ftask = newTaskFor(task);
-        execute(ftask);
-        return ftask;
-    }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;从submit的方法定义也可以看出它的返回值是一个Future接口类型的值，这里其实是RunnableFuture接口，这是一个很重要的接口，我们来看一下它的定义：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public interface RunnableFuture&amp;lt;V&amp;gt; extends Runnable, Future&amp;lt;V&amp;gt; {
-    /**
-     * Sets this Future to the result of its computation
-     * unless it has been cancelled.
-     */
-    void run();
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;这个接口分别继承了Runnable和Future接口，而FutureTask又实现了RunnableFuture接口，它们之间的关系：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/05/future-runnable.png&quot; alt=&quot;future runnable&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;RunnableFuture有以下两个特点：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;&lt;p&gt;继承Runnable接口，还是以run方法作为线程执行入口，其实上面submit方法的具体实现也可以看出，一个Callable的Task再执行的时候会被包装成RunnableFuture，然后以FutureTask作为实现类，执行FutureTask时，还是执行其的run方法，只不过run方法里面的业务逻辑是由我们定义的call方法的内容，当然再执行run方法时，程序会自动将call方法的执行结果帮我们包装起来，对外部表现成一个Future对象。&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;继承Future接口，通过实现Future接口中的方法更新或者获取线程的的执行状态，比如其中的cancel(),isDone(),get()等方法。&lt;/p&gt;&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h4&gt;Future程序示例与结果获取&lt;/h4&gt;
-
-&lt;p&gt;下面是一个简单的Future示例，我们先来看一下代码：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;ExecutorService es = Executors.newSingleThreadExecutor();
-Future f = es.submit(() -&amp;gt; {
-        System.out.println(&quot;execute call&quot;);
-        Thread.sleep(1000);
-        return 5;
-    });
-try {
-    System.out.println(f.isDone()); //检测任务是否完成
-    System.out.println(f.get(2000, TimeUnit.MILLISECONDS));
-    System.out.println(f.isDone()); //检测任务是否完成
-} catch (InterruptedException e) {
-    e.printStackTrace();
-} catch (ExecutionException e) {
-    e.printStackTrace();
-} catch (TimeoutException e) {
-    e.printStackTrace();
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;上面的代码使用了lambda表达式，有兴趣的同学可以自己去了解下，这里我们首先构建了一个ExecutorService，然后利用submit提交执行Callable接口的任务。&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;为什么是Callable接口呢？&lt;/strong&gt; 其实这里我们并没有显示声明Callable接口，这里lambda会帮我们自动进行类型推导，首先submit接受Callable接口或Runnble接口类型作为参数，而这里我们又给定了返回值，所以lambda能自动帮我们推导出内部是一个Callable接口参数。&lt;/p&gt;
-
-&lt;p&gt;到这里我们应该大致清楚了在Java中的得到Future，那么我们又是如何从Future中得到我们想要的值呢？这个结论其实很容易得出，你只需要去跑一下上面的程序即可，在利用get去获取Future中的值时，线程会一直阻塞，直到返回值或者超时，所以Future中的get方法是阻塞，所以虽然利用Future似乎是异步执行任务，但是在某些需求上还是会阻塞的，并不是真正的异步，stackoverflow上有两个讨论说明了这个问题&lt;a href=&quot;http://stackoverflow.com/questions/31092067/method-call-to-future-get-blocks-is-that-really-desirable&quot;&gt;Future.get&lt;/a&gt;，&lt;a href=&quot;http://stackoverflow.com/questions/31092067/method-call-to-future-get-blocks-is-that-really-desirable&quot;&gt;without blocking when task complete&lt;/a&gt;，有兴趣的同学可以去看看。&lt;/p&gt;
-
-&lt;h3&gt;Scala中的Future&lt;/h3&gt;
-
-&lt;p&gt;Scala中的Future相对于Java的Future有什么不同呢？我总结了一下几点：&lt;/p&gt;
-
-&lt;h4&gt;1.创建Future变得很容易&lt;/h4&gt;
-
-&lt;p&gt;异步编程作为函数式语言的一大优势，Scala对于Future的支持也是非常棒的，首先它也提供了Futrue接口，但不同的是我们在构建Future对象是不用像Java一样那么繁琐，并且非常简单，举个例子：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;import scala.concurrent._ 
-import ExecutionContext.Implicits.global 
-
-val f: Future[String] = Future { &quot;Hello World!&quot; }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;是不是非常简单，也大大降低了我们使用Future的难度。&lt;/p&gt;
-
-&lt;h4&gt;2.提供真正异步的Future&lt;/h4&gt;
-
-&lt;p&gt;前面我们也说到，Java中的Future并不是全异步的，当你需要Future里的值的时候，你只能用get去获取它，亦或者不断访问Future的状态，若完成再去取值，但其意义上便不是真正的异步了，它在获取值的时候是一个阻塞的操作，当然也就无法执行其他的操作，直到结果返回。&lt;/p&gt;
-
-&lt;p&gt;但在Scala中，我们无需担心，虽然它也提供了类似Java中获取值的方式，比如：&lt;/p&gt;
-
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt; Future        &lt;/th&gt;
-&lt;th style=&quot;text-align:center;&quot;&gt; Java          &lt;/th&gt;
-&lt;th style=&quot;text-align:right;&quot;&gt; Scala  &lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt; 判断任务是否完成 &lt;/td&gt;
-&lt;td style=&quot;text-align:center;&quot;&gt; isDone        &lt;/td&gt;
-&lt;td style=&quot;text-align:right;&quot;&gt; isCompleted &lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt; 获取值          &lt;/td&gt;
-&lt;td style=&quot;text-align:center;&quot;&gt; get          &lt;/td&gt;
-&lt;td style=&quot;text-align:right;&quot;&gt;   value &lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
-
-&lt;p&gt;但是我们并不推荐这么做，因为这么做又回到了Java的老路上了，在Scala中我们可以利用Callback来获取它的结果：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;val fut = Future {
-    Thread.sleep(1000)
-    1 + 1
-}
-
-fut onComplete {
-    case Success(r) =&amp;gt; println(s&quot;the result is ${r}&quot;)
-    case _ =&amp;gt; println(&quot;some Exception&quot;)
-}
-
-println(&quot;I am working&quot;)
-Thread.sleep(2000)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;这是一个简单的例子，Future在执行完任务后会进行回调，这里使用了onComplete，也可以注册多个回调函数，但不推荐那么做，因为你不能保证这些回调函数的执行顺序，其他的一些回调函数基本都是基于onComplete的，有兴趣的同学可以去阅读一下Future的源码。&lt;/p&gt;
-
-&lt;p&gt;我们先来看一下它的运行结果:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;I am working
-the result is 2
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;从结果中我们可以分析得出，我们在利用Callback方式来获取Future结果的时候并不会阻塞，而只是当Future完成后会自动调用onComplete，我们只需要根据它的结果再做处理即可，而其他互不依赖的操作可以继续执行不会阻塞。&lt;/p&gt;
-
-&lt;h4&gt;3.强大的Future组合&lt;/h4&gt;
-
-&lt;p&gt;前面我们讲的较多的都是单个Future的情况，但是在真正实际应用时往往会遇到多个Future的情况，那么在Scala中是如何处理这种情况的呢？&lt;/p&gt;
-
-&lt;p&gt;Scala中的有多种方式来组合Future,那我们就来看看这些方式吧。&lt;/p&gt;
-
-&lt;h5&gt;1.flatMap&lt;/h5&gt;
-
-&lt;p&gt;我们可以利用flatMap来组合多个Future，不多说，先上代码：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;val fut1 = Future {
-  println(&quot;enter task1&quot;)
-  Thread.sleep(2000)
-  1 + 1
-}
-
-val fut2 = Future {
-  println(&quot;enter task2&quot;)
-  Thread.sleep(1000)
-  2 + 2
-}
-
-fut1.flatMap { v1 =&amp;gt;
-  fut2.map { v2 =&amp;gt;
-    println(s&quot;the result is ${v1 + v2}&quot;)
-  }
-}
-Thread.sleep(2500)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;利用flatMap确实能组合Future，但代码的阅读性实在是有点差，你能想象5个甚至10个map层层套着么，所以我们并不推荐这么做，但是我们需要了解这种方式，其他简洁的方式可能最终转化成的版本也许就是这样的。&lt;/p&gt;
-
-&lt;h5&gt;2.for yield表达式&lt;/h5&gt;
-
-&lt;p&gt;我们只是把上面关于flatMap的代码替换一下，看下面：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;for {
-  v1 &amp;lt;- fut1
-  v2 &amp;lt;- fut2
-} yield println(s&quot;the result is ${v1 + v2}&quot;)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;看上去是不是比之前的方式简洁多了，这也是我们在面对Future组合时推荐的方式，当然不得不说for yield表达式是一种语法糖，它最终还是会被翻译成我们常见的方法，比如flatMap，map，filter等，感兴趣的可以参考它的官方文档。&lt;a href=&quot;http://docs.scala-lang.org/tutorials/FAQ/yield.html&quot;&gt;for yield表达式&lt;/a&gt;&lt;/p&gt;
-
-&lt;h5&gt;3.scala-async&lt;/h5&gt;
-
-&lt;p&gt;另外我们可以用scala-async来组装Futrue语句块，示例如下：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;import scala.async.Async.{async, await}
-
-val v1 = async {
-  await(fut1) + await(fut2)
-}
-
-v1 foreach {
-  case r =&amp;gt; println(s&quot;the result is ${v1}&quot;)
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;这种方式与for yield表达式有啥区别呢？其实主要有两点：
-- 表达语意更加清晰，不需要用为中间值命名
-- 不需要&lt;code&gt;&amp;lt;-&lt;/code&gt;等表达式，可减少一定的代码量&lt;/p&gt;
-
-&lt;p&gt;scala-async相关的具体信息可以参考它的项目主页。&lt;a href=&quot;https://github.com/scala/async&quot;&gt;scala-async&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;总的来说Scala中的Future确实强大，在实现真正异步的情况下，为我们提供许多方便而又简洁的操作模式，其实比如还有Future.reduce()，Future.traverse(),Future.sequence()等方法，这些方法的具体功能和具体使用这里就不讲了，但相关的示例代码都会在我的示例工程里，有兴趣的同学可以去跑跑加深理解。&lt;a href=&quot;https://github.com/godpan/akka-demo/tree/master/Example_04&quot;&gt;源码链接&lt;/a&gt;&lt;/p&gt;
-
-&lt;h2&gt;总结&lt;/h2&gt;
-
-&lt;p&gt;这篇文章主要讲解了JVM生态上两大语言Java和Scala在异步编程上的一些表现，这里主要是Future机制，在清楚明白它的概念后，我们才能写出更好的程序，虽然本篇文章没有涉及到Akka相关的内容，但是Akka本身是用Scala写的，而且大量使用了Scala中的Future，相信通过对Future的学习，对Akka的理解会有一定的帮助。&lt;/p&gt;
 </content>
  </entry>
  
