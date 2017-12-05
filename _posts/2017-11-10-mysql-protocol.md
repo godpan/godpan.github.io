@@ -502,7 +502,7 @@ Execute包顾名思义是一个执行包，它是由Client端发送到Server端�
 (param_count+7)/8 | null_bit_map（描述参数中NULL的情况）
 1 | 参数绑定情况
 n*2 | 参数类型（依次存储）
-n | 参数具体值（非NULL）（依次存储，使用Row Data Binary方式编码）
+n | 参数具体值（非NULL)（依次存储，使用Row Data Binary方式编码）
 
 Execute包从Client端发送到Server端后可能会得到以下几个结果：
 
