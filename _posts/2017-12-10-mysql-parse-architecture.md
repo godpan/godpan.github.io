@@ -1,10 +1,9 @@
 ---
-title: MySQL通信数据包解析架构设计
+title: MySQL驱动架构设计
 layout: post
 guid: urn:uuid:8d2f2b63-g930-3d54-8ca7-fbgbds2a4fge
 tags:
-  - MySQL
-  - 数据包解析
+  - MySQL驱动
   - 架构设计
 ---
 

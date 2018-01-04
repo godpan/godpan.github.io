@@ -4,7 +4,7 @@
  <title>泮</title>
  <link href="/atom.xml" rel="self"/>
  <link href=""/>
- <updated>2018-01-04T09:42:30+08:00</updated>
+ <updated>2018-01-04T10:14:42+08:00</updated>
  <id>/</id>
  <author>
    <name></name>
@@ -12,7 +12,7 @@
 
  
  <entry>
-   <title>MySQL通信数据包解析架构设计</title>
+   <title>MySQL驱动架构设计</title>
    <link href="/2017/12/10/mysql-parse-architecture.html"/>
    <updated>2017-12-10T00:00:00+08:00</updated>
    <id>urn:uuid:8d2f2b63-g930-3d54-8ca7-fbgbds2a4fge</id>
