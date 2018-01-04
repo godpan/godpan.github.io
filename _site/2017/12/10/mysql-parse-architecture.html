@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="author" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    
+    <title>MySQL通信数据包解析架构设计</title>
+    
+    <link rel="shortcut icon" href="/media/favicon.ico">
+<!--     <link href="/atom.xml" rel="alternate" title="泮" type="application/atom+xml" /> -->
+<!--     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.2.0/css/font-awesome.min.css"> -->
+    <link rel="stylesheet" href="/media/css/style.css">
+  <!--   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/retina.js/1.3.0/retina.min.js"></script> -->
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/github.min.css">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/highlight.min.js"></script>
+    <script type="text/javascript"> hljs.initHighlightingOnLoad(); </script>
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?97a996faebe648d21debdaf60f01d40b";
+      var s = document.getElementsByTagName("script")[0]; 
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+  </head>
+  <body>
+      <div id="main" role="main">
+        <header>
+          <div id="header">
+            <h1><a title="泮" class="" href="/">泮</a></h1>
+          </div>
+          <nav>
+            
+            <!-- <span><a title="Blog" href="/blog.html"><i class="fa fa-list-ul"></i></a></span> -->
+            <span><a title="Blog" href="/blog.html">Blog</a></span>
+            
+            <!-- <span><a title="Tags" href="/tags.html"><i class="fa fa-tags"></i></a></span> -->
+            <span><a title="Tags" href="/tags.html">Tags</a></span>
+            
+            <!-- <span><a title="About" href="/about.html"><i class="fa fa-user"></i></a></span> -->
+            <span><a title="About" href="/about.html">About</a></span>
+            
+          </nav>
+        </header>
+        <div id="content">
+        <article>
+  <section class="title">
+    <h2>MySQL通信数据包解析架构设计 </h2>
+  </section>
+  <section class="meta">
+  <span class="time">
+    <time datetime="2017-12-10">2017-12-10</time>
+  </span>
+  
+  <span class="tags">
+    
+    <a href="/tags.html#MySQL" title="MySQL">#MySQL</a>
+    
+    <a href="/tags.html#数据包解析" title="数据包解析">#数据包解析</a>
+    
+    <a href="/tags.html#架构设计" title="架构设计">#架构设计</a>
+    
+  </span>
+  <!-- BEGIN this would not work on any other domain -->
+  <span
+    class           = "like-wrapper"
+    like-shortname  = ''
+    like-identifier = 'urn:uuid:8d2f2b63-g930-3d54-8ca7-fbgbds2a4fge'
+    like-name       = 'MySQL通信数据包解析架构设计'
+    like-btn        = '&#xf087;'
+    like-link       = '/2017/12/10/mysql-parse-architecture.html'
+    ></span>
+  <script type="text/javascript">
+    var l = document.createElement('script');
+    l.type = 'text/javascript'; l.async = true; l.src = 'http://www.like-btn.com/javascript/widget.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(l);
+  </script>
+  <!-- END this would not work on any other domain -->
+  
+  </section>
+  <section class="post">
+  <p>上一篇文章我们讲了MySQL网络协议分析，包括如何与MySQL进行通信，数据包的格式等内容，今天我主要会讲讲如何设计一个MySQL解析包类库（类似mysql-connector-xxx山寨版)，本篇文章不具备实际使用意义，更多的是一种架构的设计的尝试以及可以帮助大家理解一些相应第三方包的设计，为未来更从容的应对工作中遇到的问题。</p>
+
+<h2>文章概述</h2>
+
+<p>我会从最开始的数据库连接到最终的数据获取一系列步骤的讲解，辅助示例代码用Java编写，本文的主要几个方面分别是：</p>
+
+<ul>
+<li>数据包模型类设计</li>
+<li>数据包解析类设计</li>
+<li>相关网络传输类设计</li>
+<li>相关编码工具类设计</li>
+</ul>
+
+
+<h3>数据包模型类设计</h3>
+
+<p>数据包模型类设计主要是将数据库传输给我们的数据包解析成我们程序中的模型类，好比你实际业务中建立的JavaBean，这些类的结构依赖于上一篇文章中解析的数据包内容，相关细节请参考上篇文章<a href="http://www.godpan.me/2017/11/10/mysql-protocol.html">MySQL网络协议分析</a>,根据具体的数据内容我们可以构建以下模型类：</p>
+
+<ul>
+<li>EOF（标志类）</li>
+<li>Error（错误类）</li>
+<li>Field（数据列信息类）</li>
+<li>Handshake （初始化类）</li>
+<li>Ok（Ok类）</li>
+<li>Parameter（错误类）</li>
+<li>PSOK（预处理执行OK类）</li>
+<li>ResultSetHeader（查询结果集头部类）</li>
+<li>RowData（具体列数据结构类）</li>
+<li>RowDataBinary（Binary数据结构类）</li>
+</ul>
+
+
+<p>相信看过我前篇文章的同学，对上面很多类应该比较熟悉了，比如我们定义一个OK为以下结构：</p>
+
+<pre><code class="java">public class OK implements Packet {
+    private long affectedRows; //影响行数
+    private long insertId; //自增id
+    private int serverStatus; //服务器状态
+    private String message; //额外信息
+    ...
+}
+</code></pre>
+
+<p>其他一些相关类的结构我这边就不在贴出了，有兴趣的同学可以参考mysql-connector-java包源码，或者看我的<a href="https://github.com/godpan/java-connection-mysql">github项目</a>也行（搬砖有点不好意思...）,这部分内容是怎么解析的基础结构，充分掌握有助于后续的理解。</p>
+
+<h3>数据包解析类设计</h3>
+
+<p>假设我们现在已经写好了解析后的数据包模型类，那么我们怎么将最原始的字节数据转换成这些类呢？首先我们分析解析的过程中需要哪些东西。</p>
+
+<ul>
+<li>需要知道解析包的类型；</li>
+<li>包的大小；</li>
+<li>包结构字段定义长度，当前解析数据块位置；</li>
+<li>临时Buffer</li>
+<li>解析结果存储</li>
+</ul>
+
+
+<p>这些元素是解析主要的需要的主要结构，可能还有一些其他的内容这里就不阐述了，所以我们可以设计下面的解析类：</p>
+
+<pre><code class="java">public class Parser {
+    private List&lt;Integer&gt; waitFor = new LinkedList&lt;Integer&gt;(); //接下去要解析的包类型
+    private int dataIdx = 0; //当前解析数据包数据块的索引
+    private ByteBuffer buffer = ByteBuffer.allocate(65536); //临时Buffer
+    private int packetSize = -1; //包大小
+    private int itemSize = 0; //当前解析数据包数据块的大小
+    private Packet packet = null; //解析结果
+    ...
+}
+</code></pre>
+
+<p>上面的属性都是解析过程需要初始值，中间变量，结果等，除了这些属性外，我们还需要有将Buffer中数据转换为我们需要数据的方法，根据MySQL协议中的编码方式，主要有以下三个方法：</p>
+
+<pre><code class="java">private void readNullTerminated(ByteBuffer in) {  //对应NullTerminatedString（Null结尾方式）: 字符串以遇到Null作为结束标志，相应的字节为00。
+    ...
+}
+
+private void readLengthCodedBinary(ByteBuffer in) { //对应LengthEncodedInteger编码方式，根据第一个字节区分数据所占的字节长度
+    ...
+}
+
+private void readLengthCodedString(ByteBuffer in) { //对应LengthEncodedString编码方式，字符串的值根据nteger + Value组成，通过计算Integer的值来获取Value的具体的长度。
+     ...
+}   
+</code></pre>
+
+<p>有了以上的属性和相应方法后，我们便可以将服务器传来数据包解析成我们想要的数据了。</p>
+
+<h3>相关网络传输类设计</h3>
+
+<p>整理的网络传输类其实就是我们常见Connection类，它是程序中与数据库服务器进行交互的最重要的类，我们可以描述一下它有以下的几点功能：</p>
+
+<ul>
+<li>1.建立数据库连接；</li>
+<li>2.检验用户，登录等；</li>
+<li>3.执行相应的数据库命令，增删改查等；</li>
+<li>4.接收数据库传来的数据包，并利用Parser类进行解析；</li>
+<li>5.关闭数据库连接；</li>
+</ul>
+
+
+<p>基于这些需求我们可以构建出如下的Connection类：</p>
+
+<pre><code class="java">
+public class MysqlConnection {
+    private Handshake handshake; //握手初始包类
+    private final ByteBuffer out = ByteBuffer.allocate(65536);  //发送给服务端的数据Buffer
+    private final ByteBuffer in = ByteBuffer.allocate(65536); // 接收的数据Buffer
+    private SocketChannel channel; //异步IO传输通道
+    private Parser parser = new Parser(); //解析类
+    private String host; //数据库服务器host
+    private int port; //数据库服务器端口
+    private String user; //数据库用户名
+    private String password; //数据库密码
+    private String database; //连接具体的数据库
+    private Selector selector; //注册channel的selector
+    private long connectionId = 0L; //连接id
+}
+</code></pre>
+
+<p>这些属性相应对数据库驱动稍微有所了解的人都非常熟悉，因为平常写程序经常跟他们打交道，有了上面这些属性，我们还需要一些方法，比如连接数据库，执行命令，读取数据，关闭数据库等方法，所以可以定义以下的一些方法：</p>
+
+<pre><code class="java">private void connect() { //连接数据库
+    ...
+}
+
+public void auth () { //校验账户
+    ...
+}
+
+public void query () { //执行普通查询
+    ...
+}
+
+public void update () { //执行普通更新
+    ...    
+}
+
+public void executeQuery () { //执行预处理查询
+    ...
+}
+
+public void executeUpdate () { //执行预处理更新
+    ...
+}
+
+public void read () { //读取通道中的数据
+    ...
+}
+
+private void send () { //向服务器发送数据
+    ...
+}
+
+public void close() { //关闭数据库
+    ...
+}
+</code></pre>
+
+<p>这都是一些必要且常用的方法，相信很多人在实际开发中都有所使用，有了以上的一些属性和方法后我们就可以搭建出一个Connection类的基本模型，至于其他一些对象，比如数据库连接池，预处理对象都是基于最基础的Connection。</p>
+
+<h3>相关编码工具类设计</h3>
+
+<p>其实上面的一些类与方法，已经能组装成一个简单的与数据库交互的驱动，但是我们知道，我们向数据库服务器发送指令的时候，并不是向我们直接在数据库终端写SQL执行那么简单，而是需要根据数据库的相应协议将我们需要执行的SQL翻译成相应的字节流再发送给数据库服务端，所以我们必须有相关的编码工具类，比如Long类型编码，NULL值编码等等，所以我们需要写相应的编码类提高我们对SQL编码的效率，它应该具有以下的功能：</p>
+
+<pre><code>public static void longEncoded(){ //long类型编码
+    ...
+}
+
+public static void nullTerminatedStringEncoded() { //nullTerminatedString编码
+    ...
+}
+public static void lengthEncodedStringEncoded() { //lengthEncodedString编码
+    ...
+}
+
+private static void dateEncoded () { //Date类型编码
+    ...
+}
+</code></pre>
+
+<p>通常来说，上面这四种编码方式可以实现大部分场景的SQL编码了，方法的具体实现取决于实际中程序的数据类型和编码协议可参考我的上一篇文章。</p>
+
+<h2>总结</h2>
+
+<p>这篇文章主要讲解了如何去设计一个简单的数据库驱动，它最基本应该具备些什么，各个模块间又是怎么搭配的，这些内容不仅仅让我们了解与数据库通信的步骤，也可以让我们对目前使用的第三方数据库驱动有更深入的了解，最后我会画一张图里梳理了一下所有模块间的联系，帮助大家理解：</p>
+
+<p><img src="/media/images/2018/01/mysql-connection.png" alt="mysql-connection" /></p>
+
+  </section>
+  
+  <div class="divider">
+    <span>
+    
+    <a href="/2017/11/10/mysql-protocol.html"><i class="fa fa-chevron-left"></i></a>
+    
+    </span>
+    <!-- BEGIN comment icon
+    <span><a href="javascript:leave_comment();" id="leave_comment_link"><i class="fa fa-comment-o"></i></a></span>
+    <span><a href="javascript:collapse_comment();" id="collapse_comment_link" style="display:none;"><i class="fa fa-chevron-up"></i></a></span>
+      END comment icon -->
+
+    <span>
+    
+    <i class="fa fa-circle"></i>
+    
+    </span>
+  </div>
+  <span>文章允许转载、使用，但需要保留链接文章署名
+      <a href="http://www.godpan.me">godpan.me</a>,如有写的不当之处，也欢迎大家指正，联系邮箱：godpan.sen@gmail.com</span>
+
+  <!-- BEGIN comment
+  <section class="comment">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+      var disqus_shortname = '';
+      var disqus_identifier = 'urn:uuid:8d2f2b63-g930-3d54-8ca7-fbgbds2a4fge';
+
+      function leave_comment() {
+          var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+          dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          $("#leave_comment_link").css("display", "none");
+          $("#collapse_comment_link").css("display", "");
+      };
+      function collapse_comment() {
+          // document.getElementById("disqus_thread").innerHTML = '';
+          $("#disqus_thread").slideUp(400, function() {
+              $("#disqus_thread").empty();
+              $("#leave_comment_link").css("display", "");
+              $("#collapse_comment_link").css("display", "none");
+              $("#disqus_thread").css("display", "");
+          });
+      };
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </section>
+  END comment -->
+  
+</article>
+
+        </div>
+        <footer>
+          <div>
+            
+            &copy; 2018  | powered by jekyll | themed by sext vi | <a href="https://github.com/godpan" title="github me">github</a>
+          </div>
+        </footer>
+      </div> <!-- main -->
+  </body>
+</html>
