@@ -4,7 +4,7 @@
  <title>泮</title>
  <link href="/atom.xml" rel="self"/>
  <link href=""/>
- <updated>2018-03-13T16:20:16+08:00</updated>
+ <updated>2018-03-13T16:24:49+08:00</updated>
  <id>/</id>
  <author>
    <name></name>
@@ -24,7 +24,7 @@
 
 &lt;h3&gt;消息系统&lt;/h3&gt;
 
-&lt;p&gt;在实际的业务需求中，我们需要处理各种各样的消息，比如Page View,日志，请求等，但是很多时候这些原始的数据并不是我们想要的，我们想要的是经过处理后的数据结果，比如通过一天的搜索数据得出当天的搜索热点等，那么一个好的消息系统应该拥有哪些功能呢？&lt;/p&gt;
+&lt;p&gt;在实际的业务需求中，我们需要处理各种各样的消息，比如Page View,日志，请求等，那么一个好的消息系统应该拥有哪些功能呢？&lt;/p&gt;
 
 &lt;ul&gt;
 &lt;li&gt;拥有消息发布和订阅的功能，类似于消息队列或者企业消息传送系统；&lt;/li&gt;
@@ -41,7 +41,7 @@
 
 &lt;p&gt;&lt;img src=&quot;/media/images/2018/03/simple-message-system.png&quot; alt=&quot;simple-message-system&quot; /&gt;&lt;/p&gt;
 
-&lt;p&gt;其中消费者A与消费者B都订阅了消息源A和消息源B，这种模式很简单，但是相对来说也很弊端，比如以下两点：&lt;/p&gt;
+&lt;p&gt;其中消费者A与消费者B都订阅了消息源A和消息源B，这种模式很简单，但是相对来说也有弊端，比如以下两点：&lt;/p&gt;
 
 &lt;ul&gt;
 &lt;li&gt;该模式下消费者需要实时去处理消息，因为这里消息源和消费者都不会维护一个消息队列（代价太大），这会导致消费者若是暂时没有能力消费，则会丢失消息，当然也不能消费过去的消息；&lt;/li&gt;
@@ -243,6 +243,8 @@
 &lt;h3&gt;Kafka for Stream Processing&lt;/h3&gt;
 
 &lt;p&gt;Kafka作为一个完美主义代表者，光有普通的读写，存储等功能是不够的，它还提供了实时处理消息流的接口。&lt;/p&gt;
+
+&lt;p&gt;很多时候原始的数据并不是我们想要的，我们想要的是经过处理后的数据结果，比如通过一天的搜索数据得出当天的搜索热点等，&lt;/p&gt;
 
 &lt;p&gt;你可以利用Streams API来实现自己想要的功能，比如从输入Topic中获取数据，然后再发布到具体的输出Topic中。&lt;/p&gt;
 
