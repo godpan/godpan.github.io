@@ -4,12 +4,278 @@
  <title>泮</title>
  <link href="/atom.xml" rel="self"/>
  <link href=""/>
- <updated>2018-03-13T21:00:55+08:00</updated>
+ <updated>2018-03-24T16:10:28+08:00</updated>
  <id>/</id>
  <author>
    <name></name>
  </author>
 
+ 
+ <entry>
+   <title>Kafka学习笔记（二） ：初探Kafka</title>
+   <link href="/2018/03/24/learning-kafka-2.html"/>
+   <updated>2018-03-24T00:00:00+08:00</updated>
+   <id>urn:uuid:85cc4b63-e9f0-4454-8ca7-fbdsdc2a2fad</id>
+   <content type="html">&lt;p&gt;看完上一篇，相信大家对消息系统以及Kafka的整体构成都有了初步了解，学习一个东西最好的办法，就是去使用它，今天就让我们一起窥探一下Kafka，并完成自己的处女作。&lt;/p&gt;
+
+&lt;h2&gt;消息在Kafka中的历程&lt;/h2&gt;
+
+&lt;p&gt;虽然我们掌握东西要一步一步来，但是我们在大致了解了一个东西后，会有利于我们对它的理解和学习，所以我们可以先来看一下一条消息从发出到最后被消息者接收到底经历了什么？&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/message-flow.png&quot; alt=&quot;message-flow&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;上图简要的说明了消息在Kafka中的整个流转过程（假设已经部署好了整个Kafka系统，并创建了相应的Topic，分区等细节后续再单独讲）：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;1.消息生产者将消息发布到具体的Topic，根据一定算法或者随机被分发到具体的分区中；&lt;/li&gt;
+&lt;li&gt;2.根据实际需求，是否需要实现处理消息逻辑；&lt;/li&gt;
+&lt;li&gt;3.若需要，则实现具体逻辑后将结果发布到输出Topic；&lt;/li&gt;
+&lt;li&gt;4.消费者根据需求订阅相关Topic，并消费消息；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;总的来说，怎么流程还是比较清晰和简单的，下面就跟我一起来练习Kafka的基本操作，最后实现一个单词计数的小demo。&lt;/p&gt;
+
+&lt;h2&gt;基础操作&lt;/h2&gt;
+
+&lt;p&gt;以下代码及相应测试在以下环境测试通过：Mac OS + JDK1.8，Linux系统应该也能跑通，Windows有兴趣的同学可以去官网下载相应版本进行相应的测试练习。&lt;/p&gt;
+
+&lt;h3&gt;下载Kafka&lt;/h3&gt;
+
+&lt;p&gt;Mac系统同学可以使用brew安装：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;brew install kafka
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Linux系统同学可以从官网下载源码解压，也可以直接执行以下命令:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;cd 
+mkdir test-kafka &amp;amp;&amp;amp; cd test-kafka
+curl -o kafka_2.11-1.0.1.tgz http://mirrors.tuna.tsinghua.edu.cn/apache/kafka/1.0.1/kafka_2.11-1.0.1.tgz
+tar -xzf kafka_2.11-1.0.1.tgz
+cd kafka_2.11-1.0.1
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;启动&lt;/h3&gt;
+
+&lt;p&gt;Kafka使用Zookeeper来维护集群信息，所以这里我们先要启动Zookeeper，Kafka与Zookeeper的相关联系跟结合后续再深入了解，毕竟不能一口吃成一个胖子。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/zookeeper-server-start.sh config/zookeeper.properties
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;接着我们启动一个Kafka Server节点：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-server-start.sh config/server.properties
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这时候Kafka系统已经算是启动起来了。&lt;/p&gt;
+
+&lt;h3&gt;创建Topic&lt;/h3&gt;
+
+&lt;p&gt;在一切就绪之后，我们要开始做极其重要的一步，那就是创建Topic，Topic是整个系统流转的核心，另外Topic本身也包含着很多复杂的参数，比如复制因子个数，分区个数等，这里为了从简，我们将对应的参数都设为1，方便大家测试：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic kakfa-test
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;其中参数的具体含义：&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;属性&lt;/th&gt;
+&lt;th&gt;功能&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;--create &lt;/td&gt;
+&lt;td&gt; 代表创建Topic&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;--zookeeper &lt;/td&gt;
+&lt;td&gt; zookeeper集群信息&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;--replication-factor &lt;/td&gt;
+&lt;td&gt; 复制因子&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;--partitions &lt;/td&gt;
+&lt;td&gt; 分区信息&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;--topic &lt;/td&gt;
+&lt;td&gt; Topic名称&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;这时候我们已经创建好了一个叫kakfa-test的Topic了。&lt;/p&gt;
+
+&lt;h3&gt;向Topic发送消息&lt;/h3&gt;
+
+&lt;p&gt;在有了Topic后我们就可以向其发送消息：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kakfa-test
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;然后我们向控制台输入一些消息：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;this is my first test kafka
+so good
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这时候消息已经被发布在kakfa-test这个主题上了。&lt;/p&gt;
+
+&lt;h3&gt;从Topic获取消息&lt;/h3&gt;
+
+&lt;p&gt;现在Topic上已经有消息了，现在可以从中获取消息被消费：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic kafka-test --from-beginning
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这时候我们可以在控制台看到：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;this is my first test kafka
+so good
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;至此我们就测试了最简单的Kafka Demo，希望大家能自己动手去试试，虽然很简单，但是这能让你对整个Kafka流程能更熟悉。&lt;/p&gt;
+
+&lt;h2&gt;WordCount&lt;/h2&gt;
+
+&lt;p&gt;下面我们来利用上面的一些基本操作来实现一个简单WordCount程序，它具备以下功能：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;1.支持词组持续输入，即生产者不断生成消息；&lt;/li&gt;
+&lt;li&gt;2.程序自动从输入Topic中获取原始数据，然后经过处理，将处理结果发布在计数Topic中；&lt;/li&gt;
+&lt;li&gt;3.消费者可以从计数Topic获取相应的WordCount的结果；&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;1.启动kafka&lt;/h3&gt;
+
+&lt;p&gt;与上文的启动一样，按照其操作即可。&lt;/p&gt;
+
+&lt;h3&gt;2.创建输入Topic&lt;/h3&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-topics.sh --zookeeper localhost:2181 --create --topic kafka-word-count-input --partitions 1 --replication-factor 1
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;3.向Topic输入消息&lt;/h3&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kafka-word-count-input
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;4.流处理逻辑&lt;/h3&gt;
+
+&lt;p&gt;这部分内容是整个例子的核心，这部分代码有Java 8+和Scala版本，个人认为流处理用函数式语法表达的更加简洁清晰，推荐大家用函数式的思维去尝试写以下，发现自己再也不想写Java匿名内部类这种语法了。&lt;/p&gt;
+
+&lt;p&gt;我们先来看一个Java 8的版本:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public class WordCount {
+    public static void main(String[] args) throws Exception {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, &quot;kafka-word-count&quot;);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, &quot;localhost:9092&quot;);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+        final StreamsBuilder builder = new StreamsBuilder();
+        KStream&amp;lt;String, String&amp;gt; source = builder.&amp;lt;String, String&amp;gt;stream(&quot;kafka-word-count-input&quot;);
+        Pattern pattern = Pattern.compile(&quot;\\W+&quot;);
+        source
+           .flatMapValues(value -&amp;gt; Arrays.asList(pattern.split(value.toLowerCase(Locale.getDefault()))))
+           .groupBy((key, value) -&amp;gt; value)
+           .count(Materialized.&amp;lt;String, Long, KeyValueStore&amp;lt;Bytes, byte[]&amp;gt;&amp;gt;as(&quot;counts-store&quot;)).mapValues(value-&amp;gt;Long.toString(value))
+           .toStream()
+           .to(&quot;kafka-word-count-output&quot;);
+        final KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;是不是很惊讶，用java也能写出如此简洁的代码，所以说如果有适用场景，推荐大家尝试的用函数式的思维去写写java代码。&lt;/p&gt;
+
+&lt;p&gt;我们再来看看Scala版本的：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;
+object WordCount {
+  def main(args: Array[String]) {
+    val props: Properties = {
+      val p = new Properties()
+      p.put(StreamsConfig.APPLICATION_ID_CONFIG, &quot;kafka-word-count&quot;)
+      p.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, &quot;localhost:9092&quot;)
+      p.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String.getClass)
+      p.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String.getClass)
+      p
+    }
+
+    val builder: StreamsBuilder = new StreamsBuilder()
+    val source: KStream[String, String] = builder.stream(&quot;kafka-word-count-input&quot;)
+    source
+      .flatMapValues(textLine =&amp;gt; textLine.toLowerCase.split(&quot;\\W+&quot;).toIterable.asJava)
+      .groupBy((_, word) =&amp;gt; word)
+      .count(Materialized.as[String, Long, KeyValueStore[Bytes, Array[Byte]]](&quot;counts-store&quot;)).toStream.to(&quot;kafka-word-count-output&quot;)
+    val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
+    streams.start()
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;可以发现使用Java 8函数式风格编写的代码已经跟Scala很相似了。&lt;/p&gt;
+
+&lt;h3&gt;5.启动处理逻辑&lt;/h3&gt;
+
+&lt;p&gt;很多同学电脑上并没有装sbt，所以这里演示的利用Maven构建的Java版本，具体执行步骤请参考&lt;a href=&quot;https://github.com/godpan/kafka-word-count&quot;&gt;戳这里kafka-word-count&lt;/a&gt;上的说明。&lt;/p&gt;
+
+&lt;h3&gt;6.启动消费者进程&lt;/h3&gt;
+
+&lt;p&gt;最后我们启动消费者进程，并在生产者中输入一些单词，比如：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/kafka-word-count-input.png&quot; alt=&quot;kafka-word-count-input&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;最后我们可以在消费者进程中看到以下输出：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-console-consumer.sh --topic kafka-word-count-output --from-beginning --bootstrap-server localhost:9092  --property print.key=true
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/kafka-word-count-output.png&quot; alt=&quot;kafka-word-count-output&quot; /&gt;&lt;/p&gt;
+
+&lt;h2&gt;总结&lt;/h2&gt;
+
+&lt;p&gt;本篇文章主要是讲解了Kafka的基本运行过程和一些基础操作，但这是我们学习一个东西必不可少的一步，只有把基础扎实好，才能更深入的去了解它，理解它为什么这么设计，我在这个过程中也遇到很多麻烦，所以还是希望大家能够自己动手去实践一下，最终能收获更多。&lt;/p&gt;
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Git删除本地分支（批量删除）</title>
+   <link href="/2018/03/20/git-small-skill.html"/>
+   <updated>2018-03-20T00:00:00+08:00</updated>
+   <id>urn:uuid:85cc4b63-e9f0-4454-8ca7-fbdsdc2a2fad</id>
+   <content type="html">&lt;p&gt;分享一个小技巧，我们在很多时候需要删除一些本地无用分支，假如我们想要删除具体分支，我们可以这么做：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;git branch -D branchName
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;但是有些时候我们要删除很多分支，比如除了master外的所有分支，那么我们可以这么做：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;git checkout master
+git branch | grep -v 'master' | xargs git branch -D
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;具体执行步骤是：&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;切换到master分支&lt;/li&gt;
+&lt;li&gt;将git branch的结果进行筛选，除去master&lt;/li&gt;
+&lt;li&gt;将处理后的结果作为git branch -D的参数来进行删除分支&lt;/li&gt;
+&lt;/ol&gt;
+
+</content>
+ </entry>
  
  <entry>
    <title>Kafka学习笔记（一） ：为什么需要Kafka？</title>
@@ -2534,524 +2800,6 @@ class TransformationFrontend extends Actor {
 
 
 &lt;p&gt;本文的demo例子已上传github：&lt;a href=&quot;https://github.com/godpan/akka-demo/tree/master/Example_07&quot;&gt;源码链接&lt;/a&gt;&lt;/p&gt;
-</content>
- </entry>
- 
- <entry>
-   <title>Akka系列（九）：Akka分布式之Akka Remote</title>
-   <link href="/2017/08/10/learning-akka-9.html"/>
-   <updated>2017-08-10T00:00:00+08:00</updated>
-   <id>urn:uuid:8d4f2b63-e930-3d54-8ca7-fbvbds2a4fgd</id>
-   <content type="html">&lt;p&gt;Akka作为一个天生用于构建分布式应用的工具，当然提供了用于分布式组件即Akka Remote，那么我们就来看看如何用Akka Remote以及Akka Serialization来构建分布式应用。&lt;/p&gt;
-
-&lt;h3&gt;背景&lt;/h3&gt;
-
-&lt;p&gt;很多同学在程序的开发中都会遇到一个问题，当业务需求变得越来越复杂，单机服务器已经不足以承载相应的请求的时候，我们都会考虑将服务部署到不同的服务器上，但服务器之间可能需要相互调用，那么系统必须拥有相互通信的接口，用于相应的数据交互，这时候一个好的远程调用方案是一个绝对的利器，主流的远程通信有以下几种选择：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;RPC（Remote Procedure Call Protocol）&lt;/li&gt;
-&lt;li&gt;Web Service&lt;/li&gt;
-&lt;li&gt;JMS（Java Messaging Service）&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;这几种方式都是被采用比较广泛的通信方案，有兴趣的同学可以自己去了解一下，这里我会讲一下Java中的RPC即RMI （Remote Method Invocation）和JMS。&lt;/p&gt;
-
-&lt;h3&gt;JAVA远程调用&lt;/h3&gt;
-
-&lt;p&gt;RMI和JMS相信很多写过Java程序的同学都知道，是Java程序用来远程通信的主要方式，那么RMI和JMS又有什么区别呢？&lt;/p&gt;
-
-&lt;h4&gt;1.RMI&lt;/h4&gt;
-
-&lt;h5&gt;i.特征：&lt;/h5&gt;
-
-&lt;ul&gt;
-&lt;li&gt;同步通信：在使用RMI调用远程方法时，线程会持续等待直到结果返回，所以它是一个同步阻塞操作；&lt;/li&gt;
-&lt;li&gt;强耦合：请求的系统中需要使用的RMI服务进行接口声明，返回的数据类型有一定的约束；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h5&gt;ii.优点：&lt;/h5&gt;
-
-&lt;ul&gt;
-&lt;li&gt;实现相对简单，方法调用形式通俗易理解，接口声明服务功能清晰。&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h5&gt;iii.缺点：&lt;/h5&gt;
-
-&lt;ul&gt;
-&lt;li&gt;只局限支持JVM平台；&lt;/li&gt;
-&lt;li&gt;对无法兼容Java语言的其他语言也不适用；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h4&gt;2.JMS&lt;/h4&gt;
-
-&lt;h5&gt;i.特征：&lt;/h5&gt;
-
-&lt;ul&gt;
-&lt;li&gt;异步通信：JMS发送消息进行通信，在通信过程中，线程不会被阻塞，不必等待请求回应，所以是一个异步操作；&lt;/li&gt;
-&lt;li&gt;松耦合：不需要接口声明，返回的数据类型可以是各种各样，比如JSON，XML等；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h5&gt;ii.通信方式：&lt;/h5&gt;
-
-&lt;p&gt;（1）点对点消息传送模型&lt;/p&gt;
-
-&lt;p&gt;顾名思义，点对点可以理解为两个服务器的定点通信，发送者和接收者都能明确知道对方是谁，大致模型如下：
-&lt;img src=&quot;/media/images/2017/08/jms-point-to-point.png&quot; alt=&quot;jms-point-to-point&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;（2）发布/订阅消息传递模型&lt;/p&gt;
-
-&lt;p&gt;点对点模型有些场景并不是很适用，比如有一台主服务器，它产生一条消息需要让所有的从服务器都能收到，若采用点对点模型的话，那主服务器需要循环发送消息，后续若有新的从服务器增加，还要改主服务器的配置，这样就会导致不必要的麻烦，那么发布/订阅模型是怎么样的呢？其实这种模式跟设计模式中的观察者模式很相似，相信很多同学都很熟悉，它最大的特点就是较松耦合，易扩展等特点，所以发布/订阅模型的大致结构如下：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/08/jms-topic.png&quot; alt=&quot;jms-point-to-point&quot; /&gt;&lt;/p&gt;
-
-&lt;h5&gt;iii.优点：&lt;/h5&gt;
-
-&lt;ul&gt;
-&lt;li&gt;由于使用异步通信，不需要线程暂停等待，性能相对较高。&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h5&gt;iiii.缺点：&lt;/h5&gt;
-
-&lt;ul&gt;
-&lt;li&gt;技术实现相对复杂，并需要维护相关的消息队列；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;更通俗的说：&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;RMI可以看成是用打电话的方式进行信息交流，而JMS更像是发短信。&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;总的来说两种方式没有孰优孰劣，我们也不用比较到底哪种方式比较好，存在即合理，更重要的是哪种选择可能更适合你的系统。&lt;/p&gt;
-
-&lt;h3&gt;RMI Example&lt;/h3&gt;
-
-&lt;p&gt;这里我写一个RMI的例子，一方面来看一下它的使用方式，另一方面用于和后续的Akka Remote做一些比较：&lt;/p&gt;
-
-&lt;p&gt;首先我们来编写相应的传输对象和通信接口：&lt;/p&gt;
-
-&lt;p&gt;1.JoinRmiEvt：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public class JoinRmiEvt implements Remote , Serializable{
-    private static final long serialVersionUID = 1L;
-    private Long id;
-    private String name;
-
-    public JoinRmiEvt(Long id, String name) {
-        this.id = id;
-        this.name = name;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;2.RemoteRmi:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public interface RemoteRmi extends Remote {
-    public void sendNoReturn(String message) throws RemoteException, InterruptedException;
-    public String sendHasReturn(JoinRmiEvt joinRmiEvt) throws RemoteException;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;然后在服务端对该接口进行实现：&lt;/p&gt;
-
-&lt;p&gt;3.RemoteRmiImpl:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public class RemoteRmiImpl extends UnicastRemoteObject implements RemoteRmi {
-
-    private static final long serialVersionUID = 1L;
-
-    public  RemoteRmiImpl() throws RemoteException {};
-
-    @Override
-    public void sendNoReturn(String message) throws RemoteException, InterruptedException {
-        Thread.sleep(2000);
-        //throw new RemoteException(); 
-    }
-
-    @Override
-    public String sendHasReturn(JoinRmiEvt joinRmiEvt) throws RemoteException {
-      if (joinRmiEvt.getId() &amp;gt;= 0)
-          return new StringBuilder(&quot;the&quot;).append(joinRmiEvt.getName()).append(&quot;has join&quot;).toString();
-      else return null;
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;接着我们在Server端绑定相应端口并发布服务，然后启动：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public class RemoteRMIServer {
-    public static void main(String[] args) throws RemoteException, AlreadyBoundException, MalformedURLException, InterruptedException {
-        System.out.println(&quot;the RemoteRMIServer is Starting ...&quot;);
-        RemoteRmiImpl remoteRmi = new RemoteRmiImpl();
-        System.out.println(&quot;Binding server implementation to registry&quot;);
-        LocateRegistry.createRegistry(2553);
-        Naming.bind(&quot;rmi://127.0.0.1:2553/remote_rmi&quot;,remoteRmi);
-        System.out.println(&quot;the RemoteRMIServer is Started&quot;);
-        Thread.sleep(10000000);
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;下面我们在Client端调用Server端的服务：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public class RemoteRmiClient {
-    public static void main(String[] args) throws RemoteException, NotBoundException, MalformedURLException, InterruptedException {
-        System.out.println(&quot;the client has started&quot;);
-        String url = &quot;rmi://127.0.0.1:2553/remote_rmi&quot;;
-        RemoteRmi remoteRmi = (RemoteRmi) Naming.lookup(url);
-        System.out.println(&quot;the client has running&quot;);
-        remoteRmi.sendNoReturn(&quot;send no return&quot;);
-        System.out.println(remoteRmi.sendHasReturn(new JoinRmiEvt(1L,&quot;godpan&quot;)));
-        System.out.println(&quot;the client has end&quot;);
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;运行结果：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/08/java-rmi-result.png&quot; alt=&quot;java-rmi-result&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;从运行结果和代码上分析可得：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Java Rmi调用是一个阻塞的过程，这会导致一个问题，假如服务端的服务奔溃了，会导致客户端没有反应；&lt;/li&gt;
-&lt;li&gt;Java Rmi使用的是Java默认的序列化方式,性能并不是很好，而且并不提供支持使用其他序列化的接口，在一些性能要求高的系统会有一定的瓶颈；&lt;/li&gt;
-&lt;li&gt;在Rmi中使用的相应的接口和对象必须实现相应的接口，必须制定抛出相应的Exception，导致代码看起来异常的繁琐；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h3&gt;Akka Remote&lt;/h3&gt;
-
-&lt;p&gt;上面讲到JAVA中远程通信的方式，但我们之前说过Akka也是基于JVM平台的，那么它的通信方式又有什么不同呢？&lt;/p&gt;
-
-&lt;p&gt;在我看来，Akka的远程通信方式更像是RMI和JMS的结合，但更偏向于JMS的方式，为什么这么说呢，我们先来看一个示例:&lt;/p&gt;
-
-&lt;p&gt;我们先来创建一个远程的Actor：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;class RemoteActor extends Actor {
-  def receive = {
-    case msg: String =&amp;gt;
-      println(s&quot;RemoteActor received message '$msg'&quot;)
-      sender ! &quot;Hello from the RemoteActor&quot;
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;现在我们在远程服务器上启动这个Actor：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;val system = ActorSystem(&quot;RemoteDemoSystem&quot;)
-val remoteActor = system.actorOf(Props[RemoteActor], name = &quot;RemoteActor&quot;)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;那么现在我们假如有一个系统需要向这个Actor发送消息应该怎么做呢？&lt;/p&gt;
-
-&lt;p&gt;首先我们需要类似RMI发布自己的服务一样，我们需要为其他系统调用远程Actor提供消息通信的接口，在Akka中，设置非常简单，不需要代码侵入，只需简单的在配置文件里配置即可：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;akka {
-  actor {
-    provider = &quot;akka.remote.RemoteActorRefProvider&quot;
-  }
-  remote {
-    enabled-transports = [&quot;akka.remote.netty.tcp&quot;]
-    netty.tcp {
-      hostname = $localIp  //比如127.0.0.1
-      port = $port //比如2552
-    }
-    log-sent-messages = on
-    log-received-messages = on
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;我们只需配置相应的驱动，传输方式，ip，端口等属性就可简单完成Akka Remote的配置。&lt;/p&gt;
-
-&lt;p&gt;当然本地服务器也需要配置这些信息，因为Akka之间是需要相互通信的，当然配置除了hostname有一定的区别外，其他配置信息可一致，本例子是在同一台机器上，所以这里hostname是相同的。&lt;/p&gt;
-
-&lt;p&gt;这时候我们就可以在本地的服务器向这个Actor发送消息了，首先我们可以创建一个本地的Actor：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;case object Init
-case object SendNoReturn
-
-class LocalActor extends Actor{
-
-  val path = ConfigFactory.defaultApplication().getString(&quot;remote.actor.name.test&quot;)
-  implicit val timeout = Timeout(4.seconds)
-  val remoteActor = context.actorSelection(path)
-
-  def receive: Receive = {
-    case Init =&amp;gt; &quot;init local actor&quot;
-    case SendNoReturn =&amp;gt; remoteActor ! &quot;hello remote actor&quot;
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;其中的&lt;code&gt;remote.actor.name.test&lt;/code&gt;的值为：“akka.tcp://RemoteDemoSystem@127.0.0.1:4444/user/RemoteActor”，另外我们可以看到我们使用了&lt;code&gt;context.actorSelection(path)&lt;/code&gt;来获取的是一个ActorSelection对象，若是需要获得ActorRef，我们可以调用它的resolveOne(),它返回的是是一个Future[ActorRef],这里是不是很熟悉，因为它跟本地获取Actor方式是一样的，因为Akka中Actor是位置透明的，获取本地Actor和远程Actor是一样的。&lt;/p&gt;
-
-&lt;p&gt;最后我们首先启动远程Actor的系统：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;object RemoteDemo extends App  {
-  val system = ActorSystem(&quot;RemoteDemoSystem&quot;)
-  val remoteActor = system.actorOf(Props[RemoteActor], name = &quot;RemoteActor&quot;)
-  remoteActor ! &quot;The RemoteActor is alive&quot;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;然后我们在本地系统中启动这个LocalActor，并向它发送消息：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;object LocalDemo extends App {
-
-  implicit val system = ActorSystem(&quot;LocalDemoSystem&quot;)
-  val localActor = system.actorOf(Props[LocalActor], name = &quot;LocalActor&quot;)
-
-  localActor ! Init
-  localActor ! SendNoReturn
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;我们可以看到RemoteActor收到了一条消息：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/08/send-no-return.png&quot; alt=&quot;send-no-return&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;从以上的步骤和结果看出可以看出，Akka的远程通信跟JMS的点对点模式似乎更相似一点，但是它有不需要我们维护消息队列，而是使用Actor自身的邮箱，另外我们利用context.actorSelection获取的ActorRef，可以看成远程Actor的副本，这个又和RMI相关概念类似，所以说Akka远程通信的形式上像是RMI和JMS的结合,当然底层还是通过TCP、UDP等相关网络协议进行数据传输的，从配置文件的相应内容便可以看出。&lt;/p&gt;
-
-&lt;p&gt;上述例子演示的是sendNoReturn的模式，那么假如我们需要远程Actor给我们一个回复应该怎么做呢？&lt;/p&gt;
-
-&lt;p&gt;首先我们创建一个消息：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;case object SendHasReturn
-
- def receive: Receive = {
-    case SendHasReturn =&amp;gt;
-      for {
-        r &amp;lt;- remoteActor.ask(&quot;hello remote actor&quot;)
-      } yield r
-  }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;我们重新运行LocalActor并像RemoteActor发送一条消息：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/08/send-has-return.png&quot; alt=&quot;send-has-return&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;可以看到LocalActor在发送消息后并收到了RemoteActor返回来的消息，另外我们这里设置了超时时间，若在规定的时间内没有得到反馈，程序就会报错。&lt;/p&gt;
-
-&lt;h3&gt;Akka Serialization&lt;/h3&gt;
-
-&lt;p&gt;其实这一部分本可以单独拿出来写，但是相信序列化这块大家都应该有所了解了，所以就不准备讲太多序列化的知识了，怕班门弄斧，主要讲讲Akka中的序列化。&lt;/p&gt;
-
-&lt;p&gt;继续上面的例子，假如我们这时向RemoteActor发送一个自定义的对象，比如一个case class对象，但是我们这是是在网络中传输这个消息，那么怎么保证这个对象类型和值呢，在同一个JVM系统中我们不需要担心这个，因为对象就在堆中，我们只要传递相应的地址即可就行，但是在不同的环境中，我们并不能这么做，我们在网络中只能传输字节数据，所以我们必须将对象做特殊的处理，在传输的时候转化成特定的由一连串字节组成的数据，而且我们又可以根据这些数据恢复成一个相应的对象，这便是序列化。&lt;/p&gt;
-
-&lt;p&gt;我们先定义一个参与的case class, 并修改一下上面发送消息的语句:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;case object SendSerialization
-case class JoinEvt(
-    id: Long,
-    name: String
-)
-def receive: Receive = {
-    case SendSerialization =&amp;gt;
-      for {
-        r &amp;lt;- remoteActor.ask(JoinEvt(1L,&quot;godpan&quot;))
-      } yield println(r)
-  }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;这时我们重新启动RemoteActor和LocalActor所在的系统，发送这条消息：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/08/send-serialization.png&quot; alt=&quot;send-serialization&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;有同学可能会觉得奇怪，我们明明没有对JoinEvt进行过任何序列化的标识和处理，为什么程序还能运行成功呢？&lt;/p&gt;
-
-&lt;p&gt;其实不然，只不过是有人替我们默认做了，不用说，肯定是贴心的Akka，它为我们提供了一个默认的序列化策略，那就是我们熟悉又纠结的java.io.Serializable，沉浸在它的易使用性上，又对它的性能深恶痛绝，尤其是当有大量对象需要传输的分布式系统，如果是小系统，当我没说，毕竟存在即合理。&lt;/p&gt;
-
-&lt;p&gt;又有同学说，既然Akka是一个天生分布式组件，为什么还用低效的java.io.Serializable，你问我我也不知道，可能当时的作者偷了偷懒，当然Akka现在可能觉醒了，首先它支持第三方的序列化工具，当然如果你有特殊需求，你也可以自己实现一个，而且在最新的文档中说明，在Akka 2.5x之后Akka内核消息全面废弃java.io.Serializable，用户自定义的消息暂时还是支持使用java.io.Serializable的，但是不推荐用，因为它是低效的，容易被攻击，所以在这里我也推荐大家再Akka中尽量不要在使用了java.io.Serializable。&lt;/p&gt;
-
-&lt;p&gt;那么在Akka中我们如何使用第三方的序列化工具呢？&lt;/p&gt;
-
-&lt;p&gt;这里我推荐一个在Java社区已经久负盛名的序列化工具：kryo，有兴趣的同学可以去了解一下：&lt;a href=&quot;https://github.com/EsotericSoftware/kryo&quot;&gt;kryo&lt;/a&gt;,而且它也提供Akka使用的相关包，这里我们就使用它作为示例：&lt;/p&gt;
-
-&lt;p&gt;这里我贴上整个项目的build.sbt, kryo的相关依赖也在里面：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;
-import sbt._
-import sbt.Keys._
-
-lazy val AllLibraryDependencies =
-  Seq(
-    &quot;com.typesafe.akka&quot; %% &quot;akka-actor&quot; % &quot;2.5.3&quot;,
-    &quot;com.typesafe.akka&quot; %% &quot;akka-remote&quot; % &quot;2.5.3&quot;,
-    &quot;com.twitter&quot; %% &quot;chill-akka&quot; % &quot;0.8.4&quot;
-  )
-
-lazy val commonSettings = Seq(
-  name := &quot;AkkaRemoting&quot;,
-  version := &quot;1.0&quot;,
-  scalaVersion := &quot;2.11.11&quot;,
-  libraryDependencies := AllLibraryDependencies
-)
-
-lazy val remote = (project in file(&quot;remote&quot;))
-  .settings(commonSettings: _*)
-  .settings(
-    // other settings
-  )
-
-lazy val local = (project in file(&quot;local&quot;))
-  .settings(commonSettings: _*)
-  .settings(
-    // other settings
-  )
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;然后我们只需将application.conf中的actor配置替换成以下的内容：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;actor {
-    provider = &quot;akka.remote.RemoteActorRefProvider&quot;
-    serializers {
-      kryo = &quot;com.twitter.chill.akka.AkkaSerializer&quot;
-    }
-    serialization-bindings {
-      &quot;java.io.Serializable&quot; = none
-      &quot;scala.Product&quot; = kryo
-    }
-  }
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;其实其中的&quot;java.io.Serializable&quot; = none可以省略，因为若是有其他序列化的策略则会替换掉默认的java.io.Serializable的策略，这里只是为了更加仔细的说明。&lt;/p&gt;
-
-&lt;p&gt;至此我们就可以使用kryo了，整个过程是不是很easy，迫不及待开始写demo了，那就快快开始吧。&lt;/p&gt;
-
-&lt;p&gt;从运行结果和代码上分析可得：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Akka Remote使用内置的序列化工具，并支持配置指定的序列化方式，可以按需配置；&lt;/li&gt;
-&lt;li&gt;Akka Remote使用的过程是一个异步非阻塞的过程，客户端能尽量减少对服务端的依赖；&lt;/li&gt;
-&lt;li&gt;Akka Remote的代码实现相对Java Rmi实现来说简单的多，非常简洁；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;整个例子的相关的源码已经上传到akka-demo中：&lt;a href=&quot;https://github.com/godpan/akka-demo/tree/master/Example_06&quot;&gt;源码链接&lt;/a&gt;&lt;/p&gt;
-</content>
- </entry>
- 
- <entry>
-   <title>Akka系列（八）：Akka persistence设计理念之CQRS</title>
-   <link href="/2017/07/29/learning-akka-8.html"/>
-   <updated>2017-07-29T00:00:00+08:00</updated>
-   <id>urn:uuid:8dcf2b63-e930-3d54-8ca7-fbvbdc2a4fgd</id>
-   <content type="html">&lt;p&gt;这一篇文章主要是讲解Akka persistence的核心设计理念，也是CQRS（Command Query Responsibility Segregation）架构设计的典型应用，就让我们来看看为什么Akka persistence会采用CQRS架构设计。&lt;/p&gt;
-
-&lt;h3&gt;CQRS&lt;/h3&gt;
-
-&lt;p&gt;很多时候我们在处理高并发的业务需求的时候，往往能把应用层的代码优化的很好，比如缓存，限流，均衡负载等，但是很难避免的一个问题就是数据的持久化，以致数据库的性能很可能就是系统性能的瓶颈，我前面的那篇文章也讲到，如果我们用数据库去保证记录的CRUD，在并发高的情况下，让数据库执行这么多的事务操作，会让很多数据库操作超时，连接池不够用的情况，导致大量请求失败，系统的错误率上升和负载性能下降。&lt;/p&gt;
-
-&lt;p&gt;既然这样，那我们可不可借鉴一下读写分离的思想呢？假使写操作和同操作分离，甚至是对不同数据表，数据库操作，那么我们就可以大大降低数据库的瓶颈，使整个系统的性能大大提升。那么CQRS到底是做了什么呢？&lt;/p&gt;
-
-&lt;p&gt;我们先来看看普通的方式：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/08/acid.png&quot; alt=&quot;acid&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;我们可以看出，我们对数据的请求都是通过相应的接口直接对数据库进行操作，这在并发大的时候肯定会对数据库造成很大的压力，虽然架构简单，但在面对并发高的情况下力不从心。&lt;/p&gt;
-
-&lt;p&gt;那么CQRS的方式有什么不同呢？我们也来看看它的执行方式：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/08/cqrs.png&quot; alt=&quot;acid&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;乍得一看，似乎跟普通的方式没什么不同啊，不就多了一个事件和存储DB么，其实不然，小小的改动便是核心理念的转换，首先我们可以看到在CQRS架构中会多出一个Event，那它到底代表着什么含义呢？其实看过上篇文章的同学很容易理解，Event是我们系统根据请求处理得出的一个领域模型，比如一个修改余额操作事件，当然这个Event中只会保存关键性的数据。&lt;/p&gt;
-
-&lt;p&gt;很多同学又有疑问了，这不跟普通的读写分离很像么，难道还隐藏着什么秘密？那我们就来比较一下几种方式的不同之处：&lt;/p&gt;
-
-&lt;h5&gt;1.单数据库模式&lt;/h5&gt;
-
-&lt;ul&gt;
-&lt;li&gt;写操作会产生互斥锁，导致性能降低；&lt;/li&gt;
-&lt;li&gt;即使使用乐观锁，但是在大量写操作的情况下也会大量失败；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h5&gt;2.读写分离&lt;/h5&gt;
-
-&lt;ul&gt;
-&lt;li&gt;读写分离通过物理服务器增加，负荷增加；&lt;/li&gt;
-&lt;li&gt;读写分离更适用于读操作大于写操作的场景；&lt;/li&gt;
-&lt;li&gt;读写分离在面对大量写操作的情况下还是很吃力；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h5&gt;3.CQRS&lt;/h5&gt;
-
-&lt;ul&gt;
-&lt;li&gt;普通数据的持久化和Event持久化可以使用同一台数据库；&lt;/li&gt;
-&lt;li&gt;利用架构设计可以使读和写操作尽可能的分离；&lt;/li&gt;
-&lt;li&gt;能支撑大量写的操作情况；&lt;/li&gt;
-&lt;li&gt;可以支持数据异步持久，确保数据最终一致性；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;从三种方式各自的特点可以看出，单数据库模式的在大量读写的情况下有很大的性能瓶颈，但简单的读写分离在面对大量写操作的时候也还是力不从心，比如最常见的库存修改查询场景：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/08/common-action.png&quot; alt=&quot;common-action&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;我们可以发现在这种模式下写数据库的压力还会很大，而且还有数据同步，数据延迟等问题。&lt;/p&gt;
-
-&lt;p&gt;那么我们用CQRS架构设计会是怎么样呢：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/08/cqrs-action.png&quot; alt=&quot;cqrs-action&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;首先我们可以业务模型进行分离，对不同的查询进行分离，另外避免不了的同一区间数据段进行异步持久化，在保证数据一致性的情况下提升系统的吞吐量。这种设计我们很少会遇到事务竞争，另外还可以使用内存数据库（当然如果是内存操作那就最快）来提升数据的写入。（以上的数据库都可为分布式数据库，不担心单机宕机）&lt;/p&gt;
-
-&lt;p&gt;那么CRQS机制是怎么保证数据的一致性的呢？&lt;/p&gt;
-
-&lt;p&gt;从上图中我们可以看出，一个写操作我们会在系统进行初步处理后生成一个领域事件，比如a用户购买了xx商品1件，b用户购买了xx商品2件等，按照普通的方式我们肯定是直接将订单操作，库存修改操作一并放在一个事务内去操作数据库，性能可想而知，而用CQRS的方式后，首先系统在持久化相应的领域事件后和修改内存中的库存（这个处理非常迅速）后便可马上向用户做出反应，真正的具体信息持久可以异步进行，当然若是当在具体信息持久化的过程中出错了怎么办，系统能恢复正确的数据么，当然可以，因为我们的领域事件事件已经持久化成功了，在系统恢复的时候，我们可以根据领域事件来恢复真正的数据，当然为了防止恢复数据是造成数据丢失，数据重复等问题我们需要制定相应的原则，比如给领域事件分配相应id等。&lt;/p&gt;
-
-&lt;p&gt;使用CQRS会带来性能上的提升，当然它也有它的弊端：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;使系统变得更复杂，做一些额外的设计；&lt;/li&gt;
-&lt;li&gt;CQRS保证的是最终一致性，有可能只适用于特定的业务场景；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h3&gt;Akka Persistence 中CQRS的应用&lt;/h3&gt;
-
-&lt;p&gt;通过上面的讲解，相信大家对CQRS已经有了一定的了解，下面我们就来看看它在Akka Persistence中的具体应用，这里我就结合上一篇文章抽奖的例子，比如其中的LotteryCmd便是一个写操作命令，系统经过相应的处理后得到相应的领域事件，比如其中LuckyEvent，然后我们将LuckyEvent进行持久化，并修改内存中抽奖的余额，返回相应的结果，这里我们就可以同时将结果反馈给用户，并对结果进行异步持久化，流程如下：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/08/cqrs-example.png&quot; alt=&quot;cqrs-example&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;可以看出，Akka Persistence的原理完全是基于CQRS的架构设计的，另外Persistence Actor还会保存一个内存状态，相当于一个in memory数据库，可以用来提供关键数据的存储和查询，比如前面说到的库存，余额等数据，这部分的设计取决于具体的业务场景。&lt;/p&gt;
-
-&lt;p&gt;阅读Akka Persistence相关源码，其的核心就在于PersistentActor接口中的几个持久方法，比如其中的&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;def persist[A](event: A)(handler: A ⇒ Unit): Unit
-
-def persistAll[A](events: immutable.Seq[A])(handler: A ⇒ Unit): Unit 
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;等方法，它们都有两个参数，一个是持久化的事件，一个是持久化后的后续处理逻辑，我们可以在后续handler中修改Actor内部状态，向外部发送消息等操作,这里的模式就是基于CQRS架构的，修改状态有事件驱动，另外Akka还可以在系统出错时，利用相应的事件恢复Actor的状态。&lt;/p&gt;
-
-&lt;h3&gt;总结&lt;/h3&gt;
-
-&lt;p&gt;总的来说，CQRS架构是一种不同于以往的CRUD的架构，所以你在享受它带来的高性能的同时可能会遇到一些奇怪的问题，当然这些都是可以解决的，重要的是思维上的改变，比如事件驱动，领域模型等概念，不过相信当你理解并掌握它之后，你便会爱上它的。&lt;/p&gt;
 </content>
  </entry>
  
