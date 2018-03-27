@@ -4,7 +4,7 @@
  <title>泮</title>
  <link href="/atom.xml" rel="self"/>
  <link href=""/>
- <updated>2018-03-24T16:10:28+08:00</updated>
+ <updated>2018-03-27T19:16:47+08:00</updated>
  <id>/</id>
  <author>
    <name></name>
@@ -1967,7 +1967,7 @@ ps.executeQuery();
 
 &lt;h3&gt;背景&lt;/h3&gt;
 
-&lt;p&gt;Java诞生至今，有好多种IO模型，从最早的Java IO到后来的Java NIO以及最新的Java AIO，每种IO模型都有它自己的特点，详情请看我的上篇文章&lt;a href=&quot;&quot;&gt;Java IO初探&lt;/a&gt;，而其中的的Java NIO应用非常广泛，尤其是在高并发领域，比如我们常见的Netty，Mina等框架，都是基于它实现的，相信大家都有所了解，下面让我们来看看Java NIO的具体架构。&lt;/p&gt;
+&lt;p&gt;Java诞生至今，有好多种IO模型，从最早的Java IO到后来的Java NIO以及最新的Java AIO，每种IO模型都有它自己的特点，详情请看我的上篇文章&lt;a href=&quot;http://www.godpan.me/2017/10/21/java-io.html&quot;&gt;Java IO初探&lt;/a&gt;，而其中的的Java NIO应用非常广泛，尤其是在高并发领域，比如我们常见的Netty，Mina等框架，都是基于它实现的，相信大家都有所了解，下面让我们来看看Java NIO的具体架构。&lt;/p&gt;
 
 &lt;h3&gt;Java NIO架构&lt;/h3&gt;
 

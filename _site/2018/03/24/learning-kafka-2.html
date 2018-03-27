@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="author" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>泮关森的个人博客</title>
+    <link rel="shortcut icon" href="/media/favicon.ico">
+<!--     <link href="/atom.xml" rel="alternate" title="泮" type="application/atom+xml" /> -->
+<!--     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.2.0/css/font-awesome.min.css"> -->
+    <link rel="stylesheet" href="/media/css/style.css">
+  <!--   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/retina.js/1.3.0/retina.min.js"></script> -->
+    <link rel="stylesheet" href="/media/css/github.min.css">
+    <script src="/media/js/highlight.min.js"></script>
+    <script type="text/javascript"> hljs.initHighlightingOnLoad(); </script>
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?97a996faebe648d21debdaf60f01d40b";
+      var s = document.getElementsByTagName("script")[0]; 
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+  </head>
+  <body>
+      <div id="main" role="main">
+        <header>
+          <div id="header">
+            <h1><a title="泮" class="" href="/">泮</a></h1>
+          </div>
+          <nav>
+            
+            <!-- <span><a title="Blog" href="/blog.html"><i class="fa fa-list-ul"></i></a></span> -->
+            <span><a title="Blog" href="/blog.html">Blog</a></span>
+            
+            <!-- <span><a title="Tags" href="/tags.html"><i class="fa fa-tags"></i></a></span> -->
+            <span><a title="Tags" href="/tags.html">Tags</a></span>
+            
+            <!-- <span><a title="About" href="/about.html"><i class="fa fa-user"></i></a></span> -->
+            <span><a title="About" href="/about.html">About</a></span>
+            
+          </nav>
+        </header>
+        <div id="content">
+        <article>
+  <section class="title">
+    <h2>Kafka学习笔记（二） ：初探Kafka </h2>
+  </section>
+  <section class="meta">
+  <span class="time">
+    <time datetime="2018-03-24">2018-03-24</time>
+  </span>
+  
+  <span class="tags">
+    
+    <a href="/tags.html#kafka" title="kafka">#kafka</a>
+    
+  </span>
+  <!-- BEGIN this would not work on any other domain -->
+  <span
+    class           = "like-wrapper"
+    like-shortname  = ''
+    like-identifier = 'urn:uuid:85cc4b63-e9f0-4454-8ca7-fbdsdc2a2fad'
+    like-name       = 'Kafka学习笔记（二） ：初探Kafka'
+    like-btn        = '&#xf087;'
+    like-link       = '/2018/03/24/learning-kafka-2.html'
+    ></span>
+  <script type="text/javascript">
+    var l = document.createElement('script');
+    l.type = 'text/javascript'; l.async = true; l.src = 'http://www.like-btn.com/javascript/widget.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(l);
+  </script>
+  <!-- END this would not work on any other domain -->
+  
+  </section>
+  <section class="post">
+  <p>看完上一篇，相信大家对消息系统以及Kafka的整体构成都有了初步了解，学习一个东西最好的办法，就是去使用它，今天就让我们一起窥探一下Kafka，并完成自己的处女作。</p>
+
+<h2>消息在Kafka中的历程</h2>
+
+<p>虽然我们掌握东西要一步一步来，但是我们在大致了解了一个东西后，会有利于我们对它的理解和学习，所以我们可以先来看一下一条消息从发出到最后被消息者接收到底经历了什么？</p>
+
+<p><img src="/media/images/2018/03/message-flow.png" alt="message-flow" /></p>
+
+<p>上图简要的说明了消息在Kafka中的整个流转过程（假设已经部署好了整个Kafka系统，并创建了相应的Topic，分区等细节后续再单独讲）：</p>
+
+<ul>
+<li>1.消息生产者将消息发布到具体的Topic，根据一定算法或者随机被分发到具体的分区中；</li>
+<li>2.根据实际需求，是否需要实现处理消息逻辑；</li>
+<li>3.若需要，则实现具体逻辑后将结果发布到输出Topic；</li>
+<li>4.消费者根据需求订阅相关Topic，并消费消息；</li>
+</ul>
+
+
+<p>总的来说，怎么流程还是比较清晰和简单的，下面就跟我一起来练习Kafka的基本操作，最后实现一个单词计数的小demo。</p>
+
+<h2>基础操作</h2>
+
+<p>以下代码及相应测试在以下环境测试通过：Mac OS + JDK1.8，Linux系统应该也能跑通，Windows有兴趣的同学可以去官网下载相应版本进行相应的测试练习。</p>
+
+<h3>下载Kafka</h3>
+
+<p>Mac系统同学可以使用brew安装：</p>
+
+<pre><code class="shell">brew install kafka
+</code></pre>
+
+<p>Linux系统同学可以从官网下载源码解压，也可以直接执行以下命令:</p>
+
+<pre><code class="shell">cd 
+mkdir test-kafka &amp;&amp; cd test-kafka
+curl -o kafka_2.11-1.0.1.tgz http://mirrors.tuna.tsinghua.edu.cn/apache/kafka/1.0.1/kafka_2.11-1.0.1.tgz
+tar -xzf kafka_2.11-1.0.1.tgz
+cd kafka_2.11-1.0.1
+</code></pre>
+
+<h3>启动</h3>
+
+<p>Kafka使用Zookeeper来维护集群信息，所以这里我们先要启动Zookeeper，Kafka与Zookeeper的相关联系跟结合后续再深入了解，毕竟不能一口吃成一个胖子。</p>
+
+<pre><code class="shell">bin/zookeeper-server-start.sh config/zookeeper.properties
+</code></pre>
+
+<p>接着我们启动一个Kafka Server节点：</p>
+
+<pre><code class="shell">bin/kafka-server-start.sh config/server.properties
+</code></pre>
+
+<p>这时候Kafka系统已经算是启动起来了。</p>
+
+<h3>创建Topic</h3>
+
+<p>在一切就绪之后，我们要开始做极其重要的一步，那就是创建Topic，Topic是整个系统流转的核心，另外Topic本身也包含着很多复杂的参数，比如复制因子个数，分区个数等，这里为了从简，我们将对应的参数都设为1，方便大家测试：</p>
+
+<pre><code class="shell">bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic kakfa-test
+</code></pre>
+
+<p>其中参数的具体含义：</p>
+
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>--create </td>
+<td> 代表创建Topic</td>
+</tr>
+<tr>
+<td>--zookeeper </td>
+<td> zookeeper集群信息</td>
+</tr>
+<tr>
+<td>--replication-factor </td>
+<td> 复制因子</td>
+</tr>
+<tr>
+<td>--partitions </td>
+<td> 分区信息</td>
+</tr>
+<tr>
+<td>--topic </td>
+<td> Topic名称</td>
+</tr>
+</tbody>
+</table>
+
+
+<p>这时候我们已经创建好了一个叫kakfa-test的Topic了。</p>
+
+<h3>向Topic发送消息</h3>
+
+<p>在有了Topic后我们就可以向其发送消息：</p>
+
+<pre><code class="shell">bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kakfa-test
+</code></pre>
+
+<p>然后我们向控制台输入一些消息：</p>
+
+<pre><code>this is my first test kafka
+so good
+</code></pre>
+
+<p>这时候消息已经被发布在kakfa-test这个主题上了。</p>
+
+<h3>从Topic获取消息</h3>
+
+<p>现在Topic上已经有消息了，现在可以从中获取消息被消费：</p>
+
+<pre><code class="shell">bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic kafka-test --from-beginning
+</code></pre>
+
+<p>这时候我们可以在控制台看到：</p>
+
+<pre><code class="shell">this is my first test kafka
+so good
+</code></pre>
+
+<p>至此我们就测试了最简单的Kafka Demo，希望大家能自己动手去试试，虽然很简单，但是这能让你对整个Kafka流程能更熟悉。</p>
+
+<h2>WordCount</h2>
+
+<p>下面我们来利用上面的一些基本操作来实现一个简单WordCount程序，它具备以下功能：</p>
+
+<ul>
+<li>1.支持词组持续输入，即生产者不断生成消息；</li>
+<li>2.程序自动从输入Topic中获取原始数据，然后经过处理，将处理结果发布在计数Topic中；</li>
+<li>3.消费者可以从计数Topic获取相应的WordCount的结果；</li>
+</ul>
+
+
+<h3>1.启动kafka</h3>
+
+<p>与上文的启动一样，按照其操作即可。</p>
+
+<h3>2.创建输入Topic</h3>
+
+<pre><code class="shell">bin/kafka-topics.sh --zookeeper localhost:2181 --create --topic kafka-word-count-input --partitions 1 --replication-factor 1
+</code></pre>
+
+<h3>3.向Topic输入消息</h3>
+
+<pre><code class="shell">bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kafka-word-count-input
+</code></pre>
+
+<h3>4.流处理逻辑</h3>
+
+<p>这部分内容是整个例子的核心，这部分代码有Java 8+和Scala版本，个人认为流处理用函数式语法表达的更加简洁清晰，推荐大家用函数式的思维去尝试写以下，发现自己再也不想写Java匿名内部类这种语法了。</p>
+
+<p>我们先来看一个Java 8的版本:</p>
+
+<pre><code class="java">public class WordCount {
+    public static void main(String[] args) throws Exception {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "kafka-word-count");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+        final StreamsBuilder builder = new StreamsBuilder();
+        KStream&lt;String, String&gt; source = builder.&lt;String, String&gt;stream("kafka-word-count-input");
+        Pattern pattern = Pattern.compile("\\W+");
+        source
+           .flatMapValues(value -&gt; Arrays.asList(pattern.split(value.toLowerCase(Locale.getDefault()))))
+           .groupBy((key, value) -&gt; value)
+           .count(Materialized.&lt;String, Long, KeyValueStore&lt;Bytes, byte[]&gt;&gt;as("counts-store")).mapValues(value-&gt;Long.toString(value))
+           .toStream()
+           .to("kafka-word-count-output");
+        final KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+    }
+}
+</code></pre>
+
+<p>是不是很惊讶，用java也能写出如此简洁的代码，所以说如果有适用场景，推荐大家尝试的用函数式的思维去写写java代码。</p>
+
+<p>我们再来看看Scala版本的：</p>
+
+<pre><code class="scala">
+object WordCount {
+  def main(args: Array[String]) {
+    val props: Properties = {
+      val p = new Properties()
+      p.put(StreamsConfig.APPLICATION_ID_CONFIG, "kafka-word-count")
+      p.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
+      p.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String.getClass)
+      p.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String.getClass)
+      p
+    }
+
+    val builder: StreamsBuilder = new StreamsBuilder()
+    val source: KStream[String, String] = builder.stream("kafka-word-count-input")
+    source
+      .flatMapValues(textLine =&gt; textLine.toLowerCase.split("\\W+").toIterable.asJava)
+      .groupBy((_, word) =&gt; word)
+      .count(Materialized.as[String, Long, KeyValueStore[Bytes, Array[Byte]]]("counts-store")).toStream.to("kafka-word-count-output")
+    val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
+    streams.start()
+  }
+}
+</code></pre>
+
+<p>可以发现使用Java 8函数式风格编写的代码已经跟Scala很相似了。</p>
+
+<h3>5.启动处理逻辑</h3>
+
+<p>很多同学电脑上并没有装sbt，所以这里演示的利用Maven构建的Java版本，具体执行步骤请参考<a href="https://github.com/godpan/kafka-word-count">戳这里kafka-word-count</a>上的说明。</p>
+
+<h3>6.启动消费者进程</h3>
+
+<p>最后我们启动消费者进程，并在生产者中输入一些单词，比如：</p>
+
+<p><img src="/media/images/2018/03/kafka-word-count-input.png" alt="kafka-word-count-input" /></p>
+
+<p>最后我们可以在消费者进程中看到以下输出：</p>
+
+<pre><code class="shell">bin/kafka-console-consumer.sh --topic kafka-word-count-output --from-beginning --bootstrap-server localhost:9092  --property print.key=true
+</code></pre>
+
+<p><img src="/media/images/2018/03/kafka-word-count-output.png" alt="kafka-word-count-output" /></p>
+
+<h2>总结</h2>
+
+<p>本篇文章主要是讲解了Kafka的基本运行过程和一些基础操作，但这是我们学习一个东西必不可少的一步，只有把基础扎实好，才能更深入的去了解它，理解它为什么这么设计，我在这个过程中也遇到很多麻烦，所以还是希望大家能够自己动手去实践一下，最终能收获更多。</p>
+
+  </section>
+  
+  <div class="divider">
+    <span>
+    
+    <a href="/2018/03/20/git-small-skill.html"><i class="fa fa-chevron-left"></i></a>
+    
+    </span>
+    <!-- BEGIN comment icon
+    <span><a href="javascript:leave_comment();" id="leave_comment_link"><i class="fa fa-comment-o"></i></a></span>
+    <span><a href="javascript:collapse_comment();" id="collapse_comment_link" style="display:none;"><i class="fa fa-chevron-up"></i></a></span>
+      END comment icon -->
+
+    <span>
+    
+    <i class="fa fa-circle"></i>
+    
+    </span>
+  </div>
+  <span>文章允许转载、使用，但需要保留链接文章署名
+      <a href="http://www.godpan.me">godpan.me</a>,如有写的不当之处，也欢迎大家指正，联系邮箱：godpan.sen@gmail.com</span>
+
+  <!-- BEGIN comment
+  <section class="comment">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+      var disqus_shortname = '';
+      var disqus_identifier = 'urn:uuid:85cc4b63-e9f0-4454-8ca7-fbdsdc2a2fad';
+
+      function leave_comment() {
+          var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+          dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          $("#leave_comment_link").css("display", "none");
+          $("#collapse_comment_link").css("display", "");
+      };
+      function collapse_comment() {
+          // document.getElementById("disqus_thread").innerHTML = '';
+          $("#disqus_thread").slideUp(400, function() {
+              $("#disqus_thread").empty();
+              $("#leave_comment_link").css("display", "");
+              $("#collapse_comment_link").css("display", "none");
+              $("#disqus_thread").css("display", "");
+          });
+      };
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </section>
+  END comment -->
+  
+</article>
+
+        </div>
+        <footer>
+          <div>
+            
+            &copy; 2018  | powered by jekyll | themed by sext vi | <a href="https://github.com/godpan" title="github me">github</a>
+          </div>
+        </footer>
+      </div> <!-- main -->
+  </body>
+</html>
