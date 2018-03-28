@@ -1,14 +1,4 @@
 @charset "UTF-8";
-/*------------------------------------
- * sext-vi
- *
- * @author linghua.zhang@me.com
- * @link http://lhzhang.com/
- * @update 2015-07-24
- *
- * |/ | (~ (~
- * |\.|._)._)
- * --------------------------------- */
 @import url(/media/fonts/telex-regular.css);
 @import url(/media/fonts/family.css);
 @import url(/media/fonts/fira.css);
@@ -159,10 +149,11 @@ ul.listing {
     ul.listing li.listing-item:hover {
       background-color: #f9f9f9; }
     ul.listing li.listing-seperator {
-      font-family: telexregular, Hiragino Sans GB, Microsoft YaHei, sans-serif; }
-      ul.listing li.listing-seperator:before {
-        content: "⭠ ";
-        color: #ccc; }
+      font-family: telexregular, Hiragino Sans GB, Microsoft YaHei, sans-serif;
+      margin-top: 30px; }
+
+ul.listing li.listing-seperator:first-child {
+      margin-top: 0px}
 
 article {
   margin: 2em 0; }
