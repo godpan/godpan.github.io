@@ -87,7 +87,7 @@
 
 <p>我们先来看下ActorSystem中的顶级监管者：</p>
 
-<p><img src="/media/images/2017/04/actor-syatem-guardian.png" alt="Actor系统顶级监管者" /></p>
+<p><img src="/media/images/2017/04/actor-syatem-guardian.png" alt="Actor系统顶级监管者"></p>
 
 <p>一个actor系统在其创建过程中至少要启动三个actor，如上图所示，下面来说说这三个Actor的功能：</p>
 
@@ -103,10 +103,9 @@
 <li><code>/remote</code>： 是一个人造虚拟路径，用来存放所有其监管者是远程actor引用的actor。</li>
 </ul>
 
+<p>跟我们平常打交道最多的就是<code>/user</code>，它是我们在程序中用ActorSystem.actorOf创建的actor的监管者，下面的容错我们重点关心的就是它下面的失败处理，其他几种顶级Actor具体功能定义已经给出，有兴趣的也可以去了解一下。</p>
 
-<p> 跟我们平常打交道最多的就是<code>/user</code>，它是我们在程序中用ActorSystem.actorOf创建的actor的监管者，下面的容错我们重点关心的就是它下面的失败处理，其他几种顶级Actor具体功能定义已经给出，有兴趣的也可以去了解一下。</p>
-
-<p> 根监管者监管着所有顶级Actor，对它们的各种失败情况进行处理，一般来说如果错误要上升到根监管者，整个系统就会停止。</p>
+<p>根监管者监管着所有顶级Actor，对它们的各种失败情况进行处理，一般来说如果错误要上升到根监管者，整个系统就会停止。</p>
 
 <h4>2.<code>/user</code>： 顶级actor监管者</h4>
 
@@ -120,7 +119,9 @@
 
 <p>上一篇文章介绍了Actor系统的组织结构，它是一种树形结构，其实这种结构对actor的监管是非常有利的，Akka实现的是一种叫“父监管”的形式，每一个被创建的actor都由其父亲所监管，这种限制使得actor的监管结构隐式符合其树形结构，所以我们可以得出一个结论：</p>
 
-<blockquote><p>一个被创建的Actor肯定是一个被监管者，也可能是一个监管者，它监管着它的子级Actor</p></blockquote>
+<blockquote>
+<p>一个被创建的Actor肯定是一个被监管者，也可能是一个监管者，它监管着它的子级Actor</p>
+</blockquote>
 
 <h3>监管策略</h3>
 
@@ -133,147 +134,129 @@
 <li>升级失败（沿监管树向上传递失败），由此失败自己</li>
 </ul>
 
-
 <p>这其实很好理解，下面是一个简单例子：</p>
-
-<pre><code class="scala"> override val supervisorStrategy =
-    OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
-      case _: ArithmeticException =&gt; Resume  //恢复
-      case _: NullPointerException =&gt; Restart //重启
-      case _: IllegalArgumentException =&gt; Stop //停止
-      case _: Exception =&gt; Escalate  //向上级传递
-    }
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"> <span class="k">override</span> <span class="k">val</span> <span class="n">supervisorStrategy</span> <span class="k">=</span>
+    <span class="nc">OneForOneStrategy</span><span class="o">(</span><span class="n">maxNrOfRetries</span> <span class="k">=</span> <span class="mi">10</span><span class="o">,</span> <span class="n">withinTimeRange</span> <span class="k">=</span> <span class="mi">1</span> <span class="n">minute</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">case</span> <span class="k">_:</span> <span class="kt">ArithmeticException</span> <span class="o">=&gt;</span> <span class="nc">Resume</span>  <span class="c1">//恢复
+</span>      <span class="k">case</span> <span class="k">_:</span> <span class="kt">NullPointerException</span> <span class="o">=&gt;</span> <span class="nc">Restart</span> <span class="c1">//重启
+</span>      <span class="k">case</span> <span class="k">_:</span> <span class="kt">IllegalArgumentException</span> <span class="o">=&gt;</span> <span class="nc">Stop</span> <span class="c1">//停止
+</span>      <span class="k">case</span> <span class="k">_:</span> <span class="kt">Exception</span> <span class="o">=&gt;</span> <span class="nc">Escalate</span>  <span class="c1">//向上级传递
+</span>    <span class="o">}</span>
+</code></pre></div>
 <p>我们可以根据异常的不同使用不同监管策略，在后面我会具体给出一个示例程序帮助大家理解。我们在实现自己的策略时，需要复写Actor中的<code>supervisorStrategy</code>，因为Actor的默认监管策略如下：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala">  <span class="k">final</span> <span class="k">val</span> <span class="n">defaultDecider</span><span class="k">:</span> <span class="kt">Decider</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">case</span> <span class="k">_:</span> <span class="kt">ActorInitializationException</span> <span class="k">⇒</span> <span class="kt">Stop</span>
+    <span class="k">case</span> <span class="k">_:</span> <span class="kt">ActorKilledException</span>         <span class="k">⇒</span> <span class="kt">Stop</span>
+    <span class="k">case</span> <span class="k">_:</span> <span class="kt">DeathPactException</span>           <span class="k">⇒</span> <span class="kt">Stop</span>
+    <span class="k">case</span> <span class="k">_:</span> <span class="kt">Exception</span>                    <span class="k">⇒</span> <span class="kt">Restart</span>
+  <span class="o">}</span>
+</code></pre></div>
+<p>它对除了它指定的异常进行停止，其他异常都是对下属进行重启。</p>
 
-<pre><code class="scala">  final val defaultDecider: Decider = {
-    case _: ActorInitializationException ⇒ Stop
-    case _: ActorKilledException         ⇒ Stop
-    case _: DeathPactException           ⇒ Stop
-    case _: Exception                    ⇒ Restart
-  }
-</code></pre>
-
-<p> 它对除了它指定的异常进行停止，其他异常都是对下属进行重启。</p>
-
-<p> Akka中有两种类型的监管策略：<code>OneForOneStrategy</code>和<code>AllForOneStrategy</code>，它们的主要区别在于：</p>
+<p>Akka中有两种类型的监管策略：<code>OneForOneStrategy</code>和<code>AllForOneStrategy</code>，它们的主要区别在于：</p>
 
 <ul>
 <li><code>OneForOneStrategy</code>： 该策略只会应用到发生故障的子actor上。</li>
 <li><code>AllForOneStrategy</code>： 该策略会应用到所有的子actor上。</li>
 </ul>
 
-
-<p> 我们一般都使用<code>OneForOneStrategy</code>来进行制定相关监管策略，当然你也可以根据具体需求选择合适的策略。另外我们可以给我们的策略配置相应参数，比如上面maxNrOfRetries，withinTimeRange等，这里的含义是每分钟最多进行10次重启，若超出这个界限相应的Actor将会被停止，当然你也可以使用策略的默认配置，具体配置信息可以参考源码。</p>
+<p>我们一般都使用<code>OneForOneStrategy</code>来进行制定相关监管策略，当然你也可以根据具体需求选择合适的策略。另外我们可以给我们的策略配置相应参数，比如上面maxNrOfRetries，withinTimeRange等，这里的含义是每分钟最多进行10次重启，若超出这个界限相应的Actor将会被停止，当然你也可以使用策略的默认配置，具体配置信息可以参考源码。</p>
 
 <h3>监管容错示例</h3>
 
 <p>本示例主要演示Actor在发生错误时，它的监管者会根据相应的监管策略进行不同的处理。<a href="https://github.com/godpan/akka-demo/tree/master/Example_03">源码链接</a></p>
 
 <p>因为这个例子比较简单，这里我直接贴上相应代码，后面根据具体的测试用例来解释各种监管策略所进行的响应：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">class</span> <span class="nc">Supervisor</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+  <span class="c1">//监管下属，根据下属抛出的异常进行相应的处理
+</span>  <span class="k">override</span> <span class="k">val</span> <span class="n">supervisorStrategy</span> <span class="k">=</span>
+    <span class="nc">OneForOneStrategy</span><span class="o">(</span><span class="n">maxNrOfRetries</span> <span class="k">=</span> <span class="mi">10</span><span class="o">,</span> <span class="n">withinTimeRange</span> <span class="k">=</span> <span class="mi">1</span> <span class="n">minute</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">case</span> <span class="k">_:</span> <span class="kt">ArithmeticException</span> <span class="o">=&gt;</span> <span class="nc">Resume</span>
+      <span class="k">case</span> <span class="k">_:</span> <span class="kt">NullPointerException</span> <span class="o">=&gt;</span> <span class="nc">Restart</span>
+      <span class="k">case</span> <span class="k">_:</span> <span class="kt">IllegalArgumentException</span> <span class="o">=&gt;</span> <span class="nc">Stop</span>
+      <span class="k">case</span> <span class="k">_:</span> <span class="kt">Exception</span> <span class="o">=&gt;</span> <span class="nc">Escalate</span>
+    <span class="o">}</span>
+  <span class="k">var</span> <span class="n">childIndex</span> <span class="k">=</span> <span class="mi">0</span> <span class="c1">//用于标示下属Actor的序号
+</span>
+  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="k">case</span> <span class="n">p</span><span class="k">:</span> <span class="kt">Props</span> <span class="o">=&gt;</span>
+      <span class="n">childIndex</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="c1">//返回一个Child Actor的引用，所以Supervisor Actor是Child Actor的监管者
+</span>      <span class="n">sender</span><span class="o">()</span> <span class="o">!</span> <span class="n">context</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="n">p</span><span class="o">,</span><span class="n">s</span><span class="s">"child${childIndex}"</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
 
-<pre><code class="scala">class Supervisor extends Actor {
-  //监管下属，根据下属抛出的异常进行相应的处理
-  override val supervisorStrategy =
-    OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
-      case _: ArithmeticException =&gt; Resume
-      case _: NullPointerException =&gt; Restart
-      case _: IllegalArgumentException =&gt; Stop
-      case _: Exception =&gt; Escalate
-    }
-  var childIndex = 0 //用于标示下属Actor的序号
+<span class="k">class</span> <span class="nc">Child</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+  <span class="k">val</span> <span class="n">log</span> <span class="k">=</span> <span class="nc">Logging</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">,</span> <span class="k">this</span><span class="o">)</span>
+  <span class="k">var</span> <span class="n">state</span> <span class="k">=</span> <span class="mi">0</span>
+  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="k">case</span> <span class="n">ex</span><span class="k">:</span> <span class="kt">Exception</span> <span class="o">=&gt;</span> <span class="k">throw</span> <span class="n">ex</span> <span class="c1">//抛出相应的异常
+</span>    <span class="k">case</span> <span class="n">x</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=&gt;</span> <span class="n">state</span> <span class="k">=</span> <span class="n">x</span> <span class="c1">//改变自身状态
+</span>    <span class="k">case</span> <span class="n">s</span><span class="k">:</span> <span class="kt">Command</span> <span class="kt">if</span> <span class="kt">s.content</span> <span class="o">=</span><span class="k">=</span> <span class="s">"get"</span> <span class="k">=&gt;</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="n">s</span><span class="s">"the ${s.self} state is ${state}"</span><span class="o">)</span>
+      <span class="n">sender</span><span class="o">()</span> <span class="o">!</span> <span class="n">state</span> <span class="c1">//返回自身状态
+</span>  <span class="o">}</span>
+<span class="o">}</span>
 
-  def receive = {
-    case p: Props =&gt;
-      childIndex += 1
-      //返回一个Child Actor的引用，所以Supervisor Actor是Child Actor的监管者
-      sender() ! context.actorOf(p,s"child${childIndex}")
-  }
-}
-
-class Child extends Actor {
-  val log = Logging(context.system, this)
-  var state = 0
-  def receive = {
-    case ex: Exception =&gt; throw ex //抛出相应的异常
-    case x: Int =&gt; state = x //改变自身状态
-    case s: Command if s.content == "get" =&gt;
-      log.info(s"the ${s.self} state is ${state}")
-      sender() ! state //返回自身状态
-  }
-}
-
-case class Command(  //相应命令
-    content: String,
-    self: String
-)
-</code></pre>
-
+<span class="k">case</span> <span class="k">class</span> <span class="nc">Command</span><span class="o">(</span>  <span class="c1">//相应命令
+</span>    <span class="n">content</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+    <span class="n">self</span><span class="k">:</span> <span class="kt">String</span>
+<span class="o">)</span>
+</code></pre></div>
 <p>现在我们来看看具体的测试用例：
 首先我们先构建一个测试环境：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">class</span> <span class="nc">GuardianSpec</span><span class="o">(</span><span class="nc">_system</span><span class="k">:</span> <span class="kt">ActorSystem</span><span class="o">)</span>
+    <span class="k">extends</span> <span class="nc">TestKit</span><span class="o">(</span><span class="nc">_system</span><span class="o">)</span>
+    <span class="k">with</span> <span class="nc">WordSpecLike</span>
+    <span class="k">with</span> <span class="nc">Matchers</span>
+    <span class="k">with</span> <span class="nc">ImplicitSender</span> <span class="o">{</span>
 
-<pre><code class="scala">class GuardianSpec(_system: ActorSystem)
-    extends TestKit(_system)
-    with WordSpecLike
-    with Matchers
-    with ImplicitSender {
+  <span class="k">def</span> <span class="k">this</span><span class="o">()</span> <span class="k">=</span> <span class="k">this</span><span class="o">(</span><span class="nc">ActorSystem</span><span class="o">(</span><span class="s">"GuardianSpec"</span><span class="o">))</span>
 
-  def this() = this(ActorSystem("GuardianSpec"))
+  <span class="s">"A supervisor"</span> <span class="n">must</span> <span class="o">{</span>
 
-  "A supervisor" must {
-
-    "apply the chosen strategy for its child" in {
-        code here...
-        val supervisor = system.actorOf(Props[Supervisor], "supervisor") //创建一个监管者
-        supervisor ! Props[Child]
-        val child = expectMsgType[ActorRef] // 从 TestKit 的 testActor 中获取回应
-    } 
-  }
-}
-</code></pre>
-
+    <span class="s">"apply the chosen strategy for its child"</span> <span class="n">in</span> <span class="o">{</span>
+        <span class="n">code</span> <span class="n">here</span><span class="o">...</span>
+        <span class="k">val</span> <span class="n">supervisor</span> <span class="k">=</span> <span class="n">system</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">Props</span><span class="o">[</span><span class="kt">Supervisor</span><span class="o">],</span> <span class="s">"supervisor"</span><span class="o">)</span> <span class="c1">//创建一个监管者
+</span>        <span class="n">supervisor</span> <span class="o">!</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">Child</span><span class="o">]</span>
+        <span class="k">val</span> <span class="n">child</span> <span class="k">=</span> <span class="n">expectMsgType</span><span class="o">[</span><span class="kt">ActorRef</span><span class="o">]</span> <span class="c1">// 从 TestKit 的 testActor 中获取回应
+</span>    <span class="o">}</span> 
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>1.TestOne：正常运行</p>
-
-<pre><code class="scala">child ! 50 // 将状态设为 50
-child ! Command("get",child.path.name)
-expectMsg(50)
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="n">child</span> <span class="o">!</span> <span class="mi">50</span> <span class="c1">// 将状态设为 50
+</span><span class="n">child</span> <span class="o">!</span> <span class="nc">Command</span><span class="o">(</span><span class="s">"get"</span><span class="o">,</span><span class="n">child</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="o">)</span>
+<span class="n">expectMsg</span><span class="o">(</span><span class="mi">50</span><span class="o">)</span>
+</code></pre></div>
 <p>正常运行，测试通过。</p>
 
 <p>2.TestTwo：抛出ArithmeticException</p>
-
-<pre><code class="scala">child ! new ArithmeticException // crash it
-child ! Command("get",child.path.name)
-expectMsg(50)     
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="n">child</span> <span class="o">!</span> <span class="k">new</span> <span class="nc">ArithmeticException</span> <span class="c1">// crash it
+</span><span class="n">child</span> <span class="o">!</span> <span class="nc">Command</span><span class="o">(</span><span class="s">"get"</span><span class="o">,</span><span class="n">child</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="o">)</span>
+<span class="n">expectMsg</span><span class="o">(</span><span class="mi">50</span><span class="o">)</span>     
+</code></pre></div>
 <p>大家猜这时候测试会通过吗？答案是通过，原因是根据我们制定的监管策略，监管者在面对子级Actor抛出<code>ArithmeticException</code>异常时，它会去恢复相应出异常的Actor，并保持该Actor的状态，所以此时Actor的状态值还是50，测试通过。</p>
 
 <p>3.TestThree：抛出NullPointerException</p>
-
-<pre><code class="scala">child ! new NullPointerException // crash it harder
-child ! "get"
-expectMsg(50)   
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="n">child</span> <span class="o">!</span> <span class="k">new</span> <span class="nc">NullPointerException</span> <span class="c1">// crash it harder
+</span><span class="n">child</span> <span class="o">!</span> <span class="s">"get"</span>
+<span class="n">expectMsg</span><span class="o">(</span><span class="mi">50</span><span class="o">)</span>   
+</code></pre></div>
 <p>这种情况下测试还会通过吗？答案是不通过，原因是根据我们制定的监管策略，监管者在面对子级Actor抛出<code>NullPointerException</code>异常时，它会去重启相应出异常的Actor，其状态会被清除，所以此时Actor的状态值应该是0，测试不通过。</p>
 
 <p>4.TestFour：抛出IllegalArgumentException</p>
-
-<pre><code class="scala">supervisor ! Props[Child] // create new child
-val child2 = expectMsgType[ActorRef]
-child2 ! 100 // 将状态设为 100
-watch(child) // have testActor watch “child”
-child ! new IllegalArgumentException // break it
-expectMsgPF() {
-  case Terminated(`child`) =&gt; (println("the child stop"))
-}
-child2 ! Command("get",child2.path.name)
-expectMsg(100)   
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="n">supervisor</span> <span class="o">!</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">Child</span><span class="o">]</span> <span class="c1">// create new child
+</span><span class="k">val</span> <span class="n">child2</span> <span class="k">=</span> <span class="n">expectMsgType</span><span class="o">[</span><span class="kt">ActorRef</span><span class="o">]</span>
+<span class="n">child2</span> <span class="o">!</span> <span class="mi">100</span> <span class="c1">// 将状态设为 100
+</span><span class="n">watch</span><span class="o">(</span><span class="n">child</span><span class="o">)</span> <span class="c1">// have testActor watch “child”
+</span><span class="n">child</span> <span class="o">!</span> <span class="k">new</span> <span class="nc">IllegalArgumentException</span> <span class="c1">// break it
+</span><span class="n">expectMsgPF</span><span class="o">()</span> <span class="o">{</span>
+  <span class="k">case</span> <span class="nc">Terminated</span><span class="o">(</span><span class="n">`child`</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="n">println</span><span class="o">(</span><span class="s">"the child stop"</span><span class="o">))</span>
+<span class="o">}</span>
+<span class="n">child2</span> <span class="o">!</span> <span class="nc">Command</span><span class="o">(</span><span class="s">"get"</span><span class="o">,</span><span class="n">child2</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="o">)</span>
+<span class="n">expectMsg</span><span class="o">(</span><span class="mi">100</span><span class="o">)</span>   
+</code></pre></div>
 <p>这里首先我们又创建了一个Child Actor为child2，并将它的状态置为100，这里我们监控前面创建的child1，然后给其发送一个<code>IllegalArgumentException</code>的消息，让其抛出该异常，测试结果:
 <code>
 the child stop
@@ -282,33 +265,29 @@ the child stop
 从结果中我们可以看出，child在抛出<code>IllegalArgumentException</code>后，会被其监管着停止，但监管者下的其他Actor还是正常工作。</p>
 
 <p>5.TestFive：抛出一个自定义异常</p>
-
-<pre><code class="scala"> watch(child2)
- child2 ! Command("get",child2.path.name) // verify it is alive
- expectMsg(100)
- supervisor ! Props[Child] // create new child
- val child3 = expectMsgType[ActorRef]
- child2 ! new Exception("CRASH") // escalate failure
- expectMsgPF() {
-    case t @ Terminated(`child2`) if t.existenceConfirmed =&gt; (
-       println("the child2 stop")
-    )
-}
-child3 ! Command("get",child3.path.name)
-expectMsg(0)  
-</code></pre>
-
-<p>这里首先我们又创建了一个Child Actor为child3,这里我们监控前面创建的child2,然后给其发送一个<code>Exception("CRASH")</code>的消息，让其抛出该异常,测试结果:
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"> <span class="n">watch</span><span class="o">(</span><span class="n">child2</span><span class="o">)</span>
+ <span class="n">child2</span> <span class="o">!</span> <span class="nc">Command</span><span class="o">(</span><span class="s">"get"</span><span class="o">,</span><span class="n">child2</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="o">)</span> <span class="c1">// verify it is alive
+</span> <span class="n">expectMsg</span><span class="o">(</span><span class="mi">100</span><span class="o">)</span>
+ <span class="n">supervisor</span> <span class="o">!</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">Child</span><span class="o">]</span> <span class="c1">// create new child
+</span> <span class="k">val</span> <span class="n">child3</span> <span class="k">=</span> <span class="n">expectMsgType</span><span class="o">[</span><span class="kt">ActorRef</span><span class="o">]</span>
+ <span class="n">child2</span> <span class="o">!</span> <span class="k">new</span> <span class="nc">Exception</span><span class="o">(</span><span class="s">"CRASH"</span><span class="o">)</span> <span class="c1">// escalate failure
+</span> <span class="n">expectMsgPF</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">case</span> <span class="n">t</span> <span class="k">@</span> <span class="nc">Terminated</span><span class="o">(</span><span class="n">`child2`</span><span class="o">)</span> <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">existenceConfirmed</span> <span class="k">=&gt;</span> <span class="o">(</span>
+       <span class="n">println</span><span class="o">(</span><span class="s">"the child2 stop"</span><span class="o">)</span>
+    <span class="o">)</span>
+<span class="o">}</span>
+<span class="n">child3</span> <span class="o">!</span> <span class="nc">Command</span><span class="o">(</span><span class="s">"get"</span><span class="o">,</span><span class="n">child3</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="o">)</span>
+<span class="n">expectMsg</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>  
+</code></pre></div>
+<p>这里首先我们又创建了一个Child Actor为child3,这里我们监控前面创建的child2,然后给其发送一个<code>Exception(&quot;CRASH&quot;)</code>的消息，让其抛出该异常,测试结果:
 <code>
 the child2 stop
 测试不通过
 </code></p>
 
 <p>很多人可能会疑惑为什么TestFour可以通过，这里就通不过不了呢？因为这里错误Actor抛出的异常其监管者无法处理，只能将失败上溯传递，而顶级actor的缺省策略是对所有的Exception情况（ActorInitializationException和ActorKilledException例外）进行重启. 由于缺省的重启指令会停止所有的子actor，所以我们这里的child3也会被停止。导致测试不通过。当然这里你也可以复写默认的重启方法，比如：</p>
-
-<pre><code class="scala">override def preRestart(cause: Throwable, msg: Option[Any]) {}
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">override</span> <span class="k">def</span> <span class="n">preRestart</span><span class="o">(</span><span class="n">cause</span><span class="k">:</span> <span class="kt">Throwable</span><span class="o">,</span> <span class="n">msg</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Any</span><span class="o">])</span> <span class="o">{}</span>
+</code></pre></div>
 <p>这样重启相应Actor时就不会停止其子级下的所有Actor了。</p>
 
 <p>本文主要介绍了Actor系统中的监管和容错，这一部分内容在Akka中也是很重要的，它与Actor的树形组织结构巧妙结合，本文大量参考了Akka官方文档的相应章节，有兴趣的同学可以点击这里<a href="http://doc.akka.io/docs/akka/2.5/scala/fault-tolerance.html">Akka docs</a>。也可以下载我的示例程序，里面包含了一个官方的提供的容错示例。</p>

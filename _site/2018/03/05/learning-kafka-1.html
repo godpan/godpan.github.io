@@ -91,14 +91,13 @@
 <li>能够实时的处理消息；</li>
 </ul>
 
-
 <p>以上3点是作为一个好的消息系统的最基本的能力。</p>
 
 <p>那么Kafka为什么会诞生呢？</p>
 
 <p>其实在我们工作中，相信有很多也接触过消息队列，甚至自己也写过简单的消息系统，它最基本应该拥有发布/订阅的功能，如下图所示：</p>
 
-<p><img src="/media/images/2018/03/simple-message-system.png" alt="simple-message-system" /></p>
+<p><img src="/media/images/2018/03/simple-message-system.png" alt="simple-message-system"></p>
 
 <p>其中消费者A与消费者B都订阅了消息源A和消息源B，这种模式很简单，但是相对来说也有弊端，比如以下两点：</p>
 
@@ -107,16 +106,15 @@
 <li>消息源需要维护原本不属于它的工作，比如维护订阅者（消费者）的信息，向多个消费者发送消息，亦或者有些还需要处理消息反馈，这是原本纯粹的消息源就会变得越来越复杂；</li>
 </ul>
 
-
 <p>当然这些问题都是可以改进的，比如我们可以在消息源和消费者中间增加一个消息队列，如下图所示：</p>
 
-<p><img src="/media/images/2018/03/simple-message-queue-system.png" alt="simple-message-queue-system" /></p>
+<p><img src="/media/images/2018/03/simple-message-queue-system.png" alt="simple-message-queue-system"></p>
 
 <p>从图中我们可以看出，现在消息源只需要将消息发送到消息队列中就行，至于其他就将给消息队列去完成，我们可以在消息队列持久化消息，主动推消息给已经订阅了该消息队列的消费者，那么这种模式还有什么缺点吗？</p>
 
 <p>答案是有，上图只是两个消息队列，我们维护起来并不困难，但是如果有成百上千个呢？那不得gg，其实我们可以发现，消息队列的功能都很类似，无非就是持久化消息，推送消息，给出反馈等功能，结构也非常类似，主要是消息内容，当然如果要通用化，消息结构也要尽可能通用化，与具体平台具体语言无关，比如用JSON格式等，所有我们可以演变出以下的消息系统：</p>
 
-<p><img src="/media/images/2018/03/message-system.png" alt="message-system" /></p>
+<p><img src="/media/images/2018/03/message-system.png" alt="message-system"></p>
 
 <p>这个方式看起来只是把上面的队列合并到了一起，其实并不那么简单，因为这个消息队列集合要具备以下几个功能：</p>
 
@@ -125,7 +123,6 @@
 <li>高效率的存储消息；</li>
 <li>消费者能快速的找到想要消费的消息；</li>
 </ul>
-
 
 <p>当然这些只是最基本的功能，还有比如多节点容错，数据备份等，一个好的消息系统需要处理的东西非常多，很庆幸，Kafka帮我们做到了。</p>
 
@@ -139,22 +136,20 @@
 <li>每条消息记录都包含一个key,消息内容以及时间戳；</li>
 </ul>
 
-
 <p>从上面几点我们大致可以推测Kafka是一个分布式的消息存储系统，那么它就仅仅这么点功能吗，我们继续看下面。</p>
 
 <p>Kafka为了拥有更强大的功能，提供了四大核心接口：</p>
 
 <ul>
-<li>Producer API允许了应用可以向Kafka中的topics发布消息；</li>
-<li>Consumer API允许了应用可以订阅Kafka中的topics,并消费消息；</li>
-<li>Streams API允许应用可以作为消息流的处理者，比如可以从topicA中消费消息，处理的结果发布到topicB中；</li>
-<li>Connector API提供Kafka与现有的应用或系统适配功能，比如与数据库连接器可以捕获表结构的变化；</li>
+<li> Producer API允许了应用可以向Kafka中的topics发布消息；</li>
+<li> Consumer API允许了应用可以订阅Kafka中的topics,并消费消息；</li>
+<li> Streams API允许应用可以作为消息流的处理者，比如可以从topicA中消费消息，处理的结果发布到topicB中；</li>
+<li> Connector API提供Kafka与现有的应用或系统适配功能，比如与数据库连接器可以捕获表结构的变化；</li>
 </ul>
-
 
 <p>它们与Kafka集群的关系可以用下图表示：</p>
 
-<p><img src="/media/images/2018/03/kafka-apis.png" alt="kafka-apis" /></p>
+<p><img src="/media/images/2018/03/kafka-apis.png" alt="kafka-apis"></p>
 
 <p>在了解了Kafka的一些基本概念后，我们具体来看看它的一些组成部分。</p>
 
@@ -162,11 +157,11 @@
 
 <p>顾名思义Topics是一些主题的集合，更通俗的说Topic就像一个消息队列，生产者可以向其写入消息，消费者可以从中读取消息，一个Topic支持多个生产者或消费者同时订阅它，所以其扩展性很好。Topic又可以由一个或多个partition（分区）组成，比如下图：</p>
 
-<p><img src="/media/images/2018/03/log-anatomy.png" alt="log-anatomy" /></p>
+<p><img src="/media/images/2018/03/log-anatomy.png" alt="log-anatomy"></p>
 
 <p>其中每个partition中的消息是有序的，但相互之间的顺序就不能保证了，若Topic有多个partition，生产者的消息可以指定或者由系统根据算法分配到指定分区，若你需要所有消息都是有序的，那么你最好只用一个分区。另外partition支持消息位移读取，消息位移有消费者自身管理，比如下图：</p>
 
-<p><img src="/media/images/2018/03/log-consumer.png" alt="log-consumer" /></p>
+<p><img src="/media/images/2018/03/log-consumer.png" alt="log-consumer"></p>
 
 <p>由上图可以看出，不同消费者对同一分区的消息读取互不干扰，消费者可以通过设置消息位移（offset）来控制自己想要获取的数据，比如可以从头读取，最新数据读取，重读读取等功能。</p>
 
@@ -193,10 +188,9 @@
 <li>假如所有消费者都在不同的消费者组中，并且订阅了同个Topic，那么它们将可以消费Topic的所有消息；</li>
 </ul>
 
-
 <p>下面是一个简单的例子，帮助大家理解：</p>
 
-<p><img src="/media/images/2018/03/consumer-groups.png" alt="consumer-groups" /></p>
+<p><img src="/media/images/2018/03/consumer-groups.png" alt="consumer-groups"></p>
 
 <p>上图中有两个Server节点，有一个Topic被分为四个分区（P0-P4)分别被分配在两个节点上，另外还有两个消费者组（GA，GB），其中GA有两个消费者实例，GB有四个消费者实例。</p>
 
@@ -208,7 +202,6 @@
 <li>若消费者数等于partition数，那么每个消费者都会均等分配到一个分区的消息；</li>
 <li>若消费者数大于partition数，则将会出现部分消费者得不到消息分区，出现空闲的情况；</li>
 </ul>
-
 
 <p>总的来说，Kafka会根据消费者组的情况均衡分配消息，比如有消息着实例宕机，亦或者有新的消费者加入等情况。</p>
 
@@ -222,7 +215,6 @@
 <li>对于有N个复制节点的Topic，系统可以最多容忍N-1个节点发生故障，而不丢失任何提交给该Topic的消息丢失；</li>
 </ul>
 
-
 <p>相关这些点的细节，我准备再后续文章中再慢慢深入。</p>
 
 <h3>Kafka as a Messaging System</h3>
@@ -232,55 +224,19 @@
 
 <p>1.消息队列</p>
 
-<table>
-<thead>
-<tr>
-<th>特性</th>
-<th>描述</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>表现形式 </td>
-<td> 一组消费者从消息队列中获取消息，消息会被推送给组中的某一个消费者</td>
-</tr>
-<tr>
-<td>优势 </td>
-<td> 水平扩展，可以将消息数据分开处理</td>
-</tr>
-<tr>
-<td>劣势 </td>
-<td> 消息队列不是多用户的，当一条消息记录被一个进程读取后，消息便会丢失</td>
-</tr>
-</tbody>
-</table>
-
+<p>特性|描述
+---|---
+表现形式 | 一组消费者从消息队列中获取消息，消息会被推送给组中的某一个消费者
+优势 | 水平扩展，可以将消息数据分开处理
+劣势 | 消息队列不是多用户的，当一条消息记录被一个进程读取后，消息便会丢失</p>
 
 <p>2.发布/订阅</p>
 
-<table>
-<thead>
-<tr>
-<th>特性</th>
-<th>描述</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>表现形式 </td>
-<td> 消息会广播发送给所有消费者</td>
-</tr>
-<tr>
-<td>优势 </td>
-<td> 可以多进程共享消息</td>
-</tr>
-<tr>
-<td>劣势 </td>
-<td> 每个消费者都会获得所有消息，无法通过添加消费进程提高处理效率</td>
-</tr>
-</tbody>
-</table>
-
+<p>特性|描述
+---|---
+表现形式 | 消息会广播发送给所有消费者
+优势 | 可以多进程共享消息
+劣势 | 每个消费者都会获得所有消息，无法通过添加消费进程提高处理效率</p>
 
 <p>从上面两个表中可以看出两种传统的消息系统模型的优缺点，所以Kafka在前人的肩膀上进行了优化，吸收他们的优点，主要体现在以下两方面：</p>
 
@@ -288,7 +244,6 @@
 <li>通过Topic方式来达到消息队列的功能</li>
 <li>通过消费者组这种方式来达到发布/订阅的功能</li>
 </ul>
-
 
 <p>Kafka通过结合这两点（这两点的具体描述查看上面章节），完美的解决了它们两者模式的缺点。</p>
 

@@ -4,12 +4,119 @@
  <title>泮</title>
  <link href="/atom.xml" rel="self"/>
  <link href=""/>
- <updated>2018-03-27T19:16:47+08:00</updated>
+ <updated>2018-05-24T21:25:57+08:00</updated>
  <id>/</id>
  <author>
    <name></name>
  </author>
 
+ 
+ <entry>
+   <title>微信小程序第三方开发需要注意的点</title>
+   <link href="/2018/05/24/wx-miniprogram-tips.html"/>
+   <updated>2018-05-24T00:00:00+08:00</updated>
+   <id>urn:uuid:85cc4b63-e9f0-4454-8ca7-fbdsdc2a2ff</id>
+   <content type="html">&lt;h3&gt;1.关于小程序与公众号unionid数据互通&lt;/h3&gt;
+
+&lt;p&gt;小程序和公众号必须为同一主体，而且必须绑定在同一个开放平台上，其中又分为两点：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;1.开放平台主动创建
+此时需要手动将小程序和公众号绑定在开放平台上，不可使用接口绑定；&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;2.开放平台由第三方接口创建
+在公众号和小程序授权第三方开放平台管理权限后，可由接口进行绑定，若要绑定在同一个开放平台上，前提是公众号和小程序的主体相同，同时也支持接口解除绑定；&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3&gt;2.关于小程序ext.json&lt;/h3&gt;
+
+&lt;p&gt;开发过程中可在小程序的根目录下添加ext.json文件来进行调试，比如在文件里添加以下配置：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&quot;extEnable&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&quot;extAppid&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;wx90d87655678517ee&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&quot;ext&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&quot;id&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;设置extEnable属性为true，后续小程序的逻辑将依照ext.json中extAppid来执行，并可以通过以下两种方式来获取ext中的参数：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-javascript&quot; data-lang=&quot;javascript&quot;&gt;&lt;span class=&quot;c1&quot;&gt;//方式一&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;wx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;getExtConfig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;wx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;getExtConfig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;({&lt;/span&gt;
+    &lt;span class=&quot;na&quot;&gt;success&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;res&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nx&quot;&gt;console&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;log&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;res&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;extConfig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;})&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;//方式二&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;extConfig&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;wx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;getExtConfigSync&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;wx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;getExtConfigSync&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{}&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;console&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;log&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;extConfig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;另外第三方在帮助授权小程序提交代码的时候也可以指定ext字段，具体方式参考：&lt;a href=&quot;https://open.weixin.qq.com/cgi-bin/showdocument?action=dir_list&amp;t=resource/res_list&amp;verify=1&amp;id=open1489140610_Uavc4&amp;token=&amp;lang=zh_CN&quot;&gt;微信第三方代小程序实现接口&lt;/a&gt;
+其中需要注意的一点是&lt;code&gt;ext_json&lt;/code&gt;的格式要非常注意，因为&lt;code&gt;ext_json&lt;/code&gt;结构很松散，所以很多时候需要我们自己拼装这个字段，那么它需要为类似以下格式：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;&quot;{\&quot;extAppid\&quot;: \&quot;wx90d87655678517ee\&quot;,\&quot;ext\&quot;:{\&quot;id\&quot;:100}}&quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;另外通过接口提交的&lt;code&gt;ext_json&lt;/code&gt;会覆盖配置的ext.json中的对应信息，但在开发者工具无法获取接口提交的&lt;code&gt;ext_json&lt;/code&gt;的信息，只能获取ext.json中信息，这点需要注意。&lt;/p&gt;
+
+&lt;h3&gt;3.mpvue结合ext.json&lt;/h3&gt;
+
+&lt;p&gt;目前最新版本的mpvue好像还不支持在main.js中添加ext.json的配置，所以若是需要使用它有以下两种方式：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;1.写一个插件，将src下的ext.json编译的dist目录下（mpvue编译后的小程序源码目录）&lt;/li&gt;
+&lt;li&gt;2.直接在dist目录下创建一个ext.json文件
+但记得要将extEnable属性设置为true。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3&gt;4.用户小程序授权之后的解密算法（js版）&lt;/h3&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-javascript&quot; data-lang=&quot;javascript&quot;&gt;&lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;crypto&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'crypto-browserify'&lt;/span&gt;
+
+&lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;WXBizDataCrypt&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;appId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;sessionKey&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//小程序appid，用户登录利用code从接口获得的sessionKey&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;appId&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;appId&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;sessionKey&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;sessionKey&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;WXBizDataCrypt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;prototype&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;decryptData&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;encryptedData&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;iv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// base64 decode&lt;/span&gt;
+  &lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;sessionKey&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;Buffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;sessionKey&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'base64'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;encryptedData&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;Buffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;encryptedData&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'base64'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;iv&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;Buffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;iv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'base64'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;try&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+     &lt;span class=&quot;c1&quot;&gt;// 解密&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;decipher&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;crypto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;createDecipheriv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'aes-128-cbc'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;sessionKey&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;iv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// 设置自动 padding 为 true，删除填充补位&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;decipher&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;setAutoPadding&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;decoded&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;decipher&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;update&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;encryptedData&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'binary'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'utf8'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;decoded&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;decipher&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;kr&quot;&gt;final&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'utf8'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;decoded&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;JSON&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;parse&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;decoded&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;catch&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;err&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;console&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;log&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;err&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;throw&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;Error&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'Illegal Buffer'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;decoded&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;watermark&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;appid&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!==&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;appId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;throw&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;Error&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'Illegal Buffer'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;decoded&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;kd&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;DataCrypt&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;getData&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;appId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;sessionKey&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;encryptedData&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;iv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;pc&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;WXBizDataCrypt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;appId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;sessionKey&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;pc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;decryptData&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;encryptedData&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;iv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;kr&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;default&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;DataCrypt&lt;/span&gt;
+
+&lt;span class=&quot;err&quot;&gt;使用方式：&lt;/span&gt;
+
+&lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;DataCrypt&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;path/to/DataCrypt&quot;&lt;/span&gt;
+
+&lt;span class=&quot;kr&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;DataCrypt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;getData&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(...)&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</content>
+ </entry>
  
  <entry>
    <title>Kafka学习笔记（二） ：初探Kafka</title>
@@ -22,7 +129,7 @@
 
 &lt;p&gt;虽然我们掌握东西要一步一步来，但是我们在大致了解了一个东西后，会有利于我们对它的理解和学习，所以我们可以先来看一下一条消息从发出到最后被消息者接收到底经历了什么？&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/message-flow.png&quot; alt=&quot;message-flow&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/message-flow.png&quot; alt=&quot;message-flow&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;上图简要的说明了消息在Kafka中的整个流转过程（假设已经部署好了整个Kafka系统，并创建了相应的Topic，分区等细节后续再单独讲）：&lt;/p&gt;
 
@@ -33,7 +140,6 @@
 &lt;li&gt;4.消费者根据需求订阅相关Topic，并消费消息；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;总的来说，怎么流程还是比较清晰和简单的，下面就跟我一起来练习Kafka的基本操作，最后实现一个单词计数的小demo。&lt;/p&gt;
 
 &lt;h2&gt;基础操作&lt;/h2&gt;
@@ -43,104 +149,63 @@
 &lt;h3&gt;下载Kafka&lt;/h3&gt;
 
 &lt;p&gt;Mac系统同学可以使用brew安装：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;brew install kafka
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;brew install kafka
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Linux系统同学可以从官网下载源码解压，也可以直接执行以下命令:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;cd 
-mkdir test-kafka &amp;amp;&amp;amp; cd test-kafka
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;&lt;span class=&quot;nb&quot;&gt;cd 
+&lt;/span&gt;mkdir &lt;span class=&quot;nb&quot;&gt;test&lt;/span&gt;-kafka &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;cd test&lt;/span&gt;-kafka
 curl -o kafka_2.11-1.0.1.tgz http://mirrors.tuna.tsinghua.edu.cn/apache/kafka/1.0.1/kafka_2.11-1.0.1.tgz
 tar -xzf kafka_2.11-1.0.1.tgz
-cd kafka_2.11-1.0.1
-&lt;/code&gt;&lt;/pre&gt;
+&lt;span class=&quot;nb&quot;&gt;cd &lt;/span&gt;kafka_2.11-1.0.1
 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;h3&gt;启动&lt;/h3&gt;
 
 &lt;p&gt;Kafka使用Zookeeper来维护集群信息，所以这里我们先要启动Zookeeper，Kafka与Zookeeper的相关联系跟结合后续再深入了解，毕竟不能一口吃成一个胖子。&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/zookeeper-server-start.sh config/zookeeper.properties
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;bin/zookeeper-server-start.sh config/zookeeper.properties
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;接着我们启动一个Kafka Server节点：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-server-start.sh config/server.properties
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;bin/kafka-server-start.sh config/server.properties
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;这时候Kafka系统已经算是启动起来了。&lt;/p&gt;
 
 &lt;h3&gt;创建Topic&lt;/h3&gt;
 
 &lt;p&gt;在一切就绪之后，我们要开始做极其重要的一步，那就是创建Topic，Topic是整个系统流转的核心，另外Topic本身也包含着很多复杂的参数，比如复制因子个数，分区个数等，这里为了从简，我们将对应的参数都设为1，方便大家测试：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic kakfa-test
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic kakfa-test
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;其中参数的具体含义：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;属性&lt;/th&gt;
-&lt;th&gt;功能&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;--create &lt;/td&gt;
-&lt;td&gt; 代表创建Topic&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;--zookeeper &lt;/td&gt;
-&lt;td&gt; zookeeper集群信息&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;--replication-factor &lt;/td&gt;
-&lt;td&gt; 复制因子&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;--partitions &lt;/td&gt;
-&lt;td&gt; 分区信息&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;--topic &lt;/td&gt;
-&lt;td&gt; Topic名称&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;属性|功能
+---|---
+--create | 代表创建Topic
+--zookeeper | zookeeper集群信息
+--replication-factor | 复制因子
+--partitions | 分区信息
+--topic | Topic名称&lt;/p&gt;
 
 &lt;p&gt;这时候我们已经创建好了一个叫kakfa-test的Topic了。&lt;/p&gt;
 
 &lt;h3&gt;向Topic发送消息&lt;/h3&gt;
 
 &lt;p&gt;在有了Topic后我们就可以向其发送消息：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kakfa-test
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kakfa-test
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;然后我们向控制台输入一些消息：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;this is my first test kafka
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;this is my first test kafka
 so good
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;这时候消息已经被发布在kakfa-test这个主题上了。&lt;/p&gt;
 
 &lt;h3&gt;从Topic获取消息&lt;/h3&gt;
 
 &lt;p&gt;现在Topic上已经有消息了，现在可以从中获取消息被消费：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic kafka-test --from-beginning
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic kafka-test --from-beginning
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;这时候我们可以在控制台看到：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;this is my first test kafka
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;this is my first &lt;span class=&quot;nb&quot;&gt;test &lt;/span&gt;kafka
 so good
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;至此我们就测试了最简单的Kafka Demo，希望大家能自己动手去试试，虽然很简单，但是这能让你对整个Kafka流程能更熟悉。&lt;/p&gt;
 
 &lt;h2&gt;WordCount&lt;/h2&gt;
@@ -153,78 +218,69 @@ so good
 &lt;li&gt;3.消费者可以从计数Topic获取相应的WordCount的结果；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;h3&gt;1.启动kafka&lt;/h3&gt;
 
 &lt;p&gt;与上文的启动一样，按照其操作即可。&lt;/p&gt;
 
 &lt;h3&gt;2.创建输入Topic&lt;/h3&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-topics.sh --zookeeper localhost:2181 --create --topic kafka-word-count-input --partitions 1 --replication-factor 1
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;bin/kafka-topics.sh --zookeeper localhost:2181 --create --topic kafka-word-count-input --partitions 1 --replication-factor 1
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;h3&gt;3.向Topic输入消息&lt;/h3&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kafka-word-count-input
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kafka-word-count-input
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;h3&gt;4.流处理逻辑&lt;/h3&gt;
 
 &lt;p&gt;这部分内容是整个例子的核心，这部分代码有Java 8+和Scala版本，个人认为流处理用函数式语法表达的更加简洁清晰，推荐大家用函数式的思维去尝试写以下，发现自己再也不想写Java匿名内部类这种语法了。&lt;/p&gt;
 
 &lt;p&gt;我们先来看一个Java 8的版本:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;WordCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;throws&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Exception&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;Properties&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;props&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Properties&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;StreamsConfig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;APPLICATION_ID_CONFIG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;kafka-word-count&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;StreamsConfig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;BOOTSTRAP_SERVERS_CONFIG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;localhost:9092&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;StreamsConfig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;DEFAULT_KEY_SERDE_CLASS_CONFIG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Serdes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;().&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;getClass&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;());&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;StreamsConfig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;DEFAULT_VALUE_SERDE_CLASS_CONFIG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Serdes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;().&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;getClass&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;());&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public class WordCount {
-    public static void main(String[] args) throws Exception {
-        Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, &quot;kafka-word-count&quot;);
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, &quot;localhost:9092&quot;);
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-
-        final StreamsBuilder builder = new StreamsBuilder();
-        KStream&amp;lt;String, String&amp;gt; source = builder.&amp;lt;String, String&amp;gt;stream(&quot;kafka-word-count-input&quot;);
-        Pattern pattern = Pattern.compile(&quot;\\W+&quot;);
-        source
-           .flatMapValues(value -&amp;gt; Arrays.asList(pattern.split(value.toLowerCase(Locale.getDefault()))))
-           .groupBy((key, value) -&amp;gt; value)
-           .count(Materialized.&amp;lt;String, Long, KeyValueStore&amp;lt;Bytes, byte[]&amp;gt;&amp;gt;as(&quot;counts-store&quot;)).mapValues(value-&amp;gt;Long.toString(value))
-           .toStream()
-           .to(&quot;kafka-word-count-output&quot;);
-        final KafkaStreams streams = new KafkaStreams(builder.build(), props);
-        streams.start();
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
+        &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;StreamsBuilder&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;StreamsBuilder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;KStream&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;source&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stream&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;kafka-word-count-input&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;Pattern&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pattern&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Pattern&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;compile&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;\\W+&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;source&lt;/span&gt;
+           &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;flatMapValues&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Arrays&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;asList&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pattern&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;split&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;toLowerCase&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Locale&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;getDefault&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()))))&lt;/span&gt;
+           &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;groupBy&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+           &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;count&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Materialized&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Long&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;KeyValueStore&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Bytes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;byte&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;as&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;counts-store&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)).&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;mapValues&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Long&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;toString&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;))&lt;/span&gt;
+           &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;toStream&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+           &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;to&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;kafka-word-count-output&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;KafkaStreams&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;streams&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;KafkaStreams&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;streams&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;是不是很惊讶，用java也能写出如此简洁的代码，所以说如果有适用场景，推荐大家尝试的用函数式的思维去写写java代码。&lt;/p&gt;
 
 &lt;p&gt;我们再来看看Scala版本的：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-scala&quot; data-lang=&quot;scala&quot;&gt;
+&lt;span class=&quot;k&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;WordCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Array&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;])&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;props&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Properties&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Properties&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;StreamsConfig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;APPLICATION_ID_CONFIG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;kafka-word-count&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;StreamsConfig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;BOOTSTRAP_SERVERS_CONFIG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;localhost:9092&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;StreamsConfig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;DEFAULT_KEY_SERDE_CLASS_CONFIG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Serdes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getClass&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;StreamsConfig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;DEFAULT_VALUE_SERDE_CLASS_CONFIG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Serdes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getClass&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;
-object WordCount {
-  def main(args: Array[String]) {
-    val props: Properties = {
-      val p = new Properties()
-      p.put(StreamsConfig.APPLICATION_ID_CONFIG, &quot;kafka-word-count&quot;)
-      p.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, &quot;localhost:9092&quot;)
-      p.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String.getClass)
-      p.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String.getClass)
-      p
-    }
-
-    val builder: StreamsBuilder = new StreamsBuilder()
-    val source: KStream[String, String] = builder.stream(&quot;kafka-word-count-input&quot;)
-    source
-      .flatMapValues(textLine =&amp;gt; textLine.toLowerCase.split(&quot;\\W+&quot;).toIterable.asJava)
-      .groupBy((_, word) =&amp;gt; word)
-      .count(Materialized.as[String, Long, KeyValueStore[Bytes, Array[Byte]]](&quot;counts-store&quot;)).toStream.to(&quot;kafka-word-count-output&quot;)
-    val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
-    streams.start()
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
+    &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;StreamsBuilder&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;StreamsBuilder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;source&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;KStream&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;, &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stream&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;kafka-word-count-input&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;source&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flatMapValues&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;textLine&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;textLine&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;toLowerCase&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;\\W+&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;toIterable&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;asJava&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;groupBy&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;word&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;word&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;count&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Materialized&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;as&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;, &lt;span class=&quot;kt&quot;&gt;Long&lt;/span&gt;, &lt;span class=&quot;kt&quot;&gt;KeyValueStore&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Bytes&lt;/span&gt;, &lt;span class=&quot;kt&quot;&gt;Array&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Byte&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]]](&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;counts-store&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;toStream&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;kafka-word-count-output&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;streams&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;KafkaStreams&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;KafkaStreams&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;props&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;streams&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;可以发现使用Java 8函数式风格编写的代码已经跟Scala很相似了。&lt;/p&gt;
 
 &lt;h3&gt;5.启动处理逻辑&lt;/h3&gt;
@@ -235,14 +291,12 @@ object WordCount {
 
 &lt;p&gt;最后我们启动消费者进程，并在生产者中输入一些单词，比如：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/kafka-word-count-input.png&quot; alt=&quot;kafka-word-count-input&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/kafka-word-count-input.png&quot; alt=&quot;kafka-word-count-input&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;最后我们可以在消费者进程中看到以下输出：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;bin/kafka-console-consumer.sh --topic kafka-word-count-output --from-beginning --bootstrap-server localhost:9092  --property print.key=true
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/kafka-word-count-output.png&quot; alt=&quot;kafka-word-count-output&quot; /&gt;&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;bin/kafka-console-consumer.sh --topic kafka-word-count-output --from-beginning --bootstrap-server localhost:9092  --property print.key&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;true&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/kafka-word-count-output.png&quot; alt=&quot;kafka-word-count-output&quot;&gt;&lt;/p&gt;
 
 &lt;h2&gt;总结&lt;/h2&gt;
 
@@ -256,16 +310,12 @@ object WordCount {
    <updated>2018-03-20T00:00:00+08:00</updated>
    <id>urn:uuid:85cc4b63-e9f0-4454-8ca7-fbdsdc2a2fad</id>
    <content type="html">&lt;p&gt;分享一个小技巧，我们在很多时候需要删除一些本地无用分支，假如我们想要删除具体分支，我们可以这么做：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;git branch -D branchName
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;git branch -D branchName
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;但是有些时候我们要删除很多分支，比如除了master外的所有分支，那么我们可以这么做：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;shell&quot;&gt;git checkout master
-git branch | grep -v 'master' | xargs git branch -D
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;git checkout master
+git branch | grep -v &lt;span class=&quot;s1&quot;&gt;'master'&lt;/span&gt; | xargs git branch -D
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;具体执行步骤是：&lt;/p&gt;
 
 &lt;ol&gt;
@@ -273,7 +323,6 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;将git branch的结果进行筛选，除去master&lt;/li&gt;
 &lt;li&gt;将处理后的结果作为git branch -D的参数来进行删除分支&lt;/li&gt;
 &lt;/ol&gt;
-
 </content>
  </entry>
  
@@ -298,14 +347,13 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;能够实时的处理消息；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;以上3点是作为一个好的消息系统的最基本的能力。&lt;/p&gt;
 
 &lt;p&gt;那么Kafka为什么会诞生呢？&lt;/p&gt;
 
 &lt;p&gt;其实在我们工作中，相信有很多也接触过消息队列，甚至自己也写过简单的消息系统，它最基本应该拥有发布/订阅的功能，如下图所示：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/simple-message-system.png&quot; alt=&quot;simple-message-system&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/simple-message-system.png&quot; alt=&quot;simple-message-system&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;其中消费者A与消费者B都订阅了消息源A和消息源B，这种模式很简单，但是相对来说也有弊端，比如以下两点：&lt;/p&gt;
 
@@ -314,16 +362,15 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;消息源需要维护原本不属于它的工作，比如维护订阅者（消费者）的信息，向多个消费者发送消息，亦或者有些还需要处理消息反馈，这是原本纯粹的消息源就会变得越来越复杂；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;当然这些问题都是可以改进的，比如我们可以在消息源和消费者中间增加一个消息队列，如下图所示：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/simple-message-queue-system.png&quot; alt=&quot;simple-message-queue-system&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/simple-message-queue-system.png&quot; alt=&quot;simple-message-queue-system&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;从图中我们可以看出，现在消息源只需要将消息发送到消息队列中就行，至于其他就将给消息队列去完成，我们可以在消息队列持久化消息，主动推消息给已经订阅了该消息队列的消费者，那么这种模式还有什么缺点吗？&lt;/p&gt;
 
 &lt;p&gt;答案是有，上图只是两个消息队列，我们维护起来并不困难，但是如果有成百上千个呢？那不得gg，其实我们可以发现，消息队列的功能都很类似，无非就是持久化消息，推送消息，给出反馈等功能，结构也非常类似，主要是消息内容，当然如果要通用化，消息结构也要尽可能通用化，与具体平台具体语言无关，比如用JSON格式等，所有我们可以演变出以下的消息系统：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/message-system.png&quot; alt=&quot;message-system&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/message-system.png&quot; alt=&quot;message-system&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;这个方式看起来只是把上面的队列合并到了一起，其实并不那么简单，因为这个消息队列集合要具备以下几个功能：&lt;/p&gt;
 
@@ -332,7 +379,6 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;高效率的存储消息；&lt;/li&gt;
 &lt;li&gt;消费者能快速的找到想要消费的消息；&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;p&gt;当然这些只是最基本的功能，还有比如多节点容错，数据备份等，一个好的消息系统需要处理的东西非常多，很庆幸，Kafka帮我们做到了。&lt;/p&gt;
 
@@ -346,22 +392,20 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;每条消息记录都包含一个key,消息内容以及时间戳；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;从上面几点我们大致可以推测Kafka是一个分布式的消息存储系统，那么它就仅仅这么点功能吗，我们继续看下面。&lt;/p&gt;
 
 &lt;p&gt;Kafka为了拥有更强大的功能，提供了四大核心接口：&lt;/p&gt;
 
 &lt;ul&gt;
-&lt;li&gt;Producer API允许了应用可以向Kafka中的topics发布消息；&lt;/li&gt;
-&lt;li&gt;Consumer API允许了应用可以订阅Kafka中的topics,并消费消息；&lt;/li&gt;
-&lt;li&gt;Streams API允许应用可以作为消息流的处理者，比如可以从topicA中消费消息，处理的结果发布到topicB中；&lt;/li&gt;
-&lt;li&gt;Connector API提供Kafka与现有的应用或系统适配功能，比如与数据库连接器可以捕获表结构的变化；&lt;/li&gt;
+&lt;li&gt; Producer API允许了应用可以向Kafka中的topics发布消息；&lt;/li&gt;
+&lt;li&gt; Consumer API允许了应用可以订阅Kafka中的topics,并消费消息；&lt;/li&gt;
+&lt;li&gt; Streams API允许应用可以作为消息流的处理者，比如可以从topicA中消费消息，处理的结果发布到topicB中；&lt;/li&gt;
+&lt;li&gt; Connector API提供Kafka与现有的应用或系统适配功能，比如与数据库连接器可以捕获表结构的变化；&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;p&gt;它们与Kafka集群的关系可以用下图表示：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/kafka-apis.png&quot; alt=&quot;kafka-apis&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/kafka-apis.png&quot; alt=&quot;kafka-apis&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;在了解了Kafka的一些基本概念后，我们具体来看看它的一些组成部分。&lt;/p&gt;
 
@@ -369,11 +413,11 @@ git branch | grep -v 'master' | xargs git branch -D
 
 &lt;p&gt;顾名思义Topics是一些主题的集合，更通俗的说Topic就像一个消息队列，生产者可以向其写入消息，消费者可以从中读取消息，一个Topic支持多个生产者或消费者同时订阅它，所以其扩展性很好。Topic又可以由一个或多个partition（分区）组成，比如下图：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/log-anatomy.png&quot; alt=&quot;log-anatomy&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/log-anatomy.png&quot; alt=&quot;log-anatomy&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;其中每个partition中的消息是有序的，但相互之间的顺序就不能保证了，若Topic有多个partition，生产者的消息可以指定或者由系统根据算法分配到指定分区，若你需要所有消息都是有序的，那么你最好只用一个分区。另外partition支持消息位移读取，消息位移有消费者自身管理，比如下图：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/log-consumer.png&quot; alt=&quot;log-consumer&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/log-consumer.png&quot; alt=&quot;log-consumer&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;由上图可以看出，不同消费者对同一分区的消息读取互不干扰，消费者可以通过设置消息位移（offset）来控制自己想要获取的数据，比如可以从头读取，最新数据读取，重读读取等功能。&lt;/p&gt;
 
@@ -400,10 +444,9 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;假如所有消费者都在不同的消费者组中，并且订阅了同个Topic，那么它们将可以消费Topic的所有消息；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;下面是一个简单的例子，帮助大家理解：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/consumer-groups.png&quot; alt=&quot;consumer-groups&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/03/consumer-groups.png&quot; alt=&quot;consumer-groups&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;上图中有两个Server节点，有一个Topic被分为四个分区（P0-P4)分别被分配在两个节点上，另外还有两个消费者组（GA，GB），其中GA有两个消费者实例，GB有四个消费者实例。&lt;/p&gt;
 
@@ -415,7 +458,6 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;若消费者数等于partition数，那么每个消费者都会均等分配到一个分区的消息；&lt;/li&gt;
 &lt;li&gt;若消费者数大于partition数，则将会出现部分消费者得不到消息分区，出现空闲的情况；&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;p&gt;总的来说，Kafka会根据消费者组的情况均衡分配消息，比如有消息着实例宕机，亦或者有新的消费者加入等情况。&lt;/p&gt;
 
@@ -429,7 +471,6 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;对于有N个复制节点的Topic，系统可以最多容忍N-1个节点发生故障，而不丢失任何提交给该Topic的消息丢失；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;相关这些点的细节，我准备再后续文章中再慢慢深入。&lt;/p&gt;
 
 &lt;h3&gt;Kafka as a Messaging System&lt;/h3&gt;
@@ -439,55 +480,19 @@ git branch | grep -v 'master' | xargs git branch -D
 
 &lt;p&gt;1.消息队列&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;特性&lt;/th&gt;
-&lt;th&gt;描述&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;表现形式 &lt;/td&gt;
-&lt;td&gt; 一组消费者从消息队列中获取消息，消息会被推送给组中的某一个消费者&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;优势 &lt;/td&gt;
-&lt;td&gt; 水平扩展，可以将消息数据分开处理&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;劣势 &lt;/td&gt;
-&lt;td&gt; 消息队列不是多用户的，当一条消息记录被一个进程读取后，消息便会丢失&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;特性|描述
+---|---
+表现形式 | 一组消费者从消息队列中获取消息，消息会被推送给组中的某一个消费者
+优势 | 水平扩展，可以将消息数据分开处理
+劣势 | 消息队列不是多用户的，当一条消息记录被一个进程读取后，消息便会丢失&lt;/p&gt;
 
 &lt;p&gt;2.发布/订阅&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;特性&lt;/th&gt;
-&lt;th&gt;描述&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;表现形式 &lt;/td&gt;
-&lt;td&gt; 消息会广播发送给所有消费者&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;优势 &lt;/td&gt;
-&lt;td&gt; 可以多进程共享消息&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;劣势 &lt;/td&gt;
-&lt;td&gt; 每个消费者都会获得所有消息，无法通过添加消费进程提高处理效率&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;特性|描述
+---|---
+表现形式 | 消息会广播发送给所有消费者
+优势 | 可以多进程共享消息
+劣势 | 每个消费者都会获得所有消息，无法通过添加消费进程提高处理效率&lt;/p&gt;
 
 &lt;p&gt;从上面两个表中可以看出两种传统的消息系统模型的优缺点，所以Kafka在前人的肩膀上进行了优化，吸收他们的优点，主要体现在以下两方面：&lt;/p&gt;
 
@@ -495,7 +500,6 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;通过Topic方式来达到消息队列的功能&lt;/li&gt;
 &lt;li&gt;通过消费者组这种方式来达到发布/订阅的功能&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;p&gt;Kafka通过结合这两点（这两点的具体描述查看上面章节），完美的解决了它们两者模式的缺点。&lt;/p&gt;
 
@@ -545,7 +549,6 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;相关编码工具类设计&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;h3&gt;数据包模型类设计&lt;/h3&gt;
 
 &lt;p&gt;数据包模型类设计主要是将数据库传输给我们的数据包解析成我们程序中的模型类，好比你实际业务中建立的JavaBean，这些类的结构依赖于上一篇文章中解析的数据包内容，相关细节请参考上篇文章&lt;a href=&quot;http://www.godpan.me/2017/11/10/mysql-protocol.html&quot;&gt;MySQL网络协议分析&lt;/a&gt;,根据具体的数据内容我们可以构建以下模型类：&lt;/p&gt;
@@ -563,18 +566,15 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;RowDataBinary（Binary数据结构类）&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;相信看过我前篇文章的同学，对上面很多类应该比较熟悉了，比如我们定义一个OK为以下结构：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public class OK implements Packet {
-    private long affectedRows; //影响行数
-    private long insertId; //自增id
-    private int serverStatus; //服务器状态
-    private String message; //额外信息
-    ...
-}
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;OK&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;implements&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Packet&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;affectedRows&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//影响行数&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;insertId&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//自增id&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;serverStatus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//服务器状态&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//额外信息&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;其他一些相关类的结构我这边就不在贴出了，有兴趣的同学可以参考mysql-connector-java包源码，或者看我的&lt;a href=&quot;https://github.com/godpan/java-connection-mysql&quot;&gt;github项目&lt;/a&gt;也行（搬砖有点不好意思...）,这部分内容是怎么解析的基础结构，充分掌握有助于后续的理解。&lt;/p&gt;
 
 &lt;h3&gt;数据包解析类设计&lt;/h3&gt;
@@ -589,35 +589,32 @@ git branch | grep -v 'master' | xargs git branch -D
 &lt;li&gt;解析结果存储&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;这些元素是解析主要的需要的主要结构，可能还有一些其他的内容这里就不阐述了，所以我们可以设计下面的解析类：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Parser&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;List&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Integer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;waitFor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LinkedList&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Integer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;();&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//接下去要解析的包类型&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dataIdx&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//当前解析数据包数据块的索引&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;buffer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;allocate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;65536&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//临时Buffer&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;packetSize&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//包大小&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;itemSize&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//当前解析数据包数据块的大小&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Packet&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;packet&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;null&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//解析结果&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public class Parser {
-    private List&amp;lt;Integer&amp;gt; waitFor = new LinkedList&amp;lt;Integer&amp;gt;(); //接下去要解析的包类型
-    private int dataIdx = 0; //当前解析数据包数据块的索引
-    private ByteBuffer buffer = ByteBuffer.allocate(65536); //临时Buffer
-    private int packetSize = -1; //包大小
-    private int itemSize = 0; //当前解析数据包数据块的大小
-    private Packet packet = null; //解析结果
-    ...
-}
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;上面的属性都是解析过程需要初始值，中间变量，结果等，除了这些属性外，我们还需要有将Buffer中数据转换为我们需要数据的方法，根据MySQL协议中的编码方式，主要有以下三个方法：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;readNullTerminated&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;in&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//对应NullTerminatedString（Null结尾方式）: 字符串以遇到Null作为结束标志，相应的字节为00。&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;private void readNullTerminated(ByteBuffer in) {  //对应NullTerminatedString（Null结尾方式）: 字符串以遇到Null作为结束标志，相应的字节为00。
-    ...
-}
+&lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;readLengthCodedBinary&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;in&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//对应LengthEncodedInteger编码方式，根据第一个字节区分数据所占的字节长度&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-private void readLengthCodedBinary(ByteBuffer in) { //对应LengthEncodedInteger编码方式，根据第一个字节区分数据所占的字节长度
-    ...
-}
+&lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;readLengthCodedString&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;in&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//对应LengthEncodedString编码方式，字符串的值根据nteger + Value组成，通过计算Integer的值来获取Value的具体的长度。&lt;/span&gt;
+     &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;   
 
-private void readLengthCodedString(ByteBuffer in) { //对应LengthEncodedString编码方式，字符串的值根据nteger + Value组成，通过计算Integer的值来获取Value的具体的长度。
-     ...
-}   
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;有了以上的属性和相应方法后，我们便可以将服务器传来数据包解析成我们想要的数据了。&lt;/p&gt;
 
 &lt;h3&gt;相关网络传输类设计&lt;/h3&gt;
@@ -632,72 +629,68 @@ private void readLengthCodedString(ByteBuffer in) { //对应LengthEncodedString�
 &lt;li&gt;5.关闭数据库连接；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;基于这些需求我们可以构建出如下的Connection类：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;MysqlConnection&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Handshake&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;handshake&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//握手初始包类&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;out&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;allocate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;65536&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;err&quot;&gt; &lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;//发送给服务端的数据Buffer&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;allocate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;65536&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// 接收的数据Buffer&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SocketChannel&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;channel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//异步IO传输通道&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Parser&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parser&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Parser&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//解析类&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;host&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//数据库服务器host&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;port&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//数据库服务器端口&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;user&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//数据库用户名&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;password&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//数据库密码&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;database&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//连接具体的数据库&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Selector&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//注册channel的selector&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;connectionId&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0L&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//连接id&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;
-public class MysqlConnection {
-    private Handshake handshake; //握手初始包类
-    private final ByteBuffer out = ByteBuffer.allocate(65536);  //发送给服务端的数据Buffer
-    private final ByteBuffer in = ByteBuffer.allocate(65536); // 接收的数据Buffer
-    private SocketChannel channel; //异步IO传输通道
-    private Parser parser = new Parser(); //解析类
-    private String host; //数据库服务器host
-    private int port; //数据库服务器端口
-    private String user; //数据库用户名
-    private String password; //数据库密码
-    private String database; //连接具体的数据库
-    private Selector selector; //注册channel的selector
-    private long connectionId = 0L; //连接id
-}
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;这些属性相应对数据库驱动稍微有所了解的人都非常熟悉，因为平常写程序经常跟他们打交道，有了上面这些属性，我们还需要一些方法，比如连接数据库，执行命令，读取数据，关闭数据库等方法，所以可以定义以下的一些方法：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;connect&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//连接数据库&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;private void connect() { //连接数据库
-    ...
-}
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;auth&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//校验账户&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-public void auth () { //校验账户
-    ...
-}
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;query&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//执行普通查询&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-public void query () { //执行普通查询
-    ...
-}
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;update&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//执行普通更新&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;    
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-public void update () { //执行普通更新
-    ...    
-}
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;executeQuery&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//执行预处理查询&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-public void executeQuery () { //执行预处理查询
-    ...
-}
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;executeUpdate&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//执行预处理更新&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-public void executeUpdate () { //执行预处理更新
-    ...
-}
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;read&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//读取通道中的数据&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-public void read () { //读取通道中的数据
-    ...
-}
+&lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;send&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//向服务器发送数据&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-private void send () { //向服务器发送数据
-    ...
-}
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;close&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//关闭数据库&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-public void close() { //关闭数据库
-    ...
-}
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;这都是一些必要且常用的方法，相信很多人在实际开发中都有所使用，有了以上的一些属性和方法后我们就可以搭建出一个Connection类的基本模型，至于其他一些对象，比如数据库连接池，预处理对象都是基于最基础的Connection。&lt;/p&gt;
 
 &lt;h3&gt;相关编码工具类设计&lt;/h3&gt;
 
 &lt;p&gt;其实上面的一些类与方法，已经能组装成一个简单的与数据库交互的驱动，但是我们知道，我们向数据库服务器发送指令的时候，并不是向我们直接在数据库终端写SQL执行那么简单，而是需要根据数据库的相应协议将我们需要执行的SQL翻译成相应的字节流再发送给数据库服务端，所以我们必须有相关的编码工具类，比如Long类型编码，NULL值编码等等，所以我们需要写相应的编码类提高我们对SQL编码的效率，它应该具有以下的功能：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;public static void longEncoded(){ //long类型编码
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;public static void longEncoded(){ //long类型编码
     ...
 }
 
@@ -711,15 +704,15 @@ public static void lengthEncodedStringEncoded() { //lengthEncodedString编码
 private static void dateEncoded () { //Date类型编码
     ...
 }
-&lt;/code&gt;&lt;/pre&gt;
 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;通常来说，上面这四种编码方式可以实现大部分场景的SQL编码了，方法的具体实现取决于实际中程序的数据类型和编码协议可参考我的上一篇文章。&lt;/p&gt;
 
 &lt;h2&gt;总结&lt;/h2&gt;
 
 &lt;p&gt;这篇文章主要讲解了如何去设计一个简单的数据库驱动，它最基本应该具备些什么，各个模块间又是怎么搭配的，这些内容不仅仅让我们了解与数据库通信的步骤，也可以让我们对目前使用的第三方数据库驱动有更深入的了解，最后我会画一张图里梳理了一下所有模块间的联系，帮助大家理解：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2018/01/mysql-connection.png&quot; alt=&quot;mysql-connection&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2018/01/mysql-connection.png&quot; alt=&quot;mysql-connection&quot;&gt;&lt;/p&gt;
 </content>
  </entry>
  
@@ -741,98 +734,41 @@ private static void dateEncoded () { //Date类型编码
 &lt;h1&gt;MySQL连接方式&lt;/h1&gt;
 
 &lt;p&gt;分析协议，我们首先要了解如何与数据库连接，说到MySQL连接方式，大家突然可能有点懵，其实它一直伴随着我们，比如我们第一次装数据库完成后执行的第一次登录，比如你没有设置密码：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;mysql -uroot
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;n&quot;&gt;mysql&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uroot&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;这是最基本的一种数据库连接方式，那么MySQL连接方式到底有几种呢？到MySQL5.7为止，总共有五种，分别是TCP/IP，TLS/SSL，Unix Sockets，Shared Memory，Named pipes，下面我们就来看看这五种的区别：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;方式&lt;/th&gt;
-&lt;th&gt;默认开启&lt;/th&gt;
-&lt;th&gt;支持系统&lt;/th&gt;
-&lt;th&gt;只支持本机&lt;/th&gt;
-&lt;th&gt;如何开启&lt;/th&gt;
-&lt;th&gt;参数配置&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;TCP/IP &lt;/td&gt;
-&lt;td&gt; 是 &lt;/td&gt;
-&lt;td&gt; 所有系统 &lt;/td&gt;
-&lt;td&gt; 否 &lt;/td&gt;
-&lt;td&gt;--skip-networking=yes/no. &lt;/td&gt;
-&lt;td&gt; --port&lt;br&gt;--bind-address&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;TLS/SSL &lt;/td&gt;
-&lt;td&gt; 是 &lt;/td&gt;
-&lt;td&gt; 所有系统（基于TCP/IP)之上 &lt;/td&gt;
-&lt;td&gt; 否 &lt;/td&gt;
-&lt;td&gt;--ssl=yes/no. &lt;/td&gt;
-&lt;td&gt; --ssl-* options&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;Unix Sockets &lt;/td&gt;
-&lt;td&gt; 是 &lt;/td&gt;
-&lt;td&gt; 类Unix系统 &lt;/td&gt;
-&lt;td&gt; 是 &lt;/td&gt;
-&lt;td&gt; 设置--socket=&amp;lt;empty&gt; 来关闭. &lt;/td&gt;
-&lt;td&gt; --socket=socket path&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;Shared Memory &lt;/td&gt;
-&lt;td&gt; 否 &lt;/td&gt;
-&lt;td&gt; Windows系统 &lt;/td&gt;
-&lt;td&gt; 是 &lt;/td&gt;
-&lt;td&gt;--shared-memory=on/off. &lt;/td&gt;
-&lt;td&gt; --shared-memory-base-name=&amp;lt;name&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;Named pipes &lt;/td&gt;
-&lt;td&gt; 否 &lt;/td&gt;
-&lt;td&gt; Windows系统 &lt;/td&gt;
-&lt;td&gt; 否 &lt;/td&gt;
-&lt;td&gt;--enable-named-pipe=on/off. &lt;/td&gt;
-&lt;td&gt;  --socket=&amp;lt;name&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;方式|默认开启|支持系统|只支持本机|如何开启|参数配置
+---|---|---|---|---|---
+TCP/IP | 是 | 所有系统 | 否 |--skip-networking=yes/no. | --port&lt;br&gt;--bind-address
+TLS/SSL | 是 | 所有系统（基于TCP/IP)之上 | 否 |--ssl=yes/no. | --ssl-* options
+Unix Sockets | 是 | 类Unix系统 | 是 | 设置--socket=&lt;empty\&gt; 来关闭. | --socket=socket path
+Shared Memory | 否 | Windows系统 | 是 |--shared-memory=on/off. | --shared-memory-base-name=&lt;name\&gt;
+Named pipes | 否 | Windows系统 | 否 |--enable-named-pipe=on/off. |  --socket=&lt;name\&gt;&lt;/p&gt;
 
 &lt;p&gt;从上表中我们可以清晰看出每种连接方式的区别，接下里我会具体说明几种连接是怎么操作的，由于我的机子是Mac OS系统，这里只模拟非Windows系统下的三种方式,因为这三种方式都是默认开启的，我们不需要进行任何配置：&lt;/p&gt;
 
 &lt;h2&gt;1.Unix Sockets：&lt;/h2&gt;
-
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;mysql -uroot
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;n&quot;&gt;mysql&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uroot&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;若你在本机使用这种方式连接MySQL数据库的话，它默认会使用Unix Sockets。&lt;/p&gt;
 
 &lt;h2&gt;2.TCP/IP：&lt;/h2&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;n&quot;&gt;mysql&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;--protocol=tcp -uroot&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;mysql&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;P3306&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;h127&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uroot&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;mysql --protocol=tcp -uroot
-mysql -P3306 -h127.0.0.1 -uroot
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;连接的时候我们指定连接协议，或者指定相应的IP及端口，我们的连接方式就变成了TCP/IP方式。&lt;/p&gt;
 
 &lt;h2&gt;3.TLS/SSL：&lt;/h2&gt;
-
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;mysql --protocol=tcp -uroot --ssl=on
-mysql -P3306 -h127.0.0.1 -uroot --ssl=on
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;n&quot;&gt;mysql&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;--protocol=tcp -uroot --ssl=on&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;mysql&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;P3306&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;h127&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uroot&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;--ssl=on&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;上表说过，TLS/SSL是基于TCP/IP的，所以我们只需再指定打开ssl配置即可。&lt;/p&gt;
 
 &lt;p&gt;然后我们可以通过以下语句来查询目前数据库的连接情况：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;SELECT DISTINCT connection_type from performance_schema.threads where connection_type is not null
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;k&quot;&gt;SELECT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;DISTINCT&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;connection_type&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;performance_schema&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threads&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;where&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;connection_type&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;is&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;null&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;那么我们如何选择连接方式呢？个人总结了以下几个原则：&lt;/p&gt;
 
 &lt;ul&gt;
@@ -840,12 +776,11 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 &lt;li&gt;若数据库分布在不同的机子上，且能确保连接安全或者安全性要求不是那么高，推荐使用TCP/IP，反之使用TLS/SSL；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;h1&gt;MySQL数据包&lt;/h1&gt;
 
 &lt;p&gt;通信中最重要的就是数据，那么程序是如何和MySQL Server进行通信，并交互数据的呢？比如如何验证账户，发送查询语句，返回执行结果等，我先画一个流程图来模拟一下整个过程，帮助大家理解：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/mysql-process.png&quot; alt=&quot;mysql-process&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/mysql-process.png&quot; alt=&quot;mysql-process&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;整个过程相对来说还是比较清晰的，我们对连接请求和断开请求不需要过分关心，只需要了解这一点就可以了，重要的是其他几点，那么在这几步中，数据是怎么进行交互的呢？&lt;/p&gt;
 
@@ -862,45 +797,17 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 
 &lt;p&gt;使用LengthEncodedInteger编码的整数可能会使用1, 3, 4, 或者9 个字节，具体使用字节取决于数值的大小，下表是不同的数据长度的整数所使用的字节数：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;最小值（包含）&lt;/th&gt;
-&lt;th&gt;最大值（不包含）&lt;/th&gt;
-&lt;th&gt;存储方式&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;0 &lt;/td&gt;
-&lt;td&gt;251&lt;/td&gt;
-&lt;td&gt; 1个字节&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;251 &lt;/td&gt;
-&lt;td&gt;2&lt;sup&gt;16&lt;/sup&gt;&lt;/td&gt;
-&lt;td&gt; 3个字节(0xFC + 2个字节具体数据)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2&lt;sup&gt;16&lt;/sup&gt; &lt;/td&gt;
-&lt;td&gt;2&lt;sup&gt;24&lt;/sup&gt;&lt;/td&gt;
-&lt;td&gt; 4个字节(0xFD + 3个字节具体数据)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2&lt;sup&gt;24&lt;/sup&gt; &lt;/td&gt;
-&lt;td&gt;2&lt;sup&gt;64&lt;/sup&gt;&lt;/td&gt;
-&lt;td&gt; 9个字节(0xFE + 8个字节具体数据)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;最小值（包含）|最大值（不包含）|存储方式
+---|---|---|
+0 |251| 1个字节
+251 |2^16| 3个字节(0xFC + 2个字节具体数据)
+2^16 |2^24| 4个字节(0xFD + 3个字节具体数据)
+2^24 |2^64| 9个字节(0xFE + 8个字节具体数据)&lt;/p&gt;
 
 &lt;p&gt;举个简单的例子，比如1024的编码为：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;0xFC 0x00 0x04
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;其中0x代表16进制，实际数据传输中并没有该标识，第一位代表这是一个251~2&lt;sup&gt;16&lt;/sup&gt;之间的数值，所以后面两位为数值具体的值，这里使用的是小端字节序，MySQL默认使用的也是这种编码次序，所以这里1024是0x00 0x04，字节序相关知识可以参考：&lt;a href=&quot;http://www.ruanyifeng.com/blog/2016/11/byte-order.html&quot;&gt;理解字节序&lt;/a&gt;，到这里大家应该对这种编码格式有了一定的了解了，下面我们就来看看String。&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;0xFC 0x00 0x04
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;其中0x代表16进制，实际数据传输中并没有该标识，第一位代表这是一个251~2^16之间的数值，所以后面两位为数值具体的值，这里使用的是小端字节序，MySQL默认使用的也是这种编码次序，所以这里1024是0x00 0x04，字节序相关知识可以参考：&lt;a href=&quot;http://www.ruanyifeng.com/blog/2016/11/byte-order.html&quot;&gt;理解字节序&lt;/a&gt;，到这里大家应该对这种编码格式有了一定的了解了，下面我们就来看看String。&lt;/p&gt;
 
 &lt;h3&gt;String(字符串)&lt;/h3&gt;
 
@@ -914,7 +821,6 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 &lt;li&gt;RestOfPacketString（包末端字符串方式）：一个包末端的字符串，可根据包的总长度金和当前位置得到字符串的长度，实际中并不常用。&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;总的来说String的编码格式种类相对比较多，不同方式之间的区别也比较大，若要深刻理解还需从实际的例子里去学习，后续文章中我会写几个demo带大家一起去探索。&lt;/p&gt;
 
 &lt;h2&gt;2.基本数据包格式&lt;/h2&gt;
@@ -926,264 +832,79 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 &lt;p&gt;Server向Client发送的数据包有两个原则：&lt;/p&gt;
 
 &lt;ul&gt;
-&lt;li&gt;每个数据包大小不能超过2&lt;sup&gt;24&lt;/sup&gt;字节(16MB);&lt;/li&gt;
+&lt;li&gt;每个数据包大小不能超过2^24字节(16MB);&lt;/li&gt;
 &lt;li&gt;每个数据包前都需要加上数据包信息；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;每个包的基本格式：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;Type &lt;/th&gt;
-&lt;th&gt;Name&lt;/th&gt;
-&lt;th&gt;Description&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;int&lt;3&gt; &lt;/td&gt;
-&lt;td&gt;payload_length(包数据长度)&lt;/td&gt;
-&lt;td&gt; 具体数据包的内容长度，从出去头部四个字节后开始的内容&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;int&lt;1&gt; &lt;/td&gt;
-&lt;td&gt;sequence_id(包序列id)&lt;/td&gt;
-&lt;td&gt; 每个包的序列id，总数据内容大于16MB时需要用，从0开始，依次增加，新的命令执行会重载为0&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;string &lt;/td&gt;
-&lt;td&gt;payload(具体数据)&lt;/td&gt;
-&lt;td&gt; 包中除去头部后的具体数据内容&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;Type |Name|Description
+---|---|---|
+int&lt;3&gt; |payload&lt;em&gt;length(包数据长度)| 具体数据包的内容长度，从出去头部四个字节后开始的内容
+int&lt;1&gt; |sequence&lt;/em&gt;id(包序列id)| 每个包的序列id，总数据内容大于16MB时需要用，从0开始，依次增加，新的命令执行会重载为0
+string |payload(具体数据)| 包中除去头部后的具体数据内容&lt;/p&gt;
 
 &lt;p&gt;举个列子：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;例子 &lt;/th&gt;
-&lt;th&gt;解释&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;01 00 00 00 01&lt;/td&gt;
-&lt;td&gt; &lt;li&gt;payload_length: 1&lt;/li&gt; &lt;li&gt;sequence_id: 0x00&lt;/li&gt;&lt;li&gt;payload: 0x01&lt;/li&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
+&lt;p&gt;例子 |解释
+---|---|
+    01 00 00 00 01| &lt;li&gt;payload&lt;em&gt;length: 1&lt;/li&gt; &lt;li&gt;sequence&lt;/em&gt;id: 0x00&lt;/li&gt;&lt;li&gt;payload: 0x01&lt;/li&gt;&lt;/p&gt;
 
-
-&lt;p&gt;若是数据内容大于或者等于2&lt;sup&gt;24&lt;/sup&gt;-1个字节，将会拆分发送，举个例子，比如发送16 777 215 (2&lt;sup&gt;24&lt;/sup&gt;-1) 字节的内容，则会按一下这种方式发送&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;ff ff ff 00 ...
+&lt;p&gt;若是数据内容大于或者等于2^24-1个字节，将会拆分发送，举个例子，比如发送16 777 215 (2^24-1) 字节的内容，则会按一下这种方式发送 &lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;ff ff ff 00 ...
 00 00 00 01
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;第一个数据包满载，第二个数据包是一个空数据包（一种临界情况）。&lt;/p&gt;
 
 &lt;h3&gt;Client to Server&lt;/h3&gt;
 
 &lt;p&gt;Client向Server端发送的格式相对来说就简单一点了&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;Type &lt;/th&gt;
-&lt;th&gt;Name&lt;/th&gt;
-&lt;th&gt;Description&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;int&lt;1&gt; &lt;/td&gt;
-&lt;td&gt;执行命令&lt;/td&gt;
-&lt;td&gt; 执行的操作，比如切换数据库，查询表等操作&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;string &lt;/td&gt;
-&lt;td&gt;参数&lt;/td&gt;
-&lt;td&gt; 命令相应的参数&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;Type |Name|Description
+---|---|---|
+int&lt;1&gt; |执行命令| 执行的操作，比如切换数据库，查询表等操作
+string |参数| 命令相应的参数&lt;/p&gt;
 
 &lt;p&gt;命令列表（摘抄自胡桃夹子的博客）：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;类型值 &lt;/th&gt;
-&lt;th&gt;命令&lt;/th&gt;
-&lt;th&gt;功能&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;0x00&lt;/td&gt;
-&lt;td&gt;    COM_SLEEP&lt;/td&gt;
-&lt;td&gt;   （内部线程状态)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x01&lt;/td&gt;
-&lt;td&gt;    COM_QUIT &lt;/td&gt;
-&lt;td&gt;   关闭连接&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x02&lt;/td&gt;
-&lt;td&gt;    COM_INIT_DB &lt;/td&gt;
-&lt;td&gt; 切换数据库&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x03&lt;/td&gt;
-&lt;td&gt;    COM_QUERY   &lt;/td&gt;
-&lt;td&gt;SQL查询请求&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x04&lt;/td&gt;
-&lt;td&gt;   COM_FIELD_LIST&lt;/td&gt;
-&lt;td&gt;  获取数据表字段信息&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x05&lt;/td&gt;
-&lt;td&gt;    COM_CREATE_DB &lt;/td&gt;
-&lt;td&gt;  创建数据库&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x06&lt;/td&gt;
-&lt;td&gt;    COM_DROP_DB&lt;/td&gt;
-&lt;td&gt; 删除数据库&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x07&lt;/td&gt;
-&lt;td&gt;    COM_REFRESH&lt;/td&gt;
-&lt;td&gt; 清除缓存&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x08&lt;/td&gt;
-&lt;td&gt;   COM_SHUTDOWN &lt;/td&gt;
-&lt;td&gt;   停止服务器&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x09&lt;/td&gt;
-&lt;td&gt;    COM_STATISTICS&lt;/td&gt;
-&lt;td&gt;  获取服务器统计信息&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x0A&lt;/td&gt;
-&lt;td&gt;    COM_PROCESS_INFO&lt;/td&gt;
-&lt;td&gt;    获取当前连接的列表&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x0B&lt;/td&gt;
-&lt;td&gt;    COM_CONNECT&lt;/td&gt;
-&lt;td&gt; （内部线程状态)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x0C&lt;/td&gt;
-&lt;td&gt;    COM_PROCESS_KILL&lt;/td&gt;
-&lt;td&gt;    中断某个连接&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x0D&lt;/td&gt;
-&lt;td&gt;    COM_DEBUG&lt;/td&gt;
-&lt;td&gt;   保存服务器调试信息&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x0E&lt;/td&gt;
-&lt;td&gt;    COM_PING&lt;/td&gt;
-&lt;td&gt;    测试连通性&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x0F&lt;/td&gt;
-&lt;td&gt;    COM_TIME&lt;/td&gt;
-&lt;td&gt;    （内部线程状态）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x10&lt;/td&gt;
-&lt;td&gt;    COM_DELAYED_INSERT&lt;/td&gt;
-&lt;td&gt;  （内部线程状态）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x11&lt;/td&gt;
-&lt;td&gt;    COM_CHANGE_USER&lt;/td&gt;
-&lt;td&gt; 重新登陆（不断连接）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x12&lt;/td&gt;
-&lt;td&gt;    COM_BINLOG_DUMP&lt;/td&gt;
-&lt;td&gt; 获取二进制日志信息&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x13&lt;/td&gt;
-&lt;td&gt;    COM_TABLE_DUMP&lt;/td&gt;
-&lt;td&gt;  获取数据表结构信息&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x14&lt;/td&gt;
-&lt;td&gt;    COM_CONNECT_OUT&lt;/td&gt;
-&lt;td&gt; （内部线程状态)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x15&lt;/td&gt;
-&lt;td&gt;    COM_REGISTER_SLAVE&lt;/td&gt;
-&lt;td&gt;  从服务器向主服务器进行注册&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x16&lt;/td&gt;
-&lt;td&gt;    COM_STMT_PREPARE&lt;/td&gt;
-&lt;td&gt;    预处理SQL语句&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x17&lt;/td&gt;
-&lt;td&gt;    COM_STMT_EXECUTE&lt;/td&gt;
-&lt;td&gt;    执行预处理语句&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x18&lt;/td&gt;
-&lt;td&gt;    COM_STMT_SEND_LONG_DATA&lt;/td&gt;
-&lt;td&gt; 发送BLOB类型的数据&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x19&lt;/td&gt;
-&lt;td&gt;    COM_STMT_CLOSE&lt;/td&gt;
-&lt;td&gt;  销毁预处理语句&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x1A&lt;/td&gt;
-&lt;td&gt;    COM_STMT_RESET&lt;/td&gt;
-&lt;td&gt;  清除预处理语句参数缓存&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x1B&lt;/td&gt;
-&lt;td&gt;    COM_SET_OPTION&lt;/td&gt;
-&lt;td&gt;  设置语句选项&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0x1C&lt;/td&gt;
-&lt;td&gt;    COM_STMT_FETCH&lt;/td&gt;
-&lt;td&gt;  获取预处理语句的执行结果&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;类型值 |命令|功能
+---|---|---|
+0x00|    COM&lt;em&gt;SLEEP|   （内部线程状态)
+0x01|    COM&lt;/em&gt;QUIT |   关闭连接
+0x02|    COM&lt;em&gt;INIT&lt;/em&gt;DB | 切换数据库&lt;br&gt;
+0x03|    COM&lt;em&gt;QUERY   |SQL查询请求 
+0x04|   COM&lt;/em&gt;FIELD&lt;em&gt;LIST|  获取数据表字段信息&lt;br&gt;
+0x05|    COM&lt;/em&gt;CREATE&lt;em&gt;DB |  创建数据库
+0x06|    COM&lt;/em&gt;DROP&lt;em&gt;DB| 删除数据库&lt;br&gt;
+0x07|    COM&lt;/em&gt;REFRESH| 清除缓存&lt;br&gt;
+0x08|   COM&lt;em&gt;SHUTDOWN |   停止服务器 
+0x09|    COM&lt;/em&gt;STATISTICS|  获取服务器统计信息 
+0x0A|    COM&lt;em&gt;PROCESS&lt;/em&gt;INFO|    获取当前连接的列表
+0x0B|    COM&lt;em&gt;CONNECT| （内部线程状态)
+0x0C|    COM&lt;/em&gt;PROCESS&lt;em&gt;KILL|    中断某个连接
+0x0D|    COM&lt;/em&gt;DEBUG|   保存服务器调试信息 
+0x0E|    COM&lt;em&gt;PING|    测试连通性 
+0x0F|    COM&lt;/em&gt;TIME|    （内部线程状态） 
+0x10|    COM&lt;em&gt;DELAYED&lt;/em&gt;INSERT|  （内部线程状态）&lt;br&gt;
+0x11|    COM&lt;em&gt;CHANGE&lt;/em&gt;USER| 重新登陆（不断连接）
+0x12|    COM&lt;em&gt;BINLOG&lt;/em&gt;DUMP| 获取二进制日志信息
+0x13|    COM&lt;em&gt;TABLE&lt;/em&gt;DUMP|  获取数据表结构信息
+0x14|    COM&lt;em&gt;CONNECT&lt;/em&gt;OUT| （内部线程状态)
+0x15|    COM&lt;em&gt;REGISTER&lt;/em&gt;SLAVE|  从服务器向主服务器进行注册 
+0x16|    COM&lt;em&gt;STMT&lt;/em&gt;PREPARE|    预处理SQL语句 
+0x17|    COM&lt;em&gt;STMT&lt;/em&gt;EXECUTE|    执行预处理语句 
+0x18|    COM&lt;em&gt;STMT&lt;/em&gt;SEND&lt;em&gt;LONG&lt;/em&gt;DATA| 发送BLOB类型的数据 
+0x19|    COM&lt;em&gt;STMT&lt;/em&gt;CLOSE|  销毁预处理语句 
+0x1A|    COM&lt;em&gt;STMT&lt;/em&gt;RESET|  清除预处理语句参数缓存 
+0x1B|    COM&lt;em&gt;SET&lt;/em&gt;OPTION|  设置语句选项&lt;br&gt;
+0x1C|    COM&lt;em&gt;STMT&lt;/em&gt;FETCH|  获取预处理语句的执行结果 &lt;/p&gt;
 
 &lt;p&gt;这里距一个常见的的例子，比如切换数据库：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;mysql&quot;&gt;use godpan
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-mysql&quot; data-lang=&quot;mysql&quot;&gt;use godpan
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;相应的报文格式则为：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;0x02 0x67 0x6f 0x64 0x70 0x61 0x6e
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;0x02 0x67 0x6f 0x64 0x70 0x61 0x6e
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;其中0x02代表切换数据库命令，后面的字节则为godpan的16进制表达。&lt;/p&gt;
 
 &lt;h2&gt;数据包类型&lt;/h2&gt;
@@ -1203,133 +924,38 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 &lt;li&gt;4.Server向Client发送OK packet或者ERR packet&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;这里我们来看一看上面的Handshake packet和Auth packet，OK packet和ERR packet放在另一个阶段写。&lt;/p&gt;
 
 &lt;h4&gt;Handshake packet&lt;/h4&gt;
 
 &lt;p&gt;Handshake packet是由Server向Client发送的初始化包，因为所有从Server向Client端发送的包都是一样的格式，所以前面的四个字节是包头，前三位代表Handshake packet具体内容的数据，另外包序列号为0，很显然这个包内容小于16MB，下面是Handshake packet具体内容的格式：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;相对包内容的位置 &lt;/th&gt;
-&lt;th&gt;长度（字节）&lt;/th&gt;
-&lt;th&gt;名称&lt;/th&gt;
-&lt;th&gt;描述&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;0 &lt;/td&gt;
-&lt;td&gt; 1 &lt;/td&gt;
-&lt;td&gt; 协议版本 &lt;/td&gt;
-&lt;td&gt;协议版本的版本号，通常为10（0x0A）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; len = strlen (server_version) + 1 &lt;/td&gt;
-&lt;td&gt; 数据库版本 &lt;/td&gt;
-&lt;td&gt; 使用前面的NullTerminatedString格式编码，长度为数据库版本字符串的长度加上标示结束的的一个字节&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;len + 1 &lt;/td&gt;
-&lt;td&gt; 4 &lt;/td&gt;
-&lt;td&gt; 线程ID &lt;/td&gt;
-&lt;td&gt;此次连接MySQL Server启动的线程ID&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;len + 5 &lt;/td&gt;
-&lt;td&gt; 8 + 1（0x00表示结束) &lt;/td&gt;
-&lt;td&gt; 挑战随机数（第一部分） &lt;/td&gt;
-&lt;td&gt;用于后续账户密码验证&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;len + 14 &lt;/td&gt;
-&lt;td&gt; 2 &lt;/td&gt;
-&lt;td&gt; 协议协商 &lt;/td&gt;
-&lt;td&gt; 用于与客户端协商通讯方式&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;len + 16 &lt;/td&gt;
-&lt;td&gt; 1 &lt;/td&gt;
-&lt;td&gt; 编码格式 &lt;/td&gt;
-&lt;td&gt;标识数据库目前的编码方式&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;len + 17 &lt;/td&gt;
-&lt;td&gt; 2 &lt;/td&gt;
-&lt;td&gt; 服务器状态 &lt;/td&gt;
-&lt;td&gt;用于表示服务器状态，比如是否是事务模式或者自动提交模式&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;len + 19 &lt;/td&gt;
-&lt;td&gt; 13 &lt;/td&gt;
-&lt;td&gt; 保留字节 &lt;/td&gt;
-&lt;td&gt;未来可能会用到，预留字节&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;len + 32 &lt;/td&gt;
-&lt;td&gt; 12 + 1（0x00表示结束) &lt;/td&gt;
-&lt;td&gt; 挑战随机数（第二部分） &lt;/td&gt;
-&lt;td&gt;用于后续账户密码验证&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;相对包内容的位置 |长度（字节）|名称|描述
+---|---|---|---
+0 | 1 | 协议版本 |协议版本的版本号，通常为10（0x0A）
+1 | len = strlen (server_version) + 1 | 数据库版本 | 使用前面的NullTerminatedString格式编码，长度为数据库版本字符串的长度加上标示结束的的一个字节
+len + 1 | 4 | 线程ID |此次连接MySQL Server启动的线程ID
+len + 5 | 8 + 1（0x00表示结束) | 挑战随机数（第一部分） |用于后续账户密码验证
+len + 14 | 2 | 协议协商 | 用于与客户端协商通讯方式
+len + 16 | 1 | 编码格式 |标识数据库目前的编码方式
+len + 17 | 2 | 服务器状态 |用于表示服务器状态，比如是否是事务模式或者自动提交模式
+len + 19 | 13 | 保留字节 |未来可能会用到，预留字节
+len + 32 | 12 + 1（0x00表示结束) | 挑战随机数（第二部分） |用于后续账户密码验证&lt;/p&gt;
 
 &lt;p&gt;上表就是整个Handshake packet的这个包结构，属性的含义以及规范都有相应的说明，下面是我本机解析的某次连接数据库的Handshake packet包，仅供参考：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;{protocolVersion=10, serverVersion='5.7.13', threadId=4055, scramble=[49, 97, 80, 3, 35, 118, 45, 15, 5, 118, 9, 11, 124, 93, 93, 5, 31, 47, 111, 109, 0, 0, 0, 0, 0], serverCapabilities=65535, serverLanguage=33, serverStatus=2}
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;protocolVersion=10,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;serverVersion='5.7.13',&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;threadId=4055,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;scramble=[49,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;97,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;80,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;3,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;35,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;118,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;45,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;15,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;5,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;118,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;9,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;11,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;124,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;93,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;93,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;5,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;31,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;47,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;111,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;109,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;0,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;0,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;0,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;0,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;0],&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;serverCapabilities=65535,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;serverLanguage=33,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;serverStatus=2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;h4&gt;Auth packet&lt;/h4&gt;
 
 &lt;p&gt;Auth packet是由Client向Server发送的认证包，用于验证数据库账户登录，相应内容的格式：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;相对包内容的位置 &lt;/th&gt;
-&lt;th&gt;长度（字节）&lt;/th&gt;
-&lt;th&gt;名称&lt;/th&gt;
-&lt;th&gt;描述&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;0 &lt;/td&gt;
-&lt;td&gt; 4 &lt;/td&gt;
-&lt;td&gt; 协议协商 &lt;/td&gt;
-&lt;td&gt; 用于与服务端协商通讯方式&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;4 &lt;/td&gt;
-&lt;td&gt; 4 &lt;/td&gt;
-&lt;td&gt; 消息最长长度 &lt;/td&gt;
-&lt;td&gt; 客户端可以发送或接收的最长长度，0表示不做任何限制&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;8 &lt;/td&gt;
-&lt;td&gt; 1 &lt;/td&gt;
-&lt;td&gt; 字符编码 &lt;/td&gt;
-&lt;td&gt; 客服端字符编码方式&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;9 &lt;/td&gt;
-&lt;td&gt; 23 &lt;/td&gt;
-&lt;td&gt; 保留字节 &lt;/td&gt;
-&lt;td&gt; 未来可能会用到，预留字节，用0代替&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;32 &lt;/td&gt;
-&lt;td&gt;不定&lt;/td&gt;
-&lt;td&gt; 认证字符串 &lt;/td&gt;
-&lt;td&gt; 主要有三部分内容&lt;br&gt; &lt;li&gt;用户名：NullTerminatedString格式编码&lt;/li&gt;&lt;li&gt;加密后的密码：LengthEncodedString格式编码&lt;/li&gt;&lt;li&gt;数据库名称（可选）：NullTerminatedString格式编码&lt;/li&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;相对包内容的位置 |长度（字节）|名称|描述
+---|---|---|---
+0 | 4 | 协议协商 | 用于与服务端协商通讯方式
+4 | 4 | 消息最长长度 | 客户端可以发送或接收的最长长度，0表示不做任何限制
+8 | 1 | 字符编码 | 客服端字符编码方式
+9 | 23 | 保留字节 | 未来可能会用到，预留字节，用0代替
+    32 |不定| 认证字符串 | 主要有三部分内容&lt;br&gt; &lt;li&gt;用户名：NullTerminatedString格式编码&lt;/li&gt;&lt;li&gt;加密后的密码：LengthEncodedString格式编码&lt;/li&gt;&lt;li&gt;数据库名称（可选）：NullTerminatedString格式编码&lt;/li&gt;&lt;/p&gt;
 
 &lt;p&gt;这部分内容是由客户端自己生成，所以说如果我们如果要写一个程序连接数据库，那么这个包就得按照这个格式，不然服务端将会无法识别。&lt;/p&gt;
 
@@ -1345,54 +971,17 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 &lt;li&gt;Result Set包：用于Server向Client发送的查询结果包；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;h4&gt;Data Field&lt;/h4&gt;
 
 &lt;p&gt;Data Field是Server回应包里的一个核心，主要是数据的一种编码结构，跟我之前讲的LengthEncodedInteger和LengthEncodedString很类似，也主要分为三个部分&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;最小数据长度（包含）&lt;/th&gt;
-&lt;th&gt;最大数据长度（不包含）&lt;/th&gt;
-&lt;th&gt;数据长度&lt;/th&gt;
-&lt;th&gt;格式&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt;251&lt;/td&gt;
-&lt;td&gt; 1个字节&lt;/td&gt;
-&lt;td&gt;1字节 + 具体数据&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;251 &lt;/td&gt;
-&lt;td&gt;2&lt;sup&gt;16&lt;/sup&gt;&lt;/td&gt;
-&lt;td&gt; 2个字节 &lt;/td&gt;
-&lt;td&gt; 0xFC + 2个字节数据长度 + 具体数据&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2&lt;sup&gt;16&lt;/sup&gt; &lt;/td&gt;
-&lt;td&gt;2&lt;sup&gt;24&lt;/sup&gt;&lt;/td&gt;
-&lt;td&gt; 4个字节 &lt;/td&gt;
-&lt;td&gt; 0xFD + 4个字节数据长度 + 具体数据&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2&lt;sup&gt;24&lt;/sup&gt; &lt;/td&gt;
-&lt;td&gt;2&lt;sup&gt;64&lt;/sup&gt;&lt;/td&gt;
-&lt;td&gt; 8个字节 &lt;/td&gt;
-&lt;td&gt; 0xFE + 8个字节数据长度 + 具体数据&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;NULL &lt;/td&gt;
-&lt;td&gt; NULL &lt;/td&gt;
-&lt;td&gt; 0个字节 &lt;/td&gt;
-&lt;td&gt; 0xFB&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;最小数据长度（包含）|最大数据长度（不包含）|数据长度|格式
+---|---|---|
+1 |251| 1个字节|1字节 + 具体数据
+251 |2^16| 2个字节 | 0xFC + 2个字节数据长度 + 具体数据
+2^16 |2^24| 4个字节 | 0xFD + 4个字节数据长度 + 具体数据
+2^24 |2^64| 8个字节 | 0xFE + 8个字节数据长度 + 具体数据
+NULL | NULL | 0个字节 | 0xFB&lt;/p&gt;
 
 &lt;p&gt;要注意的一点是如果出现0xFB（251）开头说明这个数据对应的是MySQL中的NULL。&lt;/p&gt;
 
@@ -1404,127 +993,43 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 &lt;li&gt;COM_PING: 连接或者测试数据库&lt;/li&gt;
 &lt;li&gt;COM_QUERY： 不需要查询结果集的操作，比如INSERT, UPDATE, or ALTER TABLE&lt;/li&gt;
 &lt;li&gt;COM_REFRESH： 数据刷新&lt;/li&gt;
-&lt;li&gt;COM_REGISTER_SLAVE： 注册从服务器&lt;/li&gt;
+&lt;li&gt;COM&lt;em&gt;REGISTER&lt;/em&gt;SLAVE： 注册从服务器&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;p&gt;OK 包的主要结构：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;相对包内容的位置 &lt;/th&gt;
-&lt;th&gt;长度（字节）&lt;/th&gt;
-&lt;th&gt;名称&lt;/th&gt;
-&lt;th&gt;描述&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;0 &lt;/td&gt;
-&lt;td&gt; 1 &lt;/td&gt;
-&lt;td&gt; 包头标识 &lt;/td&gt;
-&lt;td&gt;0x00 代表这是一个OK 包&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; rows_len &lt;/td&gt;
-&lt;td&gt; 影响行数 &lt;/td&gt;
-&lt;td&gt; 相应操作影响的行数，比如一个Update操作的记录是5条，那么这个值就为5&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 + rows_len &lt;/td&gt;
-&lt;td&gt; id_len &lt;/td&gt;
-&lt;td&gt; 自增id &lt;/td&gt;
-&lt;td&gt;插入一条记录时，如果是自增id的话，返回的id值&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 + rows_len + id_len &lt;/td&gt;
-&lt;td&gt; 2 &lt;/td&gt;
-&lt;td&gt; 服务器状态 &lt;/td&gt;
-&lt;td&gt;用于表示服务器状态，比如是否是事务模式或者自动提交模式&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;3 + rows_len + id_len &lt;/td&gt;
-&lt;td&gt; 2 &lt;/td&gt;
-&lt;td&gt; 警告数 &lt;/td&gt;
-&lt;td&gt;上次命令引起的警告数&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;5 + rows_len + id_len &lt;/td&gt;
-&lt;td&gt; msg_len &lt;/td&gt;
-&lt;td&gt; 额外信息 &lt;/td&gt;
-&lt;td&gt;此次操作的一些额外信息&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;相对包内容的位置 |长度（字节）|名称|描述
+---|---|---|---
+0 | 1 | 包头标识 |0x00 代表这是一个OK 包
+1 | rows&lt;em&gt;len | 影响行数 | 相应操作影响的行数，比如一个Update操作的记录是5条，那么这个值就为5
+1 + rows&lt;/em&gt;len | id&lt;em&gt;len | 自增id |插入一条记录时，如果是自增id的话，返回的id值
+1 + rows&lt;/em&gt;len + id&lt;em&gt;len | 2 | 服务器状态 |用于表示服务器状态，比如是否是事务模式或者自动提交模式
+3 + rows&lt;/em&gt;len + id&lt;em&gt;len | 2 | 警告数 |上次命令引起的警告数
+5 + rows&lt;/em&gt;len + id&lt;em&gt;len | msg&lt;/em&gt;len | 额外信息 |此次操作的一些额外信息&lt;/p&gt;
 
 &lt;p&gt;下面是我本机解析的某次正确连接数据库后的OK packet包，仅供参考：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;OK{affectedRows=0, insertId=0, serverStatus=2, message='....'}
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;OK{affectedRows=0, insertId=0, serverStatus=2, message='....'}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;h4&gt;Error 包&lt;/h4&gt;
 
 &lt;p&gt;顾名思义Error 包就是当出现错误的时候返回的信息，比如账户验证不通过，查询命令不合法，非空字段未指定值等相关操作，Server端都会向Client端发送Error 包。&lt;/p&gt;
 
 &lt;p&gt;Error 包的主要结构：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;相对包内容的位置 &lt;/th&gt;
-&lt;th&gt;长度（字节）&lt;/th&gt;
-&lt;th&gt;名称&lt;/th&gt;
-&lt;th&gt;描述&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;0 &lt;/td&gt;
-&lt;td&gt; 1 &lt;/td&gt;
-&lt;td&gt; 包头标识 &lt;/td&gt;
-&lt;td&gt;0xFF 代表这是一个Error 包&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; 2 &lt;/td&gt;
-&lt;td&gt; 错误代码 &lt;/td&gt;
-&lt;td&gt;该错误的相应错误代码&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;3 &lt;/td&gt;
-&lt;td&gt; 1 &lt;/td&gt;
-&lt;td&gt; 标识位 &lt;/td&gt;
-&lt;td&gt;SQL执行状态标识位，用'#'进行标识&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;4 &lt;/td&gt;
-&lt;td&gt; 5 &lt;/td&gt;
-&lt;td&gt; 执行状态 &lt;/td&gt;
-&lt;td&gt;SQL的具体执行状态&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;9 &lt;/td&gt;
-&lt;td&gt; msg_len &lt;/td&gt;
-&lt;td&gt; 错误信息 &lt;/td&gt;
-&lt;td&gt;具体的错误信息&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;相对包内容的位置 |长度（字节）|名称|描述
+---|---|---|---
+0 | 1 | 包头标识 |0xFF 代表这是一个Error 包
+1 | 2 | 错误代码 |该错误的相应错误代码
+3 | 1 | 标识位 |SQL执行状态标识位，用&amp;#39;#&amp;#39;进行标识
+4 | 5 | 执行状态 |SQL的具体执行状态
+9 | msg_len | 错误信息 |具体的错误信息&lt;/p&gt;
 
 &lt;p&gt;比如我们现在已经连接了数据库，执行&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;use test_database;
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;use test_database;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;但是我们数据库中并没有test_database这个数据库，我们将会得到相应的错误信息，下面是我本机解析的Error packet包，仅供参考：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Error{errno=1046, sqlState='3D000', message='No database selected'}
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;Error{errno=1046, sqlState='3D000', message='No database selected'}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;h4&gt;EOF Packet&lt;/h4&gt;
 
 &lt;p&gt;EOF Packet是用于标识某个阶段数据结束的标志包，会在一下几种情况中产生：&lt;/p&gt;
@@ -1533,44 +1038,17 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 &lt;li&gt;结果集中字段信息结束的时候；&lt;/li&gt;
 &lt;li&gt;结果集中列信息结束的时候；&lt;/li&gt;
 &lt;li&gt;服务器确认停止服务的时候；&lt;/li&gt;
-&lt;li&gt;客户端发送COM_SET_OPTION and COM_DEBUG命令后，服务器回应的时候；&lt;/li&gt;
+&lt;li&gt;客户端发送COM&lt;em&gt;SET&lt;/em&gt;OPTION and COM_DEBUG命令后，服务器回应的时候；&lt;/li&gt;
 &lt;li&gt;服务器请求使用MySQL4.1版本之前的认证方式的时候；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;EOF 包的主要结构：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;相对包内容的位置 &lt;/th&gt;
-&lt;th&gt;长度（字节）&lt;/th&gt;
-&lt;th&gt;名称&lt;/th&gt;
-&lt;th&gt;描述&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;0 &lt;/td&gt;
-&lt;td&gt; 1 &lt;/td&gt;
-&lt;td&gt; 包头标识 &lt;/td&gt;
-&lt;td&gt;0xFE 代表这是一个EOF 包&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; 2 &lt;/td&gt;
-&lt;td&gt; 警告数 &lt;/td&gt;
-&lt;td&gt;上次命令引起的警告数&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;3 &lt;/td&gt;
-&lt;td&gt; 2 &lt;/td&gt;
-&lt;td&gt; 服务器状态&lt;/td&gt;
-&lt;td&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;相对包内容的位置 |长度（字节）|名称|描述
+---|---|---|---
+0 | 1 | 包头标识 |0xFE 代表这是一个EOF 包
+1 | 2 | 警告数 |上次命令引起的警告数
+3 | 2 | 服务器状态 &lt;/p&gt;
 
 &lt;p&gt;这里要注意的一点，我们上面分析了Data Field的结构，发现它是用0xFE作为长度需要8个字节编码值得标识头，所以我们在判断一个包是否是EOF 包的时候，需要下面两个条件：&lt;/p&gt;
 
@@ -1579,42 +1057,17 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 &lt;li&gt;包的总长度小于9个字节；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;h4&gt;Result Set包&lt;/h4&gt;
 
 &lt;p&gt;Result Set包产生于我们每次数据库执行需要返回结果集的时候，Server端发送给我们的包，比如平常的SELECT,SHOW等命令，Result Set包相对比较复杂，主要包含以下五个方面：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;内容 &lt;/th&gt;
-&lt;th&gt;含义&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;Result Set Header &lt;/td&gt;
-&lt;td&gt; 返回数据的列数量&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;Field &lt;/td&gt;
-&lt;td&gt; 返回数据的列信息（多个）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;EOF   &lt;/td&gt;
-&lt;td&gt; 列结束&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;Row Data &lt;/td&gt;
-&lt;td&gt; 行数据（多个）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;EOF &lt;/td&gt;
-&lt;td&gt; 数据结束&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;内容 |含义
+---|---
+Result Set Header | 返回数据的列数量
+Field | 返回数据的列信息（多个）
+EOF   | 列结束
+Row Data | 行数据（多个）
+EOF | 数据结束&lt;/p&gt;
 
 &lt;p&gt;我们逐个来分析，首先我们来看Result Set Header。&lt;/p&gt;
 
@@ -1622,97 +1075,31 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 
 &lt;p&gt;Result Set Header表示返回数据的列数量以及一些额外的信息，其主要结构为：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;长度 &lt;/th&gt;
-&lt;th&gt;含义&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;1-9字节 &lt;/td&gt;
-&lt;td&gt; 数据的列数量（LengthEncodedInteger编码格式）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1-9字节 &lt;/td&gt;
-&lt;td&gt; 额外信息（LengthEncodedInteger编码格式）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;长度 |含义
+---|---
+1-9字节 | 数据的列数量（LengthEncodedInteger编码格式）
+1-9字节 | 额外信息（LengthEncodedInteger编码格式）&lt;/p&gt;
 
 &lt;h5&gt;Field&lt;/h5&gt;
 
 &lt;p&gt;Field表示Result Set中数据列的具体信息，可出现多次，具体次数取决于Result Set Header中数据的列数量，它的主要结构为：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;长度 &lt;/th&gt;
-&lt;th&gt;含义&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;4 &lt;/td&gt;
-&lt;td&gt; 通常为ASCIIz字符串def&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;n &lt;/td&gt;
-&lt;td&gt; 数据库名称（Data Field）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;n &lt;/td&gt;
-&lt;td&gt; 假如查询指定了表别名，就是表别名（Data Field）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;n &lt;/td&gt;
-&lt;td&gt; 原始的表名（Data Field）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;n &lt;/td&gt;
-&lt;td&gt; 假如查询指定了列别名，就是列别名（Data Field）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;n &lt;/td&gt;
-&lt;td&gt; 原始的列名（Data Field）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; 标识位，通常为12，表示接下去的12个字节是具体的field内容&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2 &lt;/td&gt;
-&lt;td&gt; field的编码&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;4 &lt;/td&gt;
-&lt;td&gt; field的长度&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; field的类型&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2 &lt;/td&gt;
-&lt;td&gt; field的标识&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2 &lt;/td&gt;
-&lt;td&gt; field值的的小数点精度&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2 &lt;/td&gt;
-&lt;td&gt; 预留字节&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;n &lt;/td&gt;
-&lt;td&gt; 可选元素，如果存在，则表示该field的默认值&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;长度 |含义
+---|---
+4 | 通常为ASCIIz字符串def
+n | 数据库名称（Data Field）
+n | 假如查询指定了表别名，就是表别名（Data Field）
+n | 原始的表名（Data Field）
+n | 假如查询指定了列别名，就是列别名（Data Field）
+n | 原始的列名（Data Field）
+1 | 标识位，通常为12，表示接下去的12个字节是具体的field内容
+2 | field的编码
+4 | field的长度
+1 | field的类型
+2 | field的标识
+2 | field值的的小数点精度
+2 | 预留字节
+n | 可选元素，如果存在，则表示该field的默认值&lt;/p&gt;
 
 &lt;p&gt;其中field的类型与标识具体定义和对应变量含义可参考这篇文章：&lt;a href=&quot;http://hutaow.com/blog/2013/11/06/mysql-protocol-analysis/#428-com_shutdown&quot;&gt;MySQL协议分析&lt;/a&gt;&lt;/p&gt;
 
@@ -1730,85 +1117,33 @@ mysql -P3306 -h127.0.0.1 -uroot --ssl=on
 
 &lt;h4&gt;PREPARE_OK包&lt;/h4&gt;
 
-&lt;p&gt;PREPARE_OK包产生在Client端向Server发送预处理SQL语句，Server进行正确回应的时候，大家写写Java的时候肯定用过PreparedStatement，这里PreparedStatement的功能就是进行SQL的预处理，预处理的优点比较多，比如效率高，防SQL注入等，有兴趣的同学可以自己去学习下。下面是PREPARE_OK包的结构：&lt;/p&gt;
+&lt;p&gt;PREPARE&lt;em&gt;OK包产生在Client端向Server发送预处理SQL语句，Server进行正确回应的时候，大家写写Java的时候肯定用过PreparedStatement，这里PreparedStatement的功能就是进行SQL的预处理，预处理的优点比较多，比如效率高，防SQL注入等，有兴趣的同学可以自己去学习下。下面是PREPARE&lt;/em&gt;OK包的结构：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;长度 &lt;/th&gt;
-&lt;th&gt;含义&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; 0x00（标识是一个OK包）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;4 &lt;/td&gt;
-&lt;td&gt; statement_handler_id（预处理语句id）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2 &lt;/td&gt;
-&lt;td&gt; number of columns in result set（结果集中列的数量）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2 &lt;/td&gt;
-&lt;td&gt; number of parameters in query（查询语句中参数的数量）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; 0x00 (填充值)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;2 &lt;/td&gt;
-&lt;td&gt; 警告数&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;长度 |含义
+---|---
+1 | 0x00（标识是一个OK包）
+4 | statement&lt;em&gt;handler&lt;/em&gt;id（预处理语句id）
+2 | number of columns in result set（结果集中列的数量）
+2 | number of parameters in query（查询语句中参数的数量）
+1 | 0x00 (填充值)
+2 | 警告数&lt;/p&gt;
 
 &lt;p&gt;比如我现在执执行下面的语句：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;PreparedStatement ps = connection.prepareStatement(&quot;SELECT * FROM `godpan_fans` where id=?&quot;);
-ps.setInteger(1, 1);
-ps.executeQuery();
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;n&quot;&gt;PreparedStatement&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ps&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;connection&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;prepareStatement&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;SELECT * FROM `godpan_fans` where id=?&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ps&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;setInteger&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ps&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;executeQuery&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;得到下面的PREPARE_OK包，仅供参考：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;PSOK{statementId=1, columns=5, parameters=1}
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;PSOK{statementId=1, columns=5, parameters=1}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;如果上面的columns大于0，以及parameters大于0，则将有额外的两个包传输，分别是columns的信息以及parameters的信息，对应信息结构：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;内容 &lt;/th&gt;
-&lt;th&gt;含义&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;Field &lt;/td&gt;
-&lt;td&gt; columns信息（多个）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;EOF   &lt;/td&gt;
-&lt;td&gt; columns信息结束&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;Field &lt;/td&gt;
-&lt;td&gt; parameters（多个）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;EOF &lt;/td&gt;
-&lt;td&gt; parameters结束&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;内容 |含义
+---|---
+Field | columns信息（多个）
+EOF   | columns信息结束
+Field | parameters（多个）
+EOF | parameters结束&lt;/p&gt;
 
 &lt;p&gt;到此整个PREPARE_OK包发送完毕。&lt;/p&gt;
 
@@ -1821,64 +1156,21 @@ ps.executeQuery();
 &lt;li&gt;数据编码不再单纯的使用LengthEncodedString，而是根据数据类型的不同进行相应的编码；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;后面我会分别解释这两点，我们先来看看它的结构：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;相对包内容的位置 &lt;/th&gt;
-&lt;th&gt;长度（字节）&lt;/th&gt;
-&lt;th&gt;名称&lt;/th&gt;
-&lt;th&gt;描述&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;0 &lt;/td&gt;
-&lt;td&gt; 1 &lt;/td&gt;
-&lt;td&gt; 包头标识 &lt;/td&gt;
-&lt;td&gt;0x00&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; (col_count+7+2)/8 &lt;/td&gt;
-&lt;td&gt; Null Bit Map &lt;/td&gt;
-&lt;td&gt; 前两位为预留字节，主要用于区别与其他的几种包（OK，ERROR，EOF），在MySQL 5之后这两个字节都为0X00，其中col_count为列的数量&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;(col_count+7+2)/8 + 1 &lt;/td&gt;
-&lt;td&gt; n &lt;/td&gt;
-&lt;td&gt; column values &lt;/td&gt;
-&lt;td&gt; 具体的列值，重复多次，根据值类型编码&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;相对包内容的位置 |长度（字节）|名称|描述
+---|---|---|---
+0 | 1 | 包头标识 |0x00
+1 | (col&lt;em&gt;count+7+2)/8 | Null Bit Map | 前两位为预留字节，主要用于区别与其他的几种包（OK，ERROR，EOF），在MySQL 5之后这两个字节都为0X00，其中col&lt;/em&gt;count为列的数量
+(col_count+7+2)/8 + 1 | n | column values | 具体的列值，重复多次，根据值类型编码&lt;/p&gt;
 
 &lt;p&gt;现在我们来看一下它的两个特点，首先我们来看它是如何来定义NULL的，首先我们看到他的结构中有一个Null Bit Map，除去两个标识位，真正用于标识数据信息的就是(col_count+7)/8位字节，这里我先给出结论，后面再给大家具体分析：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;参数个数 &lt;/th&gt;
-&lt;th&gt;长度（字节）&lt;/th&gt;
-&lt;th&gt;具体值范围&lt;/th&gt;
-&lt;th&gt;描述&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;1-8 &lt;/td&gt;
-&lt;td&gt; 1 &lt;/td&gt;
-&lt;td&gt; -1, 2&lt;sup&gt;n&lt;/sup&gt;组合 &lt;/td&gt;
-&lt;td&gt; 1 = 2&lt;sup&gt;0&lt;/sup&gt;表示第一个参数为NULL，3 = 2&lt;sup&gt;0&lt;/sup&gt; + 2&lt;sup&gt;1&lt;/sup&gt;表示第一个和第二参数为NULL...&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
+&lt;p&gt;参数个数 |长度（字节）|具体值范围|描述
+---|---|---|---
+1-8 | 1 | -1, 2^n组合 | 1 = 2^0表示第一个参数为NULL，3 = 2^0 + 2^1表示第一个和第二参数为NULL...&lt;/p&gt;
 
-
-&lt;p&gt;上面给出了标识NULL的基本算法，原则是哪个参数（次序为n)为NULL，则Null Bit Map相应的值加上2&lt;sup&gt;n&lt;/sup&gt;,8个参数为一个周期，以此类推。&lt;/p&gt;
+&lt;p&gt;上面给出了标识NULL的基本算法，原则是哪个参数（次序为n)为NULL，则Null Bit Map相应的值加上2^n,8个参数为一个周期，以此类推。&lt;/p&gt;
 
 &lt;p&gt;接着我们来看一下第二点，是如何用具体值类型来对相应的值进行编码的，这里主要分为三类，基本数据类型，时间类型，字符串类型；&lt;/p&gt;
 
@@ -1888,58 +1180,21 @@ ps.executeQuery();
 &lt;li&gt;字符串类：不属于上面两类的都属于字符串类型，使用普通的LengthEncodedString；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;h4&gt;Execute包&lt;/h4&gt;
 
 &lt;p&gt;Execute包顾名思义是一个执行包，它是由Client端发送到Server端的，但它和普通的命令又有点不同，它主要是用来执行预处理语句，并会携带相应参数，具体结构如下：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;长度 &lt;/th&gt;
-&lt;th&gt;含义&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; COM_EXECUTE（标识是一个Execute包）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;4 &lt;/td&gt;
-&lt;td&gt; 预处理语句id&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; 游标类型&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;4 &lt;/td&gt;
-&lt;td&gt; 预留字节&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;0 &lt;/td&gt;
-&lt;td&gt; 接下去的内容只有在有参数的情况下&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;(param_count+7)/8 &lt;/td&gt;
-&lt;td&gt; null_bit_map（描述参数中NULL的情况）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;1 &lt;/td&gt;
-&lt;td&gt; 参数绑定情况&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;n*2 &lt;/td&gt;
-&lt;td&gt; 参数类型（依次存储）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;n &lt;/td&gt;
-&lt;td&gt; 参数具体值（非NULL)（依次存储，使用Row Data Binary方式编码）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;长度 |含义
+---|---
+1 | COM&lt;em&gt;EXECUTE（标识是一个Execute包）
+4 | 预处理语句id
+1 | 游标类型
+4 | 预留字节
+0 | 接下去的内容只有在有参数的情况下
+(param&lt;/em&gt;count+7)/8 | null&lt;em&gt;bit&lt;/em&gt;map（描述参数中NULL的情况）
+1 | 参数绑定情况
+n*2 | 参数类型（依次存储）
+n | 参数具体值（非NULL)（依次存储，使用Row Data Binary方式编码）&lt;/p&gt;
 
 &lt;p&gt;Execute包从Client端发送到Server端后可能会得到以下几个结果：&lt;/p&gt;
 
@@ -1948,7 +1203,6 @@ ps.executeQuery();
 &lt;li&gt;ERROR包&lt;/li&gt;
 &lt;li&gt;Result Set包（可能多个）&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;p&gt;我们需要根据包的不同类型来进行不同的处理。&lt;/p&gt;
 
@@ -1973,28 +1227,26 @@ ps.executeQuery();
 
 &lt;p&gt;其实Java NIO模型相对来说也还是比较简单的，它的核心主要有三个，分别是：Selector、Channel和Buffer,我们先来看看它们之间的关系：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/java-nio.png&quot; alt=&quot;java-nio&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/java-nio.png&quot; alt=&quot;java-nio&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;它们之间的关系很清晰，一个线程对应着一个Selector，一个Selector对应着多个Channel，一个Channel对应着一个Buffer，当然这只是通常的做法，一个Channel也可以对应多个Selector，一个Channel对应着多个Buffer。&lt;/p&gt;
 
 &lt;h4&gt;Selector&lt;/h4&gt;
 
 &lt;p&gt;个人认为Selector是Java NIO的最大特点，之前我们说过，传统的Java IO在面对大量IO请求的时候有心无力，因为每个维护每一个IO请求都需要一个线程，这带来的问题就是，系统资源被极度消耗，吞吐量直线下降，引起系统相关问题，那么Java NIO是如何解决这个问题的呢？答案就是Selector，简单来说它对应着多路IO复用中的监管角色，它负责统一管理IO请求，监听相应的IO事件，并通知对应的线程进行处理，这种模式下就无需为每个IO请求单独分配一个线程，另外也减少线程大量阻塞，资源利用率下降的情况，所以说Selector是Java NIO的精髓，在Java中我们可以这么写：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;c1&quot;&gt;// 打开服务器套接字通道&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ServerSocketChannel&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ServerSocketChannel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;open&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 服务器配置为非阻塞&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;configureBlocking&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 进行服务的绑定&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;bind&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;InetSocketAddress&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;localhost&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8001&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;));&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;// 打开服务器套接字通道
-ServerSocketChannel ssc = ServerSocketChannel.open();
-// 服务器配置为非阻塞
-ssc.configureBlocking(false);
-// 进行服务的绑定
-ssc.bind(new InetSocketAddress(&quot;localhost&quot;, 8001));
-
-// 通过open()方法找到Selector
-Selector selector = Selector.open();
-// 注册到selector，等待连接
-ssc.register(selector, SelectionKey.OP_ACCEPT);
-...
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;span class=&quot;c1&quot;&gt;// 通过open()方法找到Selector&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;Selector&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;open&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 注册到selector，等待连接&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;register&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SelectionKey&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;OP_ACCEPT&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;h4&gt;Channel&lt;/h4&gt;
 
 &lt;p&gt;Channel本意是通道的意思，简单来说，它在Java NIO中表现的就是一个数据通道，但是这个通道有一个特点，那就是它是双向的，也就是说，我们可以从通道里接收数据，也可以向通道里写数据，不用像Java BIO那样，读数据和写数据需要不同的数据通道，比如最常见的Inputstream和Outputstream，但是它们都是单向的，Channel作为一种全新的设计，它帮助系统以相对小的代价来保持IO请求数据传输的处理，但是它并不真正存放数据，它总是结合着缓存区（Buffer）一起使用，另外Channel主要有以下四种：&lt;/p&gt;
@@ -2005,7 +1257,6 @@ ssc.register(selector, SelectionKey.OP_ACCEPT);
 &lt;li&gt;SocketChannel：传输TCP连接数据时的通道，与Java IO中的Socket对应&lt;/li&gt;
 &lt;li&gt;ServerSocketChannel: 监听套接词连接时的通道，与Java IO中的ServerSocket对应&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;p&gt;当然其中最重要以及最常用的就是SocketChannel和ServerSocketChannel，也是Java NIO的精髓，ServerSocketChannel可以设置成非阻塞模式，然后结合Selector就可以实现多路复用IO，使用一个线程管理多个Socket连接，具体使用可以参数上面的代码。&lt;/p&gt;
 
@@ -2024,26 +1275,22 @@ ssc.register(selector, SelectionKey.OP_ACCEPT);
 &lt;li&gt;创建以及销毁的成本比较高；&lt;/li&gt;
 &lt;/ul&gt;
 
-
-&lt;p&gt;Heap Buffer：&lt;/p&gt;
+&lt;p&gt;Heap Buffer： &lt;/p&gt;
 
 &lt;ul&gt;
 &lt;li&gt;分配在Java Heap，受Java GC管理生命周期，不需要额外维护；&lt;/li&gt;
 &lt;li&gt;创建成本相对较低；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;根据它们的特性，我们可以大致总结出它们的适用场景：&lt;/p&gt;
 
 &lt;p&gt;如果这个Buffer可以重复利用，而且你也想多个字节操作，亦或者你对性能要求很高，可以选择使用Direct Buffer，但其编码相对来说会比较复杂，需要注意的点也更多，反之则用Heap Buffer，Buffer的相应创建方法：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;c1&quot;&gt;//创建Heap Buffer&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;heapBuffer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;allocate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1024&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;//创建Heap Buffer
-ByteBuffer heapBuffer = ByteBuffer.allocate(1024);
-
-//创建Direct Buffer
-ByteBuffer directBuffer = ByteBuffer.allocateDirect(1024);
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;span class=&quot;c1&quot;&gt;//创建Direct Buffer&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;directBuffer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;allocateDirect&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1024&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;下面我们来看看它的三个属性：&lt;/p&gt;
 
 &lt;ul&gt;
@@ -2052,60 +1299,47 @@ ByteBuffer directBuffer = ByteBuffer.allocateDirect(1024);
 &lt;li&gt;Position：顾名思义它的含义是位置，代表着Buffer目前操作的位置，通俗来说，就是你下次对Buffer进行操作的起始位置；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;接下来我会用一个图解的列子帮助大家理解,现在我们假设有一个容量为10的Buffer，我们先往里面写入一定字节的数据，然后再根据编码规则从其中读取我们需要的数据：&lt;/p&gt;
 
 &lt;p&gt;1.初始Buffer：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;ByteBuffer buffer = ByteBuffer.allocate(10);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/init-buffer.png&quot; alt=&quot;init-buffer&quot; /&gt;&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;buffer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ByteBuffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;allocate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/init-buffer.png&quot; alt=&quot;init-buffer&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;2.向Buffer中写入两个字节：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;buffer.put(&quot;my&quot;.getBytes());
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/write-buffer-1.png&quot; alt=&quot;write-buffer-1&quot; /&gt;&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;n&quot;&gt;buffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;my&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;getBytes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;());&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/write-buffer-1.png&quot; alt=&quot;write-buffer-1&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;3.再Buffer中写入四个字节：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;buffer.put(&quot;blog&quot;.getBytes());
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/write-buffer-2.png&quot; alt=&quot;write-buffer-2&quot; /&gt;&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;n&quot;&gt;buffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;blog&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;getBytes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;());&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/write-buffer-2.png&quot; alt=&quot;write-buffer-2&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;4.现在我们需要从Buffer中获取数据，首先我们先将写模式转换为读模式：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;  buffer.flip();
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;  &lt;span class=&quot;n&quot;&gt;buffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;flip&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;我们来看看flip()方法到底做了什么事？&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;public final Buffer flip() {
-    limit = position;
-    position = 0;
-    mark = -1;
-    return this;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Buffer&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;flip&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;limit&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;position&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;position&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;mark&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;从源码中可以看出，flip方法根据Buffer目前的相应属性来修改对应的属性，所以flip()方法之后，Buffer目前的状态：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/read-buffer.png&quot; alt=&quot;read-buffer&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/read-buffer.png&quot; alt=&quot;read-buffer&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;5.接着我们从Buffer中读取数据&lt;/p&gt;
 
 &lt;p&gt;从Buffer中读取数据有多种方式，比如get(),get(byte [])等，相关的具体方法使用可以参考Buffer的官方API文档，这里我们用最简单的get()来获取数据:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;  byte a = buffer.get();
-  byte b = buffer.get();
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;  &lt;span class=&quot;kt&quot;&gt;byte&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;buffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+  &lt;span class=&quot;kt&quot;&gt;byte&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;buffer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;此时Buffer的状态如下图所示：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/read-buffer-2.png&quot; alt=&quot;read-buffer-2&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/11/read-buffer-2.png&quot; alt=&quot;read-buffer-2&quot;&gt;&lt;/p&gt;
 
 &lt;p&gt;我们可以按照这种方式读取完我们所需数据，最终调用clear()方法将Buffer置为初始状态。&lt;/p&gt;
 
@@ -2134,7 +1368,6 @@ ByteBuffer directBuffer = ByteBuffer.allocateDirect(1024);
 &lt;li&gt;异步IO&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;那么这几种IO都有什么区别呢？下面我们一一来看，每种模型我都会举一个适当的例子助于理解：&lt;/p&gt;
 
 &lt;h4&gt;1.阻塞IO&lt;/h4&gt;
@@ -2151,7 +1384,6 @@ ByteBuffer directBuffer = ByteBuffer.allocateDirect(1024);
 &lt;li&gt;等待座位吃饭：一直阻塞，直到有座位&lt;/li&gt;
 &lt;li&gt;等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;p&gt;没什么说的，反正就是一直等，反应到程序中就是一直阻塞，而一个IO请求需要一个线程，可想而知当有大量的IO请求，线程的创建和销毁，线程间的切换，线程所占用的资源等等要耗费多少时间和资源，系统的性能会有多差。&lt;/p&gt;
 
@@ -2170,36 +1402,33 @@ ByteBuffer directBuffer = ByteBuffer.allocateDirect(1024);
 &lt;li&gt;等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;总的来说非阻塞IO的非阻塞主要体现在不需要一直等待到有数据，当然读数据那部分操作还是阻塞的，另外这种非阻塞模式需要用户线程自己不断询问检查，其实效率也不是太高，实际编程中运用的也不多。&lt;/p&gt;
 
 &lt;h4&gt;3.多路复用IO&lt;/h4&gt;
 
 &lt;p&gt;既然上面我们说到非阻塞IO的缺点，那么有没有什么方式改进呢？答案是当然有，那就是多路复用IO，我理解的它的特点就是复用，首先它也是一种非阻塞IO的模型，只不过上面说到轮询的方式用了不同的方式处理了，当一个线程发起IO请求，系统会将它注册到一个单独管理IO请求的一个线程，之后该IO的相关操作的通知状态都有这个管理IO请求的线程处理，Java 1.4发布的NIO就是这种模式，我们可以大致来看一下它的流程：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;c1&quot;&gt;// 打开服务器套接字通道&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ServerSocketChannel&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ServerSocketChannel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;open&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 服务器配置为非阻塞&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;configureBlocking&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 进行服务的绑定&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;bind&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;InetSocketAddress&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;localhost&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8008&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;));&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 这里的selector就相当于单独管理IO请求的线程&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;Selector&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;open&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// 注册到selector，等待连接&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;register&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SelectionKey&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;OP_ACCEPT&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;// 打开服务器套接字通道
-ServerSocketChannel ssc = ServerSocketChannel.open();
-// 服务器配置为非阻塞
-ssc.configureBlocking(false);
-// 进行服务的绑定
-ssc.bind(new InetSocketAddress(&quot;localhost&quot;, 8008));
-// 这里的selector就相当于单独管理IO请求的线程
-Selector selector = Selector.open();
-// 注册到selector，等待连接
-ssc.register(selector, SelectionKey.OP_ACCEPT);
-
-while (true) {
-    selector.select();  //为IO请求去轮询状态
-    Set&amp;lt;SelectionKey&amp;gt; keys = selector.selectedKeys(); //多个IO请求的状态
-    Iterator&amp;lt;SelectionKey&amp;gt; keyIterator = keys.iterator();
-    while (keyIterator.hasNext()) { //依次处理IO请求
-        SelectionKey key = keyIterator.next();
-        doThing(key)
-        ...
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;select&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//为IO请求去轮询状态&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;Set&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SelectionKey&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;keys&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;selectedKeys&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//多个IO请求的状态&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;Iterator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SelectionKey&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;keyIterator&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;keys&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;iterator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;keyIterator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;hasNext&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//依次处理IO请求&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;SelectionKey&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;key&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;keyIterator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;doThing&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;可以看出Java NIO的模式就是多路复用IO模型的应用。&lt;/p&gt;
 
 &lt;p&gt;小明多路复用IO吃饭：&lt;/p&gt;
@@ -2212,7 +1441,6 @@ while (true) {
 &lt;li&gt;领号后委托给小A，小A观察到有空位后带回小明：非阻塞，领号后可以安心去做自己的事，不用担心错过&lt;/li&gt;
 &lt;li&gt;等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;p&gt;多路复用IO可以看成普通非阻塞IO的升级版，也是目前Java编程中用到比较多的IO模型，它的优势在于可以处理大量的IO请求，用一个线程管理所有的IO请求，无需像阻塞IO和非阻塞IO一样，每个IO需要一个线程处理，提升了系统的吞吐量。&lt;/p&gt;
 
@@ -2231,14 +1459,12 @@ while (true) {
 &lt;li&gt;等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;就实际来说，信号驱动IO用的并不多，因为信号驱动IO底层是使用SIGIO信号，所以它主要使用在UDP协议上，因为UDP产生SIGIO信号的时候只有两种可能：&lt;/p&gt;
 
 &lt;ul&gt;
 &lt;li&gt;1.要么数据到达&lt;/li&gt;
 &lt;li&gt;2.发生错误&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;p&gt;但相对TCP来说，产生SIGIO信号的地方太多了，比如请求连接，确认，断开，错误等等，所以我们很难根据SIGIO信号判断到底发生了什么。&lt;/p&gt;
 
@@ -2257,14 +1483,13 @@ while (true) {
 &lt;li&gt;通知外卖到了：直接开门取外卖直接开吃，非阻塞&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;我们可以看出，异步IO才是真正的异步，因为它连数据拷贝这个过程都是非阻塞的，用户线程根本不用关心数据的读写等操作，只需等待内核线程通知后，直接处理数据即可，当然异步IO需要系统内核支持，比如Linux中的AIO和Windows中的IOCP，但是也可以通过多线程跟阻塞I/O模拟异步IO，比如可以在多路复用IO模型上进行相应的改变，另外也有现有的实现，比如异步I/O的库：libeio&lt;/p&gt;
 
 &lt;p&gt;最后用一张图总体概括一下Java IO（图片来自美团技术博客）：&lt;/p&gt;
 
 &lt;p&gt;Java IO概图：&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/10/java-io.jpg&quot; alt=&quot;java-io&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/media/images/2017/10/java-io.jpg&quot; alt=&quot;java-io&quot;&gt;&lt;/p&gt;
 
 &lt;h3&gt;多路复用IO在Linux中的实现&lt;/h3&gt;
 
@@ -2275,7 +1500,6 @@ while (true) {
 &lt;li&gt;&lt;a href=&quot;http://www.jianshu.com/p/dfd940e7fca2&quot;&gt;聊聊IO多路复用之select、poll、epoll详解&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://www.zhihu.com/question/32163005&quot;&gt;IO 多路复用是什么意思？&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
-
 
 &lt;h3&gt;总结&lt;/h3&gt;
 
@@ -2299,23 +1523,20 @@ while (true) {
 &lt;li&gt;结合业务尽量减少SQL的执行次数和查询不必要的数据；&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;h3&gt;场景实践&lt;/h3&gt;
 
 &lt;p&gt;为模拟运行场景，我这里建了一个表，并往里面添加了300w条数据，表结构如下：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;CREATE TABLE `tb_big_data` (
- `id` int(11) NOT NULL AUTO_INCREMENT,
- `weixin_id` varchar(64) NOT NULL,
- `openid` varchar(64) NOT NULL,
- `status` int(3) NOT NULL,
- `gmt_create` datetime NOT NULL,
- `gmt_modified` datetime NOT NULL,
- PRIMARY KEY (`id`),
- KEY `weixin_id_gmt_create_openid` (`weixin_id`,`gmt_create`,`openid`)
-) ENGINE=InnoDB AUTO_INCREMENT DEFAULT CHARSET=utf8
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;k&quot;&gt;CREATE&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;TABLE&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;`tb_big_data`&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+ &lt;span class=&quot;nv&quot;&gt;`id`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;AUTO_INCREMENT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+ &lt;span class=&quot;nv&quot;&gt;`weixin_id`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;varchar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;64&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+ &lt;span class=&quot;nv&quot;&gt;`openid`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;varchar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;64&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+ &lt;span class=&quot;nv&quot;&gt;`status`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+ &lt;span class=&quot;nv&quot;&gt;`gmt_create`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;datetime&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+ &lt;span class=&quot;nv&quot;&gt;`gmt_modified`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;datetime&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+ &lt;span class=&quot;k&quot;&gt;PRIMARY&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;KEY&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;`id`&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+ &lt;span class=&quot;k&quot;&gt;KEY&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;`weixin_id_gmt_create_openid`&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;`weixin_id`&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;`gmt_create`&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;`openid`&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ENGINE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;InnoDB&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;AUTO_INCREMENT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;DEFAULT&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;CHARSET&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;utf8&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;h4&gt;1.分页查询小优化&lt;/h4&gt;
 
 &lt;p&gt;分页查询老生常谈，网上各种优化方法都很多，这里就不提及了，这里只是分享一个小技巧：&lt;/p&gt;
@@ -2323,23 +1544,19 @@ while (true) {
 &lt;p&gt;&lt;strong&gt;如何在使用最普通的limit的时候提高性能？&lt;/strong&gt;&lt;/p&gt;
 
 &lt;p&gt;假设我们现在有一条这样的SQL：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;k&quot;&gt;SELECT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;FROM&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;`tb_big_data`&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;where&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;weixin_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'gh_266a30a8a1f6'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gmt_create&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'2017-10-10 00:00:00'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;order&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;by&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;asc&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;limit&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;800000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;SELECT * FROM `tb_big_data` where weixin_id ='gh_266a30a8a1f6' and gmt_create &amp;gt; '2017-10-10 00:00:00' order by id asc limit 800000, 100;
-
-执行时间：100 rows in set (1.53 sec)
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;span class=&quot;err&quot;&gt;执行时间：&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;rows&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;set&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;53&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;假如我们现在不能进行其他优化，比如传入最小id，分表查询等策略，以及不进行SQL预热，怎么提高这条SQL的速度呢？
 其实很简单我们只需要一个in操作即可：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;k&quot;&gt;SELECT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;FROM&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;`tb_big_data`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;where&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt; 
+    &lt;span class=&quot;k&quot;&gt;SELECT&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;FROM&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt; 
+        &lt;span class=&quot;k&quot;&gt;SELECT&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;FROM&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;`tb_big_data`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t2&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;where&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;weixin_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'gh_266a30a8a1f6'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gmt_create&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'2017-10-10 00:00:00'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;order&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;by&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;t2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;asc&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;limit&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;800100&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;SELECT * FROM `tb_big_data` t1 where t1.id in ( 
-    SELECT tt.id FROM ( 
-        SELECT id FROM `tb_big_data` t2 where weixin_id = 'gh_266a30a8a1f6' and gmt_create &amp;gt; '2017-10-10 00:00:00' order by t2.id asc limit 800100, 100
-        ) as tt);
-
-执行时间：100 rows in set (1.17 sec)
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;span class=&quot;err&quot;&gt;执行时间：&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;rows&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;set&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;17&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;可以看出只需稍加修改，SQL的效率可以提高30%~40%，而且在单条数据记录越大的情况下效果越好，当然这不是最好的分页方法，这只是一个小技巧；&lt;/p&gt;
 
 &lt;h4&gt;2.减少SQL查询&lt;/h4&gt;
@@ -2349,19 +1566,16 @@ while (true) {
 &lt;p&gt;这是问题其实很简单，我们首先一想到的操作就是循环这个列表一个一个判断，很简单也很好实现，但是真正测试的时候发现性能却很差，尤其在数据量大的情况下，倍数级增长，这里有有网络数据传输消耗的时间和SQL本身的执行时间；&lt;/p&gt;
 
 &lt;p&gt;假设我们现在执行一条以下的SQL：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;k&quot;&gt;SELECT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;FROM&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;`tb_big_data`&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;WHERE&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;weixin_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'gh_266a30a8a1f6'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gmt_create&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'2017-10-13 00:00:00'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;openid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'2n6bvynihm5bzgyx'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;SELECT * FROM `tb_big_data` WHERE weixin_id ='gh_266a30a8a1f6' and gmt_create &amp;gt; '2017-10-13 00:00:00' and openid='2n6bvynihm5bzgyx';
+&lt;span class=&quot;err&quot;&gt;执行时间：&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;row&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;set&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;95&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 
-执行时间：1 row in set (0.95 sec)
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;现在如果我们执行100次，不敢想象会是什么情况，庆幸自己发现了这个问题，因为在数据量少的情况下，这个问题表现的并不是那么严重，其实我们稍加改变就能以另一种高效的方式解决这个问题：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;k&quot;&gt;SELECT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;FROM&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;`tb_big_data`&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;WHERE&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;weixin_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'gh_266a30a8a1f6'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gmt_create&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'2017-10-13 00:00:00'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;openid&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'2n6bvynihm5bzgyx'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'1stbvdnl63de2q37'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'3z8552gxzfi3wy27'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;...);&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;SELECT * FROM `tb_big_data` WHERE weixin_id ='gh_266a30a8a1f6' and gmt_create &amp;gt; '2017-10-13 00:00:00' and openid in ('2n6bvynihm5bzgyx','1stbvdnl63de2q37','3z8552gxzfi3wy27'...);
-
-执行时间：100 row in set (1.05 sec)
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;span class=&quot;err&quot;&gt;执行时间：&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;row&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;set&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;05&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;发现了没有，还是用in，而且执行时间几乎与单条查询的时间一样，可见只是单一这一部分处理就可以提升了很大的性能。&lt;/p&gt;
 
 &lt;h4&gt;3.特定场景使用SQL的批处理&lt;/h4&gt;
@@ -2371,62 +1585,41 @@ while (true) {
 &lt;h5&gt;（1）批量插入&lt;/h5&gt;
 
 &lt;p&gt;批量插入比较简单，也比较常用，这里就给一下基本语法：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;INSERT INTO table_name (field1,filed2,...) values (value11,value12,...),(value21,value22,...),...
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;k&quot;&gt;INSERT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;INTO&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;table_name&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;field1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;filed2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,...)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;values&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,...),(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value21&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value22&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,...),...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;h5&gt;（2）批量更新&lt;/h5&gt;
 
 &lt;p&gt;我先举个简单的例子，我们现在来根据一些条件来更新数据，具体SQL如下：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;k&quot;&gt;update&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;`tb_big_data`&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;set&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;status&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;WHERE&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;weixin_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'gh_266a30a8a1f6'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gmt_create&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'2017-10-13 00:00:00'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;openid&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'2n6bvynihm5bzgyx'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;update `tb_big_data` set status = 2 WHERE weixin_id ='gh_266a30a8a1f6' and gmt_create &amp;gt; '2017-10-13 00:00:00' and openid = '2n6bvynihm5bzgyx';
-
-Query OK, 1 row affected (2.28 sec)
-Rows matched: 1  Changed: 1  Warnings: 0
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;span class=&quot;n&quot;&gt;Query&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;OK&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;row&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;affected&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;28&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;Rows&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;matched&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;Changed&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;Warnings&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;很惊讶，我们只是更新了一条记录，而且更新条件上是有复合索引的，没想到速度还那么慢，可以想象如果我们批量更新数据，那得耗时多少；&lt;/p&gt;
 
 &lt;p&gt;但是我们看一下另一条SQL：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;k&quot;&gt;update&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;`tb_big_data`&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;set&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;status&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;WHERE&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;900098&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;update `tb_big_data` set status = 1 WHERE id = 900098;
-
-Query OK, 1 row affected (0.00 sec)
-Rows matched: 1  Changed: 1  Warnings: 0
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;span class=&quot;n&quot;&gt;Query&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;OK&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;row&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;affected&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;00&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sec&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;Rows&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;matched&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;Changed&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;Warnings&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;上面的id值为之前条件筛选出来的记录的id，是不是很惊讶，怎么这条SQL执行的时间几乎不需要什么时间，所以我们可以利用这个特点和批量查询简化批量更新，虽然这种方式不能让性能到最优，但是也能提升很大了，我进行了一个测试，根据相应条件批量更新100条数据：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;方式&lt;/th&gt;
-&lt;th&gt;直接批量更新&lt;/th&gt;
-&lt;th&gt;先批量查主键再批量更新&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;耗时 &lt;/td&gt;
-&lt;td&gt; 289.12s &lt;/td&gt;
-&lt;td&gt; 1.342s&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;方式|直接批量更新|先批量查主键再批量更新
+---|---|---
+耗时 | 289.12s | 1.342s&lt;/p&gt;
 
 &lt;p&gt;可以看出这种方式相对对于普通方式来说，性能提升巨大，具体执行的时候我们也可以将这些SQL放在一个事务提交，减少数据库事务次数，但只这是一种在代码层面上的优化；&lt;/p&gt;
 
 &lt;p&gt;另外我们可以利用MySQL提供的特殊语法进行批量更新，具体语法为：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;o&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;语法&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;INSERT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;INTO&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;table_name&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;field1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;field2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,...)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;VALUES&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,...),(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value11&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value12&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,...),...&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;on&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;duplicate&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;key&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;update&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;field&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VAULES&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;field&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
 
-&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;#语法
-INSERT INTO table_name (id,field1,field2,...) VALUES  (id1,value11,value12,...),(id1,value11,value12,...),... on duplicate key update  field = VAULES(field);
+&lt;span class=&quot;o&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;使用例子&lt;/span&gt;
 
-#使用例子
+&lt;span class=&quot;k&quot;&gt;INSERT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;INTO&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;`tb_big_data`&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;weixin_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;openid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gmt_create&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;status&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;values&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'gh_266a30a8a1f6'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'w9q8fmodytjgppsr'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'2017-10-13 12:00:00'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'gh_266a30a8a1f6'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'bu1flmch4i8eegzf'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'2017-10-13 12:00:00'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;on&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;duplicate&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;key&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;update&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;status&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;VAULES&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;status&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
 
-INSERT INTO `tb_big_data` (id,weixin_id,openid,gmt_create,status) values  (1,'gh_266a30a8a1f6','w9q8fmodytjgppsr','2017-10-13 12:00:00',3),(2,'gh_266a30a8a1f6','bu1flmch4i8eegzf','2017-10-13 12:00:00',3) on duplicate key update status = VAULES(status);
-&lt;/code&gt;&lt;/pre&gt;
-
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;经过测试这种方式在数据量小的情况下与上述方式效率差不多，但是随着数据量越来越大，性能也越来越好，缺点的话主要传输的数据量很大，不需要更新的字段也需要传输。&lt;/p&gt;
 
 &lt;p&gt;另外也不推荐大量数据的批量更新，一次不要超过1000条为好。&lt;/p&gt;
@@ -2452,48 +1645,14 @@ INSERT INTO `tb_big_data` (id,weixin_id,openid,gmt_create,status) values  (1,'gh
 
 &lt;p&gt;我们在确定这个项目的时候，也对目前JVM生态中的数据库驱动进行了一定的总结，仅供参考：&lt;/p&gt;
 
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;项目&lt;/th&gt;
-&lt;th&gt;mysql-async&lt;/th&gt;
-&lt;th&gt;HikariCP + mysql-connector/j&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;编程模型 &lt;/td&gt;
-&lt;td&gt; 异步 &lt;/td&gt;
-&lt;td&gt; 同步&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;网络IO &lt;/td&gt;
-&lt;td&gt; NIO &lt;/td&gt;
-&lt;td&gt; BIO&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;链接池 &lt;/td&gt;
-&lt;td&gt; 异步实现 &lt;/td&gt;
-&lt;td&gt; 同步实现&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;过载防护 &lt;/td&gt;
-&lt;td&gt; 通过调节队列长度实现 &lt;/td&gt;
-&lt;td&gt; 需要额外实现 （例如指定线程池任务队列长度）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;可伸缩性 &lt;/td&gt;
-&lt;td&gt; 只需要设置合理连接数(例如几十个) &lt;/td&gt;
-&lt;td&gt; 需要测试最佳线程数和链接数&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;线程数 &lt;/td&gt;
-&lt;td&gt; 少 &lt;/td&gt;
-&lt;td&gt; 多&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
+&lt;p&gt;项目|mysql-async|HikariCP + mysql-connector/j
+---|---|---
+编程模型 | 异步 | 同步
+网络IO | NIO | BIO
+链接池 | 异步实现 | 同步实现
+过载防护 | 通过调节队列长度实现 | 需要额外实现 （例如指定线程池任务队列长度）
+可伸缩性 | 只需要设置合理连接数(例如几十个) | 需要测试最佳线程数和链接数
+线程数 | 少 | 多&lt;/p&gt;
 
 &lt;p&gt;具体相关测试及说明可以看我们写的相关系列文章&lt;a href=&quot;https://scala.cool/2017/04/mysql-async-1/&quot;&gt;MySQL 异步驱动浅析 （一）：性能分析&lt;/a&gt;。&lt;/p&gt;
 
@@ -2517,7 +1676,6 @@ INSERT INTO `tb_big_data` (id,weixin_id,openid,gmt_create,status) values  (1,'gh
 &lt;li&gt;5.提供对应Java8的接口&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;总的来说，除了第一点大家可能比较陌生，其他几点大家都应该能大致了解,但是第一点才是我们这个项目最重要的一点，也是用来解决我们之前遇到问题的关键，后续我会写几篇文章对于这一点进行的相关介绍，如果有兴趣的同学可以自己了解一下：&lt;a href=&quot;https://github.com/typelevel/cats-effect&quot;&gt;cats-effect&lt;/a&gt;&lt;/p&gt;
 
 &lt;h3&gt;关注 Asyncdb&lt;/h3&gt;
@@ -2536,270 +1694,7 @@ INSERT INTO `tb_big_data` (id,weixin_id,openid,gmt_create,status) values  (1,'gh
 &lt;li&gt;5.学习IO-Monad(cats-effect)&lt;/li&gt;
 &lt;/ul&gt;
 
-
 &lt;p&gt;最后也希望大家能参与其中，帮助我们不断的完善它，共同成长！&lt;/p&gt;
-</content>
- </entry>
- 
- <entry>
-   <title>Akka系列（十）：Akka集群之Akka Cluster</title>
-   <link href="/2017/09/05/learning-akka-10.html"/>
-   <updated>2017-09-05T00:00:00+08:00</updated>
-   <id>urn:uuid:8d2f2b63-g930-3d54-8ca7-fbvbds2a4fge</id>
-   <content type="html">&lt;p&gt;上一篇文章我们讲了Akka Remote，理解了Akka中的远程通信，其实Akka Cluster可以看成Akka Remote的扩展，由原来的两点变成由多点组成的通信网络，这种模式相信大家都很了解，就是集群，它的优势主要有两点：系统伸缩性高，容错性更好。&lt;/p&gt;
-
-&lt;h3&gt;集群概念&lt;/h3&gt;
-
-&lt;p&gt;很多人很容易把分布式和集群的概念搞错，包括我也是，我一开始也以为它们两个是一样的概念，只是叫法不同而已，但其实不然，虽然它们在实际场景中都是部署在不同的机器上，但它们所提供的功能并不是一样的。举个简单的例子来看看它们之间的不同：&lt;/p&gt;
-
-&lt;p&gt;为了保持整个系列连续性，我又以抽奖为基础举一个例子：&lt;/p&gt;
-
-&lt;p&gt;假定我们现在抽奖流程包括，抽奖分配奖品和用户根据链接领取指定奖品，用户先抽奖然后获取奖品链接，点击链接填写相应信息领取奖品。&lt;/p&gt;
-
-&lt;h4&gt;1.分布式：&lt;/h4&gt;
-
-&lt;p&gt;我们现在把抽奖分配奖品和用户根据链接领取指定奖品分别部署在两台机器上，突然有一天很不幸，抽奖活动进行到一半，抽奖分配奖品那台机子所在的区域停电了，很显然，后续的用户参与抽奖就不能进行了，因为我们只有一台抽奖分配奖品的机子，但由于我们将领取奖品的业务部署在另一台机器上，所以前面那些中奖的用户还是可以正常的领取奖品，具体相关定义可参考《分布式系统概念与设计》中对分布式系统的定义。&lt;/p&gt;
-
-&lt;h4&gt;2.集群：&lt;/h4&gt;
-
-&lt;p&gt;现在我们还是有两台机器，但是我们在两个机器上都部署了抽奖分配奖品和用户根据链接领取指定奖品的业务逻辑，突然有一天，有一台所在的区域停电了，但这时我们并担心，因为另一台服务器还是可以正常的运行处理用户的所有请求。&lt;/p&gt;
-
-&lt;p&gt;它们的各自特点：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;分布式：是指在多台不同的服务器中部署不同的服务模块，通过远程调用协同工作，对外提供服务；&lt;/li&gt;
-&lt;li&gt;集群：是指在多台不同的服务器中部署相同应用或服务模块，构成一个集群，通过负载均衡设备对外提供服务；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;总的来说： 分布式是以分离任务缩短时间来提高效率，而集群是在单位时间内处理更多的任务来提高效率。&lt;/p&gt;
-
-&lt;h3&gt;Akka Cluster&lt;/h3&gt;
-
-&lt;p&gt;在前面的文章Akka Actor的工作方式，我们可以将一个任务分解成一个个小任务，然后分配给它的子Actor执行，其实这就可以看成一个小的分布式系统，那么在Akka中，集群又是一种怎样的概念呢？&lt;/p&gt;
-
-&lt;p&gt;其实往简单里说，就是一些相同的ActorSystem的组合，它们具有着相同的功能，我们需要执行的任务可以随机的分配到目前可用的ActorSystem上，这点跟Nginx的负载均衡很类似，根据算法和配置将请求转发给运行正常的服务器去，Akka集群的表现形式也是这样，当然它背后的理论基础是基于gossip协议的，目前很多分布式的数据库的数据同步都采用这个协议，有兴趣的同学可以自己去研究研究，只是我也是一知半解，这里就不写了，怕误导了大家。&lt;/p&gt;
-
-&lt;p&gt;下面我来讲讲Akka Cluster中比较重要的几个概念：&lt;/p&gt;
-
-&lt;h4&gt;Seed Nodes&lt;/h4&gt;
-
-&lt;p&gt;Seed Nodes可以看过是种子节点或者原始节点，它的一个主要作用用于可以自动接收新加入集群的节点的信息，并与之通信，使用方式可以用配置文件或者运行时指定，推荐使用配置文件方式，比如：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;akka.cluster.seed-nodes = [
-  &quot;akka.tcp://ClusterSystem@host1:2552&quot;,
-  &quot;akka.tcp://ClusterSystem@host2:2552&quot;]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;seed-nodes列表中的第一个节点会集群启动的时候初始化，而其他节点则是在有需要时再初始化。&lt;/p&gt;
-
-&lt;p&gt;当然你也可以不指定seed nodes，但你可以需要手动或者在程序中写相关逻辑让相应的节点加入集群，具体使用方式可参考官方文档。&lt;/p&gt;
-
-&lt;h4&gt;Cluster Events&lt;/h4&gt;
-
-&lt;p&gt;Cluster Events字面意思是集群事件，那么这是什么意思呢？其实它代表着是一个节点的各种状态和操作，举个例子，假设你在打一局王者5v5的游戏，那么你可以把十个人看成一个集群，我们每个人都是一个节点，我们的任何操作和状态都能被整个系统捕获到，比如A杀了B、A超神了，A离开了游戏，A重新连接了游戏等等，这些状态和操作在Cluster Events中就相当于节点之于集群，那么它具体是怎么使用的呢？&lt;/p&gt;
-
-&lt;p&gt;首先我们必须将节点注册到集群中，或者说节点订阅了某个集群，我们可以这么做：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;cluster.subscribe(self, classOf[MemberEvent], classOf[UnreachableMember])
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;具体代码相关的使用我会再下面写一个demo例子，来说明是如何具体使用它们的。&lt;/p&gt;
-
-&lt;p&gt;从上面的代码我们可以看到有一个MemberEvent的概念，这个其实就是每个成员所可能拥有的events，那么一个成员在它的生命周期中有以下的events&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;ClusterEvent.MemberJoined - 新的节点加入集群，此时的状态是Joining；&lt;/li&gt;
-&lt;li&gt;ClusterEvent.MemberUp - 新的节点加入集群，此时的状态是Up；&lt;/li&gt;
-&lt;li&gt;ClusterEvent.MemberExited - 节点正在离开集群，此时的状态是Exiting；&lt;/li&gt;
-&lt;li&gt;ClusterEvent.MemberRemoved - 节点已经离开集群，此时的状态是Removed；&lt;/li&gt;
-&lt;li&gt;ClusterEvent.UnreachableMember - 节点被标记为不可触达；&lt;/li&gt;
-&lt;li&gt;ClusterEvent.ReachableMember - 节点被标记为可触达；&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;状态说明：
-- Joining: 加入集群的瞬间状态
-- Up: 正常服务状态
-- Leaving / Exiting: 正常移出中状态
-- Down: 被标记为停机（不再是集群决策的一部分）
-- Removed: 已从集群中移除&lt;/p&gt;
-
-&lt;h4&gt;Roles&lt;/h4&gt;
-
-&lt;p&gt;虽然上面说到集群中的各个节点的功能是一样的，其实并不一定，比如我们将分布式和集群融合到一起，集群中的一部分节点负责接收请求，一部分用于计算，一部分用于数据存储等等，所以Akka Cluster提供了一种Roles的概念，用来表示该节点的功能特性，我们可以在配置文件中指定,比如：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;akka.cluster.roles = request
-akka.cluster.roles = compute
-akka.cluster.roles = store
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;h4&gt;ClusterClient&lt;/h4&gt;
-
-&lt;p&gt;ClusterClient是一个集群客户端，主要用于集群外部系统与集群通信，使用它非常方便，我们只需要将集群中的任意指定一个节点作为集群客户端，然后将其注册为一个该集群的接待员，最后我们就可以在外部系统直接与之通信了，使用ClusterClient需要做相应的配置：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;akka.extensions = [&quot;akka.cluster.client.ClusterClientReceptionist&quot;]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;假设我们现在我一个接待的Actor，叫做frontend,我们就可以这样做：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;sacla&quot;&gt;val frontend = system.actorOf(Props[TransformationFrontend], name = &quot;frontend&quot;)
-ClusterClientReceptionist(system).registerService(frontend)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;h3&gt;Akka Cluster例子&lt;/h3&gt;
-
-&lt;p&gt;上面讲了集群概念和Akka Cluster中相对重要的概念，下面我们就来写一个Akka Cluster的demo，&lt;/p&gt;
-
-&lt;p&gt;demo需求：&lt;/p&gt;
-
-&lt;p&gt;线假设需要执行一些相同任务，频率为2s一个，现在我们需要将这些任务分配给Akka集群中的不同节点去执行，这里使用ClusterClient作为集群与外部的通信接口。&lt;/p&gt;
-
-&lt;p&gt;首先我们先来定义一些命令：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;
-package sample.cluster.transformation
-
-final case class TransformationJob(text: String) // 任务内容
-final case class TransformationResult(text: String) // 执行任务结果
-final case class JobFailed(reason: String, job: TransformationJob) //任务失败相应原因
-case object BackendRegistration // 后台具体执行任务节点注册事件
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;然后我们实现具体执行任务逻辑的后台节点：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;
-class TransformationBackend extends Actor {
-
-  val cluster = Cluster(context.system)
-
-  override def preStart(): Unit = cluster.subscribe(self, classOf[MemberEvent])  //在启动Actor时将该节点订阅到集群中
-  override def postStop(): Unit = cluster.unsubscribe(self)
-
-  def receive = {
-    case TransformationJob(text) =&amp;gt; { // 接收任务请求
-      val result = text.toUpperCase // 任务执行得到结果（将字符串转换为大写）
-      sender() ! TransformationResult(text.toUpperCase) // 向发送者返回结果
-    }
-    case state: CurrentClusterState =&amp;gt;
-      state.members.filter(_.status == MemberStatus.Up) foreach register // 根据节点状态向集群客户端注册
-    case MemberUp(m) =&amp;gt; register(m)  // 将刚处于Up状态的节点向集群客户端注册
-  }
-
-  def register(member: Member): Unit = {   //将节点注册到集群客户端
-    context.actorSelection(RootActorPath(member.address) / &quot;user&quot; / &quot;frontend&quot;) !
-      BackendRegistration
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;em&gt;相应节点的配置文件信息，我这里就不贴了，请从相应的源码demo里获取。&lt;/em&gt;&lt;a href=&quot;https://github.com/godpan/akka-demo/tree/master/Example_07&quot;&gt;源码链接&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;接着我们来实现集群客户端：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;
-class TransformationFrontend extends Actor {
-
-  var backends = IndexedSeq.empty[ActorRef] //任务后台节点列表
-  var jobCounter = 0
-
-  def receive = {
-    case job: TransformationJob if backends.isEmpty =&amp;gt;  //目前暂无执行任务节点可用
-      sender() ! JobFailed(&quot;Service unavailable, try again later&quot;, job)
-
-    case job: TransformationJob =&amp;gt; //执行相应任务
-      jobCounter += 1
-      implicit val timeout = Timeout(5 seconds)
-      val backend = backends(jobCounter % backends.size) //根据相应算法选择执行任务的节点
-      println(s&quot;the backend is ${backend} and the job is ${job}&quot;)
-      val result  = (backend ? job)
-        .map(x =&amp;gt; x.asInstanceOf[TransformationResult])  // 后台节点处理得到结果
-      result pipeTo sender  //向外部系统发送执行结果
-
-    case BackendRegistration if !backends.contains(sender()) =&amp;gt;  // 添加新的后台任务节点
-      context watch sender() //监控相应的任务节点
-      backends = backends :+ sender()
-
-    case Terminated(a) =&amp;gt;
-      backends = backends.filterNot(_ == a)  // 移除已经终止运行的节点
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt; 最后我们实现与集群客户端交互的逻辑：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;class ClientJobTransformationSendingActor extends Actor {
-
-  val initialContacts = Set(
-    ActorPath.fromString(&quot;akka.tcp://ClusterSystem@127.0.0.1:2551/system/receptionist&quot;))
-  val settings = ClusterClientSettings(context.system)
-    .withInitialContacts(initialContacts)
-
-  val c = context.system.actorOf(ClusterClient.props(settings), &quot;demo-client&quot;)
-
-
-  def receive = {
-    case TransformationResult(result) =&amp;gt; {
-      println(s&quot;Client response and the result is ${result}&quot;)
-    }
-    case Send(counter) =&amp;gt; {
-        val job = TransformationJob(&quot;hello-&quot; + counter)
-        implicit val timeout = Timeout(5 seconds)
-        val result = Patterns.ask(c,ClusterClient.Send(&quot;/user/frontend&quot;, job, localAffinity = true), timeout)
-        result.onComplete {
-          case Success(transformationResult) =&amp;gt; {
-            self ! transformationResult
-          }
-          case Failure(t) =&amp;gt; println(&quot;An error has occured: &quot; + t.getMessage)
-        }
-      }
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;下面我们开始运行这个domo：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&quot;scala&quot;&gt;object DemoClient {
-  def main(args : Array[String]) {
-
-    TransformationFrontendApp.main(Seq(&quot;2551&quot;).toArray)  //启动集群客户端
-    TransformationBackendApp.main(Seq(&quot;8001&quot;).toArray)   //启动三个后台节点
-    TransformationBackendApp.main(Seq(&quot;8002&quot;).toArray)
-    TransformationBackendApp.main(Seq(&quot;8003&quot;).toArray)
-
-    val system = ActorSystem(&quot;OTHERSYSTEM&quot;)
-    val clientJobTransformationSendingActor =
-      system.actorOf(Props[ClientJobTransformationSendingActor],
-        name = &quot;clientJobTransformationSendingActor&quot;)
-
-    val counter = new AtomicInteger
-    import system.dispatcher
-    system.scheduler.schedule(2.seconds, 2.seconds) {   //定时发送任务
-      clientJobTransformationSendingActor ! Send(counter.incrementAndGet())
-    }
-    StdIn.readLine()
-    system.terminate()
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;运行结果：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/09/akka-cluster.png&quot; alt=&quot;akka-cluster&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;从结果可以看到，我们将任务根据算法分配给不同的后台节点进行执行，最终返回结果。&lt;/p&gt;
-
-&lt;h3&gt;本文目的&lt;/h3&gt;
-
-&lt;ul&gt;
-&lt;li&gt;掌握集群基本概念&lt;/li&gt;
-&lt;li&gt;了解学习Akka cluster的工作方式和主要角色&lt;/li&gt;
-&lt;li&gt;尝试自己写一个Akka cluster的相关例子&lt;/li&gt;
-&lt;li&gt;下一步进阶了解Akka cluster的背后原理&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;p&gt;本文的demo例子已上传github：&lt;a href=&quot;https://github.com/godpan/akka-demo/tree/master/Example_07&quot;&gt;源码链接&lt;/a&gt;&lt;/p&gt;
 </content>
  </entry>
  

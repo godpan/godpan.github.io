@@ -90,7 +90,6 @@
 <li>相关编码工具类设计</li>
 </ul>
 
-
 <h3>数据包模型类设计</h3>
 
 <p>数据包模型类设计主要是将数据库传输给我们的数据包解析成我们程序中的模型类，好比你实际业务中建立的JavaBean，这些类的结构依赖于上一篇文章中解析的数据包内容，相关细节请参考上篇文章<a href="http://www.godpan.me/2017/11/10/mysql-protocol.html">MySQL网络协议分析</a>,根据具体的数据内容我们可以构建以下模型类：</p>
@@ -108,18 +107,15 @@
 <li>RowDataBinary（Binary数据结构类）</li>
 </ul>
 
-
 <p>相信看过我前篇文章的同学，对上面很多类应该比较熟悉了，比如我们定义一个OK为以下结构：</p>
-
-<pre><code class="java">public class OK implements Packet {
-    private long affectedRows; //影响行数
-    private long insertId; //自增id
-    private int serverStatus; //服务器状态
-    private String message; //额外信息
-    ...
-}
-</code></pre>
-
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">OK</span> <span class="kd">implements</span> <span class="n">Packet</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kt">long</span> <span class="n">affectedRows</span><span class="o">;</span> <span class="c1">//影响行数</span>
+    <span class="kd">private</span> <span class="kt">long</span> <span class="n">insertId</span><span class="o">;</span> <span class="c1">//自增id</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="n">serverStatus</span><span class="o">;</span> <span class="c1">//服务器状态</span>
+    <span class="kd">private</span> <span class="n">String</span> <span class="n">message</span><span class="o">;</span> <span class="c1">//额外信息</span>
+    <span class="o">...</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>其他一些相关类的结构我这边就不在贴出了，有兴趣的同学可以参考mysql-connector-java包源码，或者看我的<a href="https://github.com/godpan/java-connection-mysql">github项目</a>也行（搬砖有点不好意思...）,这部分内容是怎么解析的基础结构，充分掌握有助于后续的理解。</p>
 
 <h3>数据包解析类设计</h3>
@@ -134,35 +130,32 @@
 <li>解析结果存储</li>
 </ul>
 
-
 <p>这些元素是解析主要的需要的主要结构，可能还有一些其他的内容这里就不阐述了，所以我们可以设计下面的解析类：</p>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Parser</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">waitFor</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;();</span> <span class="c1">//接下去要解析的包类型</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="n">dataIdx</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="c1">//当前解析数据包数据块的索引</span>
+    <span class="kd">private</span> <span class="n">ByteBuffer</span> <span class="n">buffer</span> <span class="o">=</span> <span class="n">ByteBuffer</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="mi">65536</span><span class="o">);</span> <span class="c1">//临时Buffer</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="n">packetSize</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="o">;</span> <span class="c1">//包大小</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="n">itemSize</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="c1">//当前解析数据包数据块的大小</span>
+    <span class="kd">private</span> <span class="n">Packet</span> <span class="n">packet</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span> <span class="c1">//解析结果</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-<pre><code class="java">public class Parser {
-    private List&lt;Integer&gt; waitFor = new LinkedList&lt;Integer&gt;(); //接下去要解析的包类型
-    private int dataIdx = 0; //当前解析数据包数据块的索引
-    private ByteBuffer buffer = ByteBuffer.allocate(65536); //临时Buffer
-    private int packetSize = -1; //包大小
-    private int itemSize = 0; //当前解析数据包数据块的大小
-    private Packet packet = null; //解析结果
-    ...
-}
-</code></pre>
-
+</code></pre></div>
 <p>上面的属性都是解析过程需要初始值，中间变量，结果等，除了这些属性外，我们还需要有将Buffer中数据转换为我们需要数据的方法，根据MySQL协议中的编码方式，主要有以下三个方法：</p>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="kt">void</span> <span class="nf">readNullTerminated</span><span class="o">(</span><span class="n">ByteBuffer</span> <span class="n">in</span><span class="o">)</span> <span class="o">{</span>  <span class="c1">//对应NullTerminatedString（Null结尾方式）: 字符串以遇到Null作为结束标志，相应的字节为00。</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-<pre><code class="java">private void readNullTerminated(ByteBuffer in) {  //对应NullTerminatedString（Null结尾方式）: 字符串以遇到Null作为结束标志，相应的字节为00。
-    ...
-}
+<span class="kd">private</span> <span class="kt">void</span> <span class="nf">readLengthCodedBinary</span><span class="o">(</span><span class="n">ByteBuffer</span> <span class="n">in</span><span class="o">)</span> <span class="o">{</span> <span class="c1">//对应LengthEncodedInteger编码方式，根据第一个字节区分数据所占的字节长度</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-private void readLengthCodedBinary(ByteBuffer in) { //对应LengthEncodedInteger编码方式，根据第一个字节区分数据所占的字节长度
-    ...
-}
+<span class="kd">private</span> <span class="kt">void</span> <span class="nf">readLengthCodedString</span><span class="o">(</span><span class="n">ByteBuffer</span> <span class="n">in</span><span class="o">)</span> <span class="o">{</span> <span class="c1">//对应LengthEncodedString编码方式，字符串的值根据nteger + Value组成，通过计算Integer的值来获取Value的具体的长度。</span>
+     <span class="o">...</span>
+<span class="o">}</span>   
 
-private void readLengthCodedString(ByteBuffer in) { //对应LengthEncodedString编码方式，字符串的值根据nteger + Value组成，通过计算Integer的值来获取Value的具体的长度。
-     ...
-}   
-</code></pre>
-
+</code></pre></div>
 <p>有了以上的属性和相应方法后，我们便可以将服务器传来数据包解析成我们想要的数据了。</p>
 
 <h3>相关网络传输类设计</h3>
@@ -177,72 +170,68 @@ private void readLengthCodedString(ByteBuffer in) { //对应LengthEncodedString�
 <li>5.关闭数据库连接；</li>
 </ul>
 
-
 <p>基于这些需求我们可以构建出如下的Connection类：</p>
+<div class="highlight"><pre><code class="language-java" data-lang="java">
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MysqlConnection</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="n">Handshake</span> <span class="n">handshake</span><span class="o">;</span> <span class="c1">//握手初始包类</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="n">ByteBuffer</span> <span class="n">out</span> <span class="o">=</span> <span class="n">ByteBuffer</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="mi">65536</span><span class="o">);</span> <span class="err"> </span><span class="c1">//发送给服务端的数据Buffer</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="n">ByteBuffer</span> <span class="n">in</span> <span class="o">=</span> <span class="n">ByteBuffer</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="mi">65536</span><span class="o">);</span> <span class="c1">// 接收的数据Buffer</span>
+    <span class="kd">private</span> <span class="n">SocketChannel</span> <span class="n">channel</span><span class="o">;</span> <span class="c1">//异步IO传输通道</span>
+    <span class="kd">private</span> <span class="n">Parser</span> <span class="n">parser</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Parser</span><span class="o">();</span> <span class="c1">//解析类</span>
+    <span class="kd">private</span> <span class="n">String</span> <span class="n">host</span><span class="o">;</span> <span class="c1">//数据库服务器host</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="n">port</span><span class="o">;</span> <span class="c1">//数据库服务器端口</span>
+    <span class="kd">private</span> <span class="n">String</span> <span class="n">user</span><span class="o">;</span> <span class="c1">//数据库用户名</span>
+    <span class="kd">private</span> <span class="n">String</span> <span class="n">password</span><span class="o">;</span> <span class="c1">//数据库密码</span>
+    <span class="kd">private</span> <span class="n">String</span> <span class="n">database</span><span class="o">;</span> <span class="c1">//连接具体的数据库</span>
+    <span class="kd">private</span> <span class="n">Selector</span> <span class="n">selector</span><span class="o">;</span> <span class="c1">//注册channel的selector</span>
+    <span class="kd">private</span> <span class="kt">long</span> <span class="n">connectionId</span> <span class="o">=</span> <span class="mi">0L</span><span class="o">;</span> <span class="c1">//连接id</span>
+<span class="o">}</span>
 
-<pre><code class="java">
-public class MysqlConnection {
-    private Handshake handshake; //握手初始包类
-    private final ByteBuffer out = ByteBuffer.allocate(65536);  //发送给服务端的数据Buffer
-    private final ByteBuffer in = ByteBuffer.allocate(65536); // 接收的数据Buffer
-    private SocketChannel channel; //异步IO传输通道
-    private Parser parser = new Parser(); //解析类
-    private String host; //数据库服务器host
-    private int port; //数据库服务器端口
-    private String user; //数据库用户名
-    private String password; //数据库密码
-    private String database; //连接具体的数据库
-    private Selector selector; //注册channel的selector
-    private long connectionId = 0L; //连接id
-}
-</code></pre>
-
+</code></pre></div>
 <p>这些属性相应对数据库驱动稍微有所了解的人都非常熟悉，因为平常写程序经常跟他们打交道，有了上面这些属性，我们还需要一些方法，比如连接数据库，执行命令，读取数据，关闭数据库等方法，所以可以定义以下的一些方法：</p>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="kt">void</span> <span class="nf">connect</span><span class="o">()</span> <span class="o">{</span> <span class="c1">//连接数据库</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-<pre><code class="java">private void connect() { //连接数据库
-    ...
-}
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">auth</span> <span class="o">()</span> <span class="o">{</span> <span class="c1">//校验账户</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-public void auth () { //校验账户
-    ...
-}
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">query</span> <span class="o">()</span> <span class="o">{</span> <span class="c1">//执行普通查询</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-public void query () { //执行普通查询
-    ...
-}
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">update</span> <span class="o">()</span> <span class="o">{</span> <span class="c1">//执行普通更新</span>
+    <span class="o">...</span>    
+<span class="o">}</span>
 
-public void update () { //执行普通更新
-    ...    
-}
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">executeQuery</span> <span class="o">()</span> <span class="o">{</span> <span class="c1">//执行预处理查询</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-public void executeQuery () { //执行预处理查询
-    ...
-}
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">executeUpdate</span> <span class="o">()</span> <span class="o">{</span> <span class="c1">//执行预处理更新</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-public void executeUpdate () { //执行预处理更新
-    ...
-}
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">read</span> <span class="o">()</span> <span class="o">{</span> <span class="c1">//读取通道中的数据</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-public void read () { //读取通道中的数据
-    ...
-}
+<span class="kd">private</span> <span class="kt">void</span> <span class="nf">send</span> <span class="o">()</span> <span class="o">{</span> <span class="c1">//向服务器发送数据</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-private void send () { //向服务器发送数据
-    ...
-}
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">close</span><span class="o">()</span> <span class="o">{</span> <span class="c1">//关闭数据库</span>
+    <span class="o">...</span>
+<span class="o">}</span>
 
-public void close() { //关闭数据库
-    ...
-}
-</code></pre>
-
+</code></pre></div>
 <p>这都是一些必要且常用的方法，相信很多人在实际开发中都有所使用，有了以上的一些属性和方法后我们就可以搭建出一个Connection类的基本模型，至于其他一些对象，比如数据库连接池，预处理对象都是基于最基础的Connection。</p>
 
 <h3>相关编码工具类设计</h3>
 
 <p>其实上面的一些类与方法，已经能组装成一个简单的与数据库交互的驱动，但是我们知道，我们向数据库服务器发送指令的时候，并不是向我们直接在数据库终端写SQL执行那么简单，而是需要根据数据库的相应协议将我们需要执行的SQL翻译成相应的字节流再发送给数据库服务端，所以我们必须有相关的编码工具类，比如Long类型编码，NULL值编码等等，所以我们需要写相应的编码类提高我们对SQL编码的效率，它应该具有以下的功能：</p>
-
-<pre><code>public static void longEncoded(){ //long类型编码
+<div class="highlight"><pre><code class="language-" data-lang="">public static void longEncoded(){ //long类型编码
     ...
 }
 
@@ -256,15 +245,15 @@ public static void lengthEncodedStringEncoded() { //lengthEncodedString编码
 private static void dateEncoded () { //Date类型编码
     ...
 }
-</code></pre>
 
+</code></pre></div>
 <p>通常来说，上面这四种编码方式可以实现大部分场景的SQL编码了，方法的具体实现取决于实际中程序的数据类型和编码协议可参考我的上一篇文章。</p>
 
 <h2>总结</h2>
 
 <p>这篇文章主要讲解了如何去设计一个简单的数据库驱动，它最基本应该具备些什么，各个模块间又是怎么搭配的，这些内容不仅仅让我们了解与数据库通信的步骤，也可以让我们对目前使用的第三方数据库驱动有更深入的了解，最后我会画一张图里梳理了一下所有模块间的联系，帮助大家理解：</p>
 
-<p><img src="/media/images/2018/01/mysql-connection.png" alt="mysql-connection" /></p>
+<p><img src="/media/images/2018/01/mysql-connection.png" alt="mysql-connection"></p>
 
   </section>
   

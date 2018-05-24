@@ -1,12 +1,8 @@
-markdown: rdiscount
-highlighter: pygments
+# highlighter: pygments
 permalink: /:year/:month/:day/:title.html
 name: "泮"
-markdown: rdiscount
+markdown: redcarpet
 
-# author: "wayne"
-# atom-baseurl: "http://lhzhang.com"
-# disqus: "gopherwood"
 
 navigations:
   - title: Blog

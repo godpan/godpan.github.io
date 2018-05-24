@@ -91,7 +91,6 @@
 <li>异步IO</li>
 </ul>
 
-
 <p>那么这几种IO都有什么区别呢？下面我们一一来看，每种模型我都会举一个适当的例子助于理解：</p>
 
 <h4>1.阻塞IO</h4>
@@ -108,7 +107,6 @@
 <li>等待座位吃饭：一直阻塞，直到有座位</li>
 <li>等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）</li>
 </ul>
-
 
 <p>没什么说的，反正就是一直等，反应到程序中就是一直阻塞，而一个IO请求需要一个线程，可想而知当有大量的IO请求，线程的创建和销毁，线程间的切换，线程所占用的资源等等要耗费多少时间和资源，系统的性能会有多差。</p>
 
@@ -127,36 +125,33 @@
 <li>等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）</li>
 </ul>
 
-
 <p>总的来说非阻塞IO的非阻塞主要体现在不需要一直等待到有数据，当然读数据那部分操作还是阻塞的，另外这种非阻塞模式需要用户线程自己不断询问检查，其实效率也不是太高，实际编程中运用的也不多。</p>
 
 <h4>3.多路复用IO</h4>
 
 <p>既然上面我们说到非阻塞IO的缺点，那么有没有什么方式改进呢？答案是当然有，那就是多路复用IO，我理解的它的特点就是复用，首先它也是一种非阻塞IO的模型，只不过上面说到轮询的方式用了不同的方式处理了，当一个线程发起IO请求，系统会将它注册到一个单独管理IO请求的一个线程，之后该IO的相关操作的通知状态都有这个管理IO请求的线程处理，Java 1.4发布的NIO就是这种模式，我们可以大致来看一下它的流程：</p>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="c1">// 打开服务器套接字通道</span>
+<span class="n">ServerSocketChannel</span> <span class="n">ssc</span> <span class="o">=</span> <span class="n">ServerSocketChannel</span><span class="o">.</span><span class="na">open</span><span class="o">();</span>
+<span class="c1">// 服务器配置为非阻塞</span>
+<span class="n">ssc</span><span class="o">.</span><span class="na">configureBlocking</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+<span class="c1">// 进行服务的绑定</span>
+<span class="n">ssc</span><span class="o">.</span><span class="na">bind</span><span class="o">(</span><span class="k">new</span> <span class="n">InetSocketAddress</span><span class="o">(</span><span class="s">"localhost"</span><span class="o">,</span> <span class="mi">8008</span><span class="o">));</span>
+<span class="c1">// 这里的selector就相当于单独管理IO请求的线程</span>
+<span class="n">Selector</span> <span class="n">selector</span> <span class="o">=</span> <span class="n">Selector</span><span class="o">.</span><span class="na">open</span><span class="o">();</span>
+<span class="c1">// 注册到selector，等待连接</span>
+<span class="n">ssc</span><span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">selector</span><span class="o">,</span> <span class="n">SelectionKey</span><span class="o">.</span><span class="na">OP_ACCEPT</span><span class="o">);</span>
 
-<pre><code class="java">// 打开服务器套接字通道
-ServerSocketChannel ssc = ServerSocketChannel.open();
-// 服务器配置为非阻塞
-ssc.configureBlocking(false);
-// 进行服务的绑定
-ssc.bind(new InetSocketAddress("localhost", 8008));
-// 这里的selector就相当于单独管理IO请求的线程
-Selector selector = Selector.open();
-// 注册到selector，等待连接
-ssc.register(selector, SelectionKey.OP_ACCEPT);
-
-while (true) {
-    selector.select();  //为IO请求去轮询状态
-    Set&lt;SelectionKey&gt; keys = selector.selectedKeys(); //多个IO请求的状态
-    Iterator&lt;SelectionKey&gt; keyIterator = keys.iterator();
-    while (keyIterator.hasNext()) { //依次处理IO请求
-        SelectionKey key = keyIterator.next();
-        doThing(key)
-        ...
-    }
-}
-</code></pre>
-
+<span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">selector</span><span class="o">.</span><span class="na">select</span><span class="o">();</span>  <span class="c1">//为IO请求去轮询状态</span>
+    <span class="n">Set</span><span class="o">&lt;</span><span class="n">SelectionKey</span><span class="o">&gt;</span> <span class="n">keys</span> <span class="o">=</span> <span class="n">selector</span><span class="o">.</span><span class="na">selectedKeys</span><span class="o">();</span> <span class="c1">//多个IO请求的状态</span>
+    <span class="n">Iterator</span><span class="o">&lt;</span><span class="n">SelectionKey</span><span class="o">&gt;</span> <span class="n">keyIterator</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="na">iterator</span><span class="o">();</span>
+    <span class="k">while</span> <span class="o">(</span><span class="n">keyIterator</span><span class="o">.</span><span class="na">hasNext</span><span class="o">())</span> <span class="o">{</span> <span class="c1">//依次处理IO请求</span>
+        <span class="n">SelectionKey</span> <span class="n">key</span> <span class="o">=</span> <span class="n">keyIterator</span><span class="o">.</span><span class="na">next</span><span class="o">();</span>
+        <span class="n">doThing</span><span class="o">(</span><span class="n">key</span><span class="o">)</span>
+        <span class="o">...</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>可以看出Java NIO的模式就是多路复用IO模型的应用。</p>
 
 <p>小明多路复用IO吃饭：</p>
@@ -169,7 +164,6 @@ while (true) {
 <li>领号后委托给小A，小A观察到有空位后带回小明：非阻塞，领号后可以安心去做自己的事，不用担心错过</li>
 <li>等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）</li>
 </ul>
-
 
 <p>多路复用IO可以看成普通非阻塞IO的升级版，也是目前Java编程中用到比较多的IO模型，它的优势在于可以处理大量的IO请求，用一个线程管理所有的IO请求，无需像阻塞IO和非阻塞IO一样，每个IO需要一个线程处理，提升了系统的吞吐量。</p>
 
@@ -188,14 +182,12 @@ while (true) {
 <li>等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）</li>
 </ul>
 
-
 <p>就实际来说，信号驱动IO用的并不多，因为信号驱动IO底层是使用SIGIO信号，所以它主要使用在UDP协议上，因为UDP产生SIGIO信号的时候只有两种可能：</p>
 
 <ul>
 <li>1.要么数据到达</li>
 <li>2.发生错误</li>
 </ul>
-
 
 <p>但相对TCP来说，产生SIGIO信号的地方太多了，比如请求连接，确认，断开，错误等等，所以我们很难根据SIGIO信号判断到底发生了什么。</p>
 
@@ -214,14 +206,13 @@ while (true) {
 <li>通知外卖到了：直接开门取外卖直接开吃，非阻塞</li>
 </ul>
 
-
 <p>我们可以看出，异步IO才是真正的异步，因为它连数据拷贝这个过程都是非阻塞的，用户线程根本不用关心数据的读写等操作，只需等待内核线程通知后，直接处理数据即可，当然异步IO需要系统内核支持，比如Linux中的AIO和Windows中的IOCP，但是也可以通过多线程跟阻塞I/O模拟异步IO，比如可以在多路复用IO模型上进行相应的改变，另外也有现有的实现，比如异步I/O的库：libeio</p>
 
 <p>最后用一张图总体概括一下Java IO（图片来自美团技术博客）：</p>
 
 <p>Java IO概图：</p>
 
-<p><img src="/media/images/2017/10/java-io.jpg" alt="java-io" /></p>
+<p><img src="/media/images/2017/10/java-io.jpg" alt="java-io"></p>
 
 <h3>多路复用IO在Linux中的实现</h3>
 
@@ -232,7 +223,6 @@ while (true) {
 <li><a href="http://www.jianshu.com/p/dfd940e7fca2">聊聊IO多路复用之select、poll、epoll详解</a></li>
 <li><a href="https://www.zhihu.com/question/32163005">IO 多路复用是什么意思？</a></li>
 </ul>
-
 
 <h3>总结</h3>
 

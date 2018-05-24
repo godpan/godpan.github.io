@@ -89,48 +89,14 @@
 
 <p>我们在确定这个项目的时候，也对目前JVM生态中的数据库驱动进行了一定的总结，仅供参考：</p>
 
-<table>
-<thead>
-<tr>
-<th>项目</th>
-<th>mysql-async</th>
-<th>HikariCP + mysql-connector/j</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>编程模型 </td>
-<td> 异步 </td>
-<td> 同步</td>
-</tr>
-<tr>
-<td>网络IO </td>
-<td> NIO </td>
-<td> BIO</td>
-</tr>
-<tr>
-<td>链接池 </td>
-<td> 异步实现 </td>
-<td> 同步实现</td>
-</tr>
-<tr>
-<td>过载防护 </td>
-<td> 通过调节队列长度实现 </td>
-<td> 需要额外实现 （例如指定线程池任务队列长度）</td>
-</tr>
-<tr>
-<td>可伸缩性 </td>
-<td> 只需要设置合理连接数(例如几十个) </td>
-<td> 需要测试最佳线程数和链接数</td>
-</tr>
-<tr>
-<td>线程数 </td>
-<td> 少 </td>
-<td> 多</td>
-</tr>
-</tbody>
-</table>
-
+<p>项目|mysql-async|HikariCP + mysql-connector/j
+---|---|---
+编程模型 | 异步 | 同步
+网络IO | NIO | BIO
+链接池 | 异步实现 | 同步实现
+过载防护 | 通过调节队列长度实现 | 需要额外实现 （例如指定线程池任务队列长度）
+可伸缩性 | 只需要设置合理连接数(例如几十个) | 需要测试最佳线程数和链接数
+线程数 | 少 | 多</p>
 
 <p>具体相关测试及说明可以看我们写的相关系列文章<a href="https://scala.cool/2017/04/mysql-async-1/">MySQL 异步驱动浅析 （一）：性能分析</a>。</p>
 
@@ -154,7 +120,6 @@
 <li>5.提供对应Java8的接口</li>
 </ul>
 
-
 <p>总的来说，除了第一点大家可能比较陌生，其他几点大家都应该能大致了解,但是第一点才是我们这个项目最重要的一点，也是用来解决我们之前遇到问题的关键，后续我会写几篇文章对于这一点进行的相关介绍，如果有兴趣的同学可以自己了解一下：<a href="https://github.com/typelevel/cats-effect">cats-effect</a></p>
 
 <h3>关注 Asyncdb</h3>
@@ -172,7 +137,6 @@
 <li>4.学习Scala相关的函数库比如：<a href="https://github.com/typelevel/cats">cats</a>,<a href="https://github.com/milessabin/shapeless">shapeless</a></li>
 <li>5.学习IO-Monad(cats-effect)</li>
 </ul>
-
 
 <p>最后也希望大家能参与其中，帮助我们不断的完善它，共同成长！</p>
 

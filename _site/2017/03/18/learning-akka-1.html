@@ -89,14 +89,13 @@
 <li>轻量级事件处理（1GB内存可容纳百万级别个Actor）</li>
 </ul>
 
-
 <p>为什么Actor模型是一种处理并发问题的解决方案？</p>
 
 <p>一开始我也不怎么理解，脑子里的一贯思维是处理并发问题就是如何保证共享数据的一致性和正确性，为什么会有保持共享数据正确性这个问题呢？无非是我们的程序是多线程的，多个线程对同一个数据进行修改，若不加同步条件，势必会造成数据污染。那么我们是不是可以转换一下思维，用单线程去处理相应的请求，但是又有人会问了，若是用单线程处理，那系统的性能又如何保证。Actor模型的出现解决了这个问题。</p>
 
 <p>Actor模型概图：</p>
 
-<p><img src="/media/images/2017/03/actor-model.png" alt="Actor模型" /></p>
+<p><img src="/media/images/2017/03/actor-model.png" alt="Actor模型"></p>
 
 <p>从上图中我们可以看到，Actor与Actor之前只能用消息进行通信，当某一个Actor给另外一个Actor发消息，消息是有顺序的，你只需要将消息投寄的相应的邮箱，至于对方Actor怎么处理你的消息你并不知道，当然你也可等待它的回复。</p>
 
@@ -107,7 +106,6 @@
 <li>Actor是串行处理消息的</li>
 <li>Actor中的消息是不可变的</li>
 </ul>
-
 
 <p>其实只从上面一些描述来看，并不能看出Actor在处理并发问题上的有什么优势。</p>
 
@@ -133,66 +131,57 @@
 <p>1.首先创建一个基于SBT的Scala工程</p>
 
 <p><code>build.sbt</code>配置：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="n">name</span> <span class="o">:=</span> <span class="s">"Example_01"</span>
 
-<pre><code class="scala">name := "Example_01"
+<span class="n">version</span> <span class="o">:=</span> <span class="s">"1.0"</span>
 
-version := "1.0"
+<span class="n">scalaVersion</span> <span class="o">:=</span> <span class="s">"2.11.8"</span>
 
-scalaVersion := "2.11.8"
+<span class="k">val</span> <span class="n">akkaVersion</span>   <span class="k">=</span> <span class="s">"2.4.16"</span>
 
-val akkaVersion   = "2.4.16"
-
-libraryDependencies +=
-  "com.typesafe.akka" %% "akka-actor" % akkaVersion
-</code></pre>
-
+<span class="n">libraryDependencies</span> <span class="o">+=</span>
+  <span class="s">"com.typesafe.akka"</span> <span class="o">%%</span> <span class="s">"akka-actor"</span> <span class="o">%</span> <span class="n">akkaVersion</span>
+</code></pre></div>
 <p>2.我们来定义一些消息：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">trait</span> <span class="nc">Action</span><span class="o">{</span>
+  <span class="k">val</span> <span class="n">message</span><span class="k">:</span> <span class="kt">String</span>
+  <span class="k">val</span> <span class="n">time</span><span class="k">:</span> <span class="kt">Int</span>
+<span class="o">}</span>
 
-<pre><code class="scala">trait Action{
-  val message: String
-  val time: Int
-}
+<span class="k">case</span> <span class="k">class</span> <span class="nc">TurnOnLight</span><span class="o">(</span><span class="n">time</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Action</span> <span class="o">{</span>   <span class="c1">// 开灯消息
+</span>  <span class="k">val</span> <span class="n">message</span> <span class="k">=</span> <span class="s">"Turn on the living room light"</span>
+<span class="o">}</span>
 
-case class TurnOnLight(time: Int) extends Action {   // 开灯消息
-  val message = "Turn on the living room light"
-}
-
-case class BoilWater(time: Int) extends Action {   // 烧水消息
-  val message = "Burn a pot of water"
-}
-</code></pre>
-
+<span class="k">case</span> <span class="k">class</span> <span class="nc">BoilWater</span><span class="o">(</span><span class="n">time</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Action</span> <span class="o">{</span>   <span class="c1">// 烧水消息
+</span>  <span class="k">val</span> <span class="n">message</span> <span class="k">=</span> <span class="s">"Burn a pot of water"</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>3.我们利用Actor来实现一个模拟机器人：</p>
-
-<pre><code class="scala">class RobotActor extends Actor {
-  val log = Logging(context.system, this)
-  def receive: Receive = { //机器人接受指令
-    case t: TurnOnLight =&gt; log.info(s"${t.message} after ${t.time} hour")
-    case b: BoilWater =&gt; log.info(s"${b.message} after ${b.time} hour")
-    case _ =&gt; log.info("I can not handle this message")
-  }
-}
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">class</span> <span class="nc">RobotActor</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+  <span class="k">val</span> <span class="n">log</span> <span class="k">=</span> <span class="nc">Logging</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">,</span> <span class="k">this</span><span class="o">)</span>
+  <span class="k">def</span> <span class="n">receive</span><span class="k">:</span> <span class="kt">Receive</span> <span class="o">=</span> <span class="o">{</span> <span class="c1">//机器人接受指令
+</span>    <span class="k">case</span> <span class="n">t</span><span class="k">:</span> <span class="kt">TurnOnLight</span> <span class="o">=&gt;</span> <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="n">s</span><span class="s">"${t.message} after ${t.time} hour"</span><span class="o">)</span>
+    <span class="k">case</span> <span class="n">b</span><span class="k">:</span> <span class="kt">BoilWater</span> <span class="o">=&gt;</span> <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="n">s</span><span class="s">"${b.message} after ${b.time} hour"</span><span class="o">)</span>
+    <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="s">"I can not handle this message"</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>4.我们去测试这个机器人：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">object</span> <span class="nc">Example_01</span> <span class="k">extends</span> <span class="nc">App</span> <span class="o">{</span>
+  <span class="k">val</span> <span class="n">actorSyatem</span> <span class="k">=</span> <span class="nc">ActorSystem</span><span class="o">(</span><span class="s">"robot-system"</span><span class="o">)</span> 
+  <span class="k">val</span> <span class="n">robotActor</span> <span class="k">=</span> <span class="n">actorSyatem</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">Props</span><span class="o">(</span><span class="k">new</span> <span class="nc">RobotActor</span><span class="o">()),</span> <span class="s">"robotActor"</span><span class="o">)</span> <span class="c1">//创建一个机器人
+</span>  <span class="n">robotActor</span> <span class="o">!</span> <span class="nc">TurnOnLight</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="c1">//给机器人发送一个开灯命令
+</span>  <span class="n">robotActor</span> <span class="o">!</span> <span class="nc">BoilWater</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span> <span class="c1">//给机器人发送一个烧水命令
+</span>  <span class="n">robotActor</span> <span class="o">!</span> <span class="s">"who are you"</span> <span class="c1">//给机器人发送一个任意命令
+</span>  <span class="n">actorSyatem</span> <span class="n">terminate</span> <span class="o">()</span>
+<span class="o">}</span>
 
-<pre><code class="scala">object Example_01 extends App {
-  val actorSyatem = ActorSystem("robot-system") 
-  val robotActor = actorSyatem.actorOf(Props(new RobotActor()), "robotActor") //创建一个机器人
-  robotActor ! TurnOnLight(1) //给机器人发送一个开灯命令
-  robotActor ! BoilWater(2) //给机器人发送一个烧水命令
-  robotActor ! "who are you" //给机器人发送一个任意命令
-  actorSyatem terminate ()
-}
-</code></pre>
-
+</code></pre></div>
 <p>5.运行结果</p>
-
-<pre><code>[INFO] [03/19/2017 13:48:05.622] [robot-system-akka.actor.default-dispatcher-4] [akka://robot-system/user/robotActor] Turn on the living room light after 1 hour
+<div class="highlight"><pre><code class="language-" data-lang="">[INFO] [03/19/2017 13:48:05.622] [robot-system-akka.actor.default-dispatcher-4] [akka://robot-system/user/robotActor] Turn on the living room light after 1 hour
 [INFO] [03/19/2017 13:48:05.622] [robot-system-akka.actor.default-dispatcher-4] [akka://robot-system/user/robotActor] Burn a pot of water after 2 hour
 [INFO] [03/19/2017 13:48:05.622] [robot-system-akka.actor.default-dispatcher-4] [akka://robot-system/user/robotActor] I can not handle this message
-</code></pre>
-
+</code></pre></div>
 <p>上面是一个非常简单的Akka例子，我们首先创建了一个机器人的Actor，然后通过向它发送不同指令，让它根据指令去做相应的事情，大家可以自己尝试去写一写相似的例子。</p>
 
 <p>这篇就先到这里了，下一篇主要给大家讲讲Akka中Actor的分层结构。</p>

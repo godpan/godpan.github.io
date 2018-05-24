@@ -81,7 +81,7 @@
 
 <p>虽然我们掌握东西要一步一步来，但是我们在大致了解了一个东西后，会有利于我们对它的理解和学习，所以我们可以先来看一下一条消息从发出到最后被消息者接收到底经历了什么？</p>
 
-<p><img src="/media/images/2018/03/message-flow.png" alt="message-flow" /></p>
+<p><img src="/media/images/2018/03/message-flow.png" alt="message-flow"></p>
 
 <p>上图简要的说明了消息在Kafka中的整个流转过程（假设已经部署好了整个Kafka系统，并创建了相应的Topic，分区等细节后续再单独讲）：</p>
 
@@ -92,7 +92,6 @@
 <li>4.消费者根据需求订阅相关Topic，并消费消息；</li>
 </ul>
 
-
 <p>总的来说，怎么流程还是比较清晰和简单的，下面就跟我一起来练习Kafka的基本操作，最后实现一个单词计数的小demo。</p>
 
 <h2>基础操作</h2>
@@ -102,104 +101,63 @@
 <h3>下载Kafka</h3>
 
 <p>Mac系统同学可以使用brew安装：</p>
-
-<pre><code class="shell">brew install kafka
-</code></pre>
-
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">brew install kafka
+</code></pre></div>
 <p>Linux系统同学可以从官网下载源码解压，也可以直接执行以下命令:</p>
-
-<pre><code class="shell">cd 
-mkdir test-kafka &amp;&amp; cd test-kafka
+<div class="highlight"><pre><code class="language-shell" data-lang="shell"><span class="nb">cd 
+</span>mkdir <span class="nb">test</span>-kafka <span class="o">&amp;&amp;</span> <span class="nb">cd test</span>-kafka
 curl -o kafka_2.11-1.0.1.tgz http://mirrors.tuna.tsinghua.edu.cn/apache/kafka/1.0.1/kafka_2.11-1.0.1.tgz
 tar -xzf kafka_2.11-1.0.1.tgz
-cd kafka_2.11-1.0.1
-</code></pre>
+<span class="nb">cd </span>kafka_2.11-1.0.1
 
+</code></pre></div>
 <h3>启动</h3>
 
 <p>Kafka使用Zookeeper来维护集群信息，所以这里我们先要启动Zookeeper，Kafka与Zookeeper的相关联系跟结合后续再深入了解，毕竟不能一口吃成一个胖子。</p>
-
-<pre><code class="shell">bin/zookeeper-server-start.sh config/zookeeper.properties
-</code></pre>
-
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/zookeeper-server-start.sh config/zookeeper.properties
+</code></pre></div>
 <p>接着我们启动一个Kafka Server节点：</p>
-
-<pre><code class="shell">bin/kafka-server-start.sh config/server.properties
-</code></pre>
-
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-server-start.sh config/server.properties
+</code></pre></div>
 <p>这时候Kafka系统已经算是启动起来了。</p>
 
 <h3>创建Topic</h3>
 
 <p>在一切就绪之后，我们要开始做极其重要的一步，那就是创建Topic，Topic是整个系统流转的核心，另外Topic本身也包含着很多复杂的参数，比如复制因子个数，分区个数等，这里为了从简，我们将对应的参数都设为1，方便大家测试：</p>
-
-<pre><code class="shell">bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic kakfa-test
-</code></pre>
-
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic kakfa-test
+</code></pre></div>
 <p>其中参数的具体含义：</p>
 
-<table>
-<thead>
-<tr>
-<th>属性</th>
-<th>功能</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>--create </td>
-<td> 代表创建Topic</td>
-</tr>
-<tr>
-<td>--zookeeper </td>
-<td> zookeeper集群信息</td>
-</tr>
-<tr>
-<td>--replication-factor </td>
-<td> 复制因子</td>
-</tr>
-<tr>
-<td>--partitions </td>
-<td> 分区信息</td>
-</tr>
-<tr>
-<td>--topic </td>
-<td> Topic名称</td>
-</tr>
-</tbody>
-</table>
-
+<p>属性|功能
+---|---
+--create | 代表创建Topic
+--zookeeper | zookeeper集群信息
+--replication-factor | 复制因子
+--partitions | 分区信息
+--topic | Topic名称</p>
 
 <p>这时候我们已经创建好了一个叫kakfa-test的Topic了。</p>
 
 <h3>向Topic发送消息</h3>
 
 <p>在有了Topic后我们就可以向其发送消息：</p>
-
-<pre><code class="shell">bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kakfa-test
-</code></pre>
-
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kakfa-test
+</code></pre></div>
 <p>然后我们向控制台输入一些消息：</p>
-
-<pre><code>this is my first test kafka
+<div class="highlight"><pre><code class="language-" data-lang="">this is my first test kafka
 so good
-</code></pre>
-
+</code></pre></div>
 <p>这时候消息已经被发布在kakfa-test这个主题上了。</p>
 
 <h3>从Topic获取消息</h3>
 
 <p>现在Topic上已经有消息了，现在可以从中获取消息被消费：</p>
-
-<pre><code class="shell">bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic kafka-test --from-beginning
-</code></pre>
-
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic kafka-test --from-beginning
+</code></pre></div>
 <p>这时候我们可以在控制台看到：</p>
-
-<pre><code class="shell">this is my first test kafka
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">this is my first <span class="nb">test </span>kafka
 so good
-</code></pre>
-
+</code></pre></div>
 <p>至此我们就测试了最简单的Kafka Demo，希望大家能自己动手去试试，虽然很简单，但是这能让你对整个Kafka流程能更熟悉。</p>
 
 <h2>WordCount</h2>
@@ -212,78 +170,69 @@ so good
 <li>3.消费者可以从计数Topic获取相应的WordCount的结果；</li>
 </ul>
 
-
 <h3>1.启动kafka</h3>
 
 <p>与上文的启动一样，按照其操作即可。</p>
 
 <h3>2.创建输入Topic</h3>
-
-<pre><code class="shell">bin/kafka-topics.sh --zookeeper localhost:2181 --create --topic kafka-word-count-input --partitions 1 --replication-factor 1
-</code></pre>
-
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-topics.sh --zookeeper localhost:2181 --create --topic kafka-word-count-input --partitions 1 --replication-factor 1
+</code></pre></div>
 <h3>3.向Topic输入消息</h3>
-
-<pre><code class="shell">bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kafka-word-count-input
-</code></pre>
-
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kafka-word-count-input
+</code></pre></div>
 <h3>4.流处理逻辑</h3>
 
 <p>这部分内容是整个例子的核心，这部分代码有Java 8+和Scala版本，个人认为流处理用函数式语法表达的更加简洁清晰，推荐大家用函数式的思维去尝试写以下，发现自己再也不想写Java匿名内部类这种语法了。</p>
 
 <p>我们先来看一个Java 8的版本:</p>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">WordCount</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+        <span class="n">Properties</span> <span class="n">props</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Properties</span><span class="o">();</span>
+        <span class="n">props</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">StreamsConfig</span><span class="o">.</span><span class="na">APPLICATION_ID_CONFIG</span><span class="o">,</span> <span class="s">"kafka-word-count"</span><span class="o">);</span>
+        <span class="n">props</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">StreamsConfig</span><span class="o">.</span><span class="na">BOOTSTRAP_SERVERS_CONFIG</span><span class="o">,</span> <span class="s">"localhost:9092"</span><span class="o">);</span>
+        <span class="n">props</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">StreamsConfig</span><span class="o">.</span><span class="na">DEFAULT_KEY_SERDE_CLASS_CONFIG</span><span class="o">,</span> <span class="n">Serdes</span><span class="o">.</span><span class="na">String</span><span class="o">().</span><span class="na">getClass</span><span class="o">());</span>
+        <span class="n">props</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">StreamsConfig</span><span class="o">.</span><span class="na">DEFAULT_VALUE_SERDE_CLASS_CONFIG</span><span class="o">,</span> <span class="n">Serdes</span><span class="o">.</span><span class="na">String</span><span class="o">().</span><span class="na">getClass</span><span class="o">());</span>
 
-<pre><code class="java">public class WordCount {
-    public static void main(String[] args) throws Exception {
-        Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "kafka-word-count");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-
-        final StreamsBuilder builder = new StreamsBuilder();
-        KStream&lt;String, String&gt; source = builder.&lt;String, String&gt;stream("kafka-word-count-input");
-        Pattern pattern = Pattern.compile("\\W+");
-        source
-           .flatMapValues(value -&gt; Arrays.asList(pattern.split(value.toLowerCase(Locale.getDefault()))))
-           .groupBy((key, value) -&gt; value)
-           .count(Materialized.&lt;String, Long, KeyValueStore&lt;Bytes, byte[]&gt;&gt;as("counts-store")).mapValues(value-&gt;Long.toString(value))
-           .toStream()
-           .to("kafka-word-count-output");
-        final KafkaStreams streams = new KafkaStreams(builder.build(), props);
-        streams.start();
-    }
-}
-</code></pre>
-
+        <span class="kd">final</span> <span class="n">StreamsBuilder</span> <span class="n">builder</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StreamsBuilder</span><span class="o">();</span>
+        <span class="n">KStream</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span> <span class="n">source</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span><span class="n">stream</span><span class="o">(</span><span class="s">"kafka-word-count-input"</span><span class="o">);</span>
+        <span class="n">Pattern</span> <span class="n">pattern</span> <span class="o">=</span> <span class="n">Pattern</span><span class="o">.</span><span class="na">compile</span><span class="o">(</span><span class="s">"\\W+"</span><span class="o">);</span>
+        <span class="n">source</span>
+           <span class="o">.</span><span class="na">flatMapValues</span><span class="o">(</span><span class="n">value</span> <span class="o">-&gt;</span> <span class="n">Arrays</span><span class="o">.</span><span class="na">asList</span><span class="o">(</span><span class="n">pattern</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="n">value</span><span class="o">.</span><span class="na">toLowerCase</span><span class="o">(</span><span class="n">Locale</span><span class="o">.</span><span class="na">getDefault</span><span class="o">()))))</span>
+           <span class="o">.</span><span class="na">groupBy</span><span class="o">((</span><span class="n">key</span><span class="o">,</span> <span class="n">value</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">value</span><span class="o">)</span>
+           <span class="o">.</span><span class="na">count</span><span class="o">(</span><span class="n">Materialized</span><span class="o">.&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Long</span><span class="o">,</span> <span class="n">KeyValueStore</span><span class="o">&lt;</span><span class="n">Bytes</span><span class="o">,</span> <span class="kt">byte</span><span class="o">[]&gt;&gt;</span><span class="n">as</span><span class="o">(</span><span class="s">"counts-store"</span><span class="o">)).</span><span class="na">mapValues</span><span class="o">(</span><span class="n">value</span><span class="o">-&gt;</span><span class="n">Long</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="n">value</span><span class="o">))</span>
+           <span class="o">.</span><span class="na">toStream</span><span class="o">()</span>
+           <span class="o">.</span><span class="na">to</span><span class="o">(</span><span class="s">"kafka-word-count-output"</span><span class="o">);</span>
+        <span class="kd">final</span> <span class="n">KafkaStreams</span> <span class="n">streams</span> <span class="o">=</span> <span class="k">new</span> <span class="n">KafkaStreams</span><span class="o">(</span><span class="n">builder</span><span class="o">.</span><span class="na">build</span><span class="o">(),</span> <span class="n">props</span><span class="o">);</span>
+        <span class="n">streams</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>是不是很惊讶，用java也能写出如此简洁的代码，所以说如果有适用场景，推荐大家尝试的用函数式的思维去写写java代码。</p>
 
 <p>我们再来看看Scala版本的：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala">
+<span class="k">object</span> <span class="nc">WordCount</span> <span class="o">{</span>
+  <span class="k">def</span> <span class="n">main</span><span class="o">(</span><span class="n">args</span><span class="k">:</span> <span class="kt">Array</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span> <span class="o">{</span>
+    <span class="k">val</span> <span class="n">props</span><span class="k">:</span> <span class="kt">Properties</span> <span class="o">=</span> <span class="o">{</span>
+      <span class="k">val</span> <span class="n">p</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Properties</span><span class="o">()</span>
+      <span class="n">p</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">StreamsConfig</span><span class="o">.</span><span class="nc">APPLICATION_ID_CONFIG</span><span class="o">,</span> <span class="s">"kafka-word-count"</span><span class="o">)</span>
+      <span class="n">p</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">StreamsConfig</span><span class="o">.</span><span class="nc">BOOTSTRAP_SERVERS_CONFIG</span><span class="o">,</span> <span class="s">"localhost:9092"</span><span class="o">)</span>
+      <span class="n">p</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">StreamsConfig</span><span class="o">.</span><span class="nc">DEFAULT_KEY_SERDE_CLASS_CONFIG</span><span class="o">,</span> <span class="nc">Serdes</span><span class="o">.</span><span class="nc">String</span><span class="o">.</span><span class="n">getClass</span><span class="o">)</span>
+      <span class="n">p</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">StreamsConfig</span><span class="o">.</span><span class="nc">DEFAULT_VALUE_SERDE_CLASS_CONFIG</span><span class="o">,</span> <span class="nc">Serdes</span><span class="o">.</span><span class="nc">String</span><span class="o">.</span><span class="n">getClass</span><span class="o">)</span>
+      <span class="n">p</span>
+    <span class="o">}</span>
 
-<pre><code class="scala">
-object WordCount {
-  def main(args: Array[String]) {
-    val props: Properties = {
-      val p = new Properties()
-      p.put(StreamsConfig.APPLICATION_ID_CONFIG, "kafka-word-count")
-      p.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
-      p.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String.getClass)
-      p.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String.getClass)
-      p
-    }
-
-    val builder: StreamsBuilder = new StreamsBuilder()
-    val source: KStream[String, String] = builder.stream("kafka-word-count-input")
-    source
-      .flatMapValues(textLine =&gt; textLine.toLowerCase.split("\\W+").toIterable.asJava)
-      .groupBy((_, word) =&gt; word)
-      .count(Materialized.as[String, Long, KeyValueStore[Bytes, Array[Byte]]]("counts-store")).toStream.to("kafka-word-count-output")
-    val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
-    streams.start()
-  }
-}
-</code></pre>
-
+    <span class="k">val</span> <span class="n">builder</span><span class="k">:</span> <span class="kt">StreamsBuilder</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StreamsBuilder</span><span class="o">()</span>
+    <span class="k">val</span> <span class="n">source</span><span class="k">:</span> <span class="kt">KStream</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">stream</span><span class="o">(</span><span class="s">"kafka-word-count-input"</span><span class="o">)</span>
+    <span class="n">source</span>
+      <span class="o">.</span><span class="n">flatMapValues</span><span class="o">(</span><span class="n">textLine</span> <span class="k">=&gt;</span> <span class="n">textLine</span><span class="o">.</span><span class="n">toLowerCase</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="s">"\\W+"</span><span class="o">).</span><span class="n">toIterable</span><span class="o">.</span><span class="n">asJava</span><span class="o">)</span>
+      <span class="o">.</span><span class="n">groupBy</span><span class="o">((</span><span class="k">_</span><span class="o">,</span> <span class="n">word</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">word</span><span class="o">)</span>
+      <span class="o">.</span><span class="n">count</span><span class="o">(</span><span class="nc">Materialized</span><span class="o">.</span><span class="n">as</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Long</span>, <span class="kt">KeyValueStore</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Array</span><span class="o">[</span><span class="kt">Byte</span><span class="o">]]](</span><span class="s">"counts-store"</span><span class="o">)).</span><span class="n">toStream</span><span class="o">.</span><span class="n">to</span><span class="o">(</span><span class="s">"kafka-word-count-output"</span><span class="o">)</span>
+    <span class="k">val</span> <span class="n">streams</span><span class="k">:</span> <span class="kt">KafkaStreams</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">KafkaStreams</span><span class="o">(</span><span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="o">(),</span> <span class="n">props</span><span class="o">)</span>
+    <span class="n">streams</span><span class="o">.</span><span class="n">start</span><span class="o">()</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>可以发现使用Java 8函数式风格编写的代码已经跟Scala很相似了。</p>
 
 <h3>5.启动处理逻辑</h3>
@@ -294,14 +243,12 @@ object WordCount {
 
 <p>最后我们启动消费者进程，并在生产者中输入一些单词，比如：</p>
 
-<p><img src="/media/images/2018/03/kafka-word-count-input.png" alt="kafka-word-count-input" /></p>
+<p><img src="/media/images/2018/03/kafka-word-count-input.png" alt="kafka-word-count-input"></p>
 
 <p>最后我们可以在消费者进程中看到以下输出：</p>
-
-<pre><code class="shell">bin/kafka-console-consumer.sh --topic kafka-word-count-output --from-beginning --bootstrap-server localhost:9092  --property print.key=true
-</code></pre>
-
-<p><img src="/media/images/2018/03/kafka-word-count-output.png" alt="kafka-word-count-output" /></p>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-consumer.sh --topic kafka-word-count-output --from-beginning --bootstrap-server localhost:9092  --property print.key<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
+<p><img src="/media/images/2018/03/kafka-word-count-output.png" alt="kafka-word-count-output"></p>
 
 <h2>总结</h2>
 
@@ -322,7 +269,7 @@ object WordCount {
 
     <span>
     
-    <i class="fa fa-circle"></i>
+    <a href="/2018/05/24/wx-miniprogram-tips.html"><i class="fa fa-chevron-right"></i></a>
     
     </span>
   </div>

@@ -87,16 +87,14 @@
 
 <p>首先来看看一下Java内存模型的简单构图：</p>
 
-<p><img src="/media/images/2017/05/java-memory.png" alt="Java Memory" /></p>
+<p><img src="/media/images/2017/05/java-memory.png" alt="Java Memory"></p>
 
 <p>从图中我们可以看到我们线程都有自己的一个工作内存，这就好比高速缓存，它是对主内存部分数据的拷贝，线程对自己工作内存的操作速度远远快于对主内存的操作，但这也往往会引起共享变量不一致的问题，比如以下一个场景：</p>
-
-<pre><code class="java">int a = 0;
-public void setA() {
-  a = a + 1;
-}
-</code></pre>
-
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">setA</span><span class="o">()</span> <span class="o">{</span>
+  <span class="n">a</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>上面是一个很简单的例子，a是一个全局变量，然后我们有一个方法去修改这个值，每次增加一，假如我们用100个线程去运行这段代码，那a最终的结果会是多少呢？
 100？显然不一定，它可能是80，90，或者其他数，这就造成共享变量不一致的问题，那么为什么会导致这个问题呢，就是我们上面所说的，线程去修改a的时候可能就只是修改了自己工作内存中a的副本，但并没有将a的值及时的刷新到主内存中，这便会导致其他线程可能读到未被修改a的值，最终出现变量不一致问题。</p>
 
@@ -112,22 +110,17 @@ public void setA() {
 <li>synchronized关键词（这里代表了所有类似监视锁的机制）</li>
 </ul>
 
-
 <h5>1.final关键词</h5>
 
 <p>写过Java程序的同学对这个关键词应该再熟悉不过了，其基本含义就是<strong>不可变</strong>，不可变变量，比如：</p>
-
-<pre><code class="java">final int a = 10;
-final String b = "hello";
-</code></pre>
-
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">final</span> <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">10</span><span class="o">;</span>
+<span class="kd">final</span> <span class="n">String</span> <span class="n">b</span> <span class="o">=</span> <span class="s">"hello"</span><span class="o">;</span>
+</code></pre></div>
 <p>不可变的含义在于当你对这些变量或者对象赋初值后，不能再重新去赋值，但对于对象来说，我们不能修改的是它的引用，但是对象内的内容还是可以修改的。下面是一个简单的例子：</p>
-
-<pre><code class="java">final User u = new User(1,"a");
-u.id = 2; //可以修改
-u = new User(2,"b"); //不可修改
-</code></pre>
-
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">final</span> <span class="n">User</span> <span class="n">u</span> <span class="o">=</span> <span class="k">new</span> <span class="n">User</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="s">"a"</span><span class="o">);</span>
+<span class="n">u</span><span class="o">.</span><span class="na">id</span> <span class="o">=</span> <span class="mi">2</span><span class="o">;</span> <span class="c1">//可以修改</span>
+<span class="n">u</span> <span class="o">=</span> <span class="k">new</span> <span class="n">User</span><span class="o">(</span><span class="mi">2</span><span class="o">,</span><span class="s">"b"</span><span class="o">);</span> <span class="c1">//不可修改</span>
+</code></pre></div>
 <p>所以在利用final关键词用来保证共享变量的一致性时一定要了解清楚自己的需求，选择合适的方法，另外final变量必须在定义或者构建对象的时候进行初始化，不然会报错。</p>
 
 <h4>2.volatile关键词</h4>
@@ -141,15 +134,12 @@ u = new User(2,"b"); //不可修改
 <li>线程每次修改变量后的值都会及时更新到主内存中去</li>
 </ul>
 
-
 <p>举个例子：</p>
-
-<pre><code class="java">volatile int a = 0;
-public void setA() {
-  a = a + 1;
-}
-</code></pre>
-
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">volatile</span> <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">setA</span><span class="o">()</span> <span class="o">{</span>
+  <span class="n">a</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>现在线程在执行这段代码时，都会强制去主内存中读取变量的值，修改后也会马上更新到主内存中去，但是这真的能解决共享变量不一致的问题嘛，其实不然，比如我们有这么一个场景：两个线程同时读取了主内存中变量最新的值，这是我们两个线程都去执行修改操作，最后结果会是什么呢？这里就留给大家自己去思考了，其实也很简单的。</p>
 
 <p>那么volatile在什么场景下能保证线程安全，按照官方来说，有以下两个条件：</p>
@@ -158,7 +148,6 @@ public void setA() {
 <li>对变量的写操作不依赖于当前值</li>
 <li>该变量没有包含在具有其他变量的不变式中</li>
 </ul>
-
 
 <p>多的方面这里我就不展开了，推荐两篇我觉得写的还不错的文章：<a href="http://www.cnblogs.com/paddix/p/5428507.html">volatile的使用及其原理</a><a href="http://blog.csdn.net/vking_wang/article/details/9982709">volatile的适用场景</a></p>
 
@@ -180,7 +169,6 @@ public void setA() {
 <li>同一个Actor对一条消息的处理先于下一条消息处理</li>
 </ul>
 
-
 <p>第二个原则很好理解，就是上面我们说的Actor内部是串行处理消息，那我们来看看第一个原则，为什么要保证消息的发送先于消息的接收，是为了防止我们在创建消息的时候发生了不确定的错误，接收者将可能接收到不正确的消息，导致发生奇怪的异常，主要表现为消息对象未初始化完整时，若没有这条规则保证，Actor收到的消息便会不完整。</p>
 
 <p>通过前面的学习我们知道Actor是一种比线程更轻量级，抽象程度更高的一种结构，它帮我们规避了我们自己去操作线程，那么Akka底层到底是怎么帮我们去保证共享内存的一致性的呢？</p>
@@ -190,66 +178,58 @@ public void setA() {
 <h4>Mailbox</h4>
 
 <p>Mailbox在Actor模型是一个很重要的概念，我们都知道向一个Actor发送的消息首先都会被存储到它所对应的Mailbox中，那么我们先来看看MailBox的定义结构(本文所引用的代码都在akka.dispatch.Mailbox.scala中，有兴趣的同学也可以去研究一下）：</p>
-
-<pre><code class="scala">private[akka] abstract class Mailbox(val messageQueue: MessageQueue)
-  extends ForkJoinTask[Unit] with SystemMessageQueue with Runnable {}
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">private</span><span class="o">[</span><span class="kt">akka</span><span class="o">]</span> <span class="k">abstract</span> <span class="k">class</span> <span class="nc">Mailbox</span><span class="o">(</span><span class="k">val</span> <span class="n">messageQueue</span><span class="k">:</span> <span class="kt">MessageQueue</span><span class="o">)</span>
+  <span class="k">extends</span> <span class="nc">ForkJoinTask</span><span class="o">[</span><span class="kt">Unit</span><span class="o">]</span> <span class="k">with</span> <span class="nc">SystemMessageQueue</span> <span class="k">with</span> <span class="nc">Runnable</span> <span class="o">{}</span>
+</code></pre></div>
 <p>很清晰Mailbox内部维护了一个messageQueue这样的消息队列，并继承了Scala自身定义的ForkJoinTask任务执行类和我们很熟悉的Runnable接口，由此可以看出，Mailbox底层还是利用Java中的线程进行处理的。那么我们先来看看它的run方法：</p>
-
-<pre><code class="scala">override final def run(): Unit = {
-    try {
-      if (!isClosed) { //Volatile read, needed here
-        processAllSystemMessages() //First, deal with any system messages
-        processMailbox() //Then deal with messages
-      }
-    } finally {
-      setAsIdle() //Volatile write, needed here
-      dispatcher.registerForExecution(this, false, false)
-    }
-  }
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">override</span> <span class="k">final</span> <span class="k">def</span> <span class="n">run</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(!</span><span class="n">isClosed</span><span class="o">)</span> <span class="o">{</span> <span class="c1">//Volatile read, needed here
+</span>        <span class="n">processAllSystemMessages</span><span class="o">()</span> <span class="c1">//First, deal with any system messages
+</span>        <span class="n">processMailbox</span><span class="o">()</span> <span class="c1">//Then deal with messages
+</span>      <span class="o">}</span>
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+      <span class="n">setAsIdle</span><span class="o">()</span> <span class="c1">//Volatile write, needed here
+</span>      <span class="n">dispatcher</span><span class="o">.</span><span class="n">registerForExecution</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span> <span class="kc">false</span><span class="o">)</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+</code></pre></div>
 <p>为了配合理解，我们这里先来看一下定义：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="nd">@inline</span>
+  <span class="k">final</span> <span class="k">def</span> <span class="n">currentStatus</span><span class="k">:</span> <span class="kt">Mailbox.Status</span> <span class="o">=</span> <span class="nc">Unsafe</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">getIntVolatile</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="nc">AbstractMailbox</span><span class="o">.</span><span class="n">mailboxStatusOffset</span><span class="o">)</span>
 
-<pre><code class="scala">@inline
-  final def currentStatus: Mailbox.Status = Unsafe.instance.getIntVolatile(this, AbstractMailbox.mailboxStatusOffset)
-
-@inline
-  final def isClosed: Boolean = currentStatus == Closed
-</code></pre>
-
+<span class="nd">@inline</span>
+  <span class="k">final</span> <span class="k">def</span> <span class="n">isClosed</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="n">currentStatus</span> <span class="o">==</span> <span class="nc">Closed</span>
+</code></pre></div>
 <p>这里我们可以看出Mailbox本身会维护一个状态Mailbox.Status，是一个Int变量,而且是可变的，并且用到volatile来保证了它的可见性：</p>
-
-<pre><code class="scala">@volatile
-  protected var _statusDoNotCallMeDirectly: Status = _ //0 by default
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="nd">@volatile</span>
+  <span class="k">protected</span> <span class="k">var</span> <span class="nc">_statusDoNotCallMeDirectly</span><span class="k">:</span> <span class="kt">Status</span> <span class="o">=</span> <span class="k">_</span> <span class="c1">//0 by default
+</span>
+</code></pre></div>
 <p>现在我们在回去看上面的代码，run方法的执行过程，首先它会去读取MailBox此时的状态，因为是一个Volatile read，所以能保证读取到的是最新的值，然后它会先处理任何的系统消息，这部分不需要我们太过关心，之后便是执行我们发送的消息，这里我们需要详细看一下processMailbox()的实现：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala">
+<span class="nd">@tailrec</span> <span class="k">private</span> <span class="k">final</span> <span class="k">def</span> <span class="n">processMailbox</span><span class="o">(</span>
+    <span class="n">left</span><span class="k">:</span>       <span class="kt">Int</span>  <span class="o">=</span> <span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">Math</span><span class="o">.</span><span class="n">max</span><span class="o">(</span><span class="n">dispatcher</span><span class="o">.</span><span class="n">throughput</span><span class="o">,</span> <span class="mi">1</span><span class="o">),</span>
+    <span class="n">deadlineNs</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="k">if</span> <span class="o">(</span><span class="n">dispatcher</span><span class="o">.</span><span class="n">isThroughputDeadlineTimeDefined</span> <span class="o">==</span> <span class="kc">true</span><span class="o">)</span> <span class="nc">System</span><span class="o">.</span><span class="n">nanoTime</span> <span class="o">+</span> <span class="n">dispatcher</span><span class="o">.</span><span class="n">throughputDeadlineTime</span><span class="o">.</span><span class="n">toNanos</span> <span class="k">else</span> <span class="mi">0L</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">shouldProcessMessage</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">val</span> <span class="n">next</span> <span class="k">=</span> <span class="n">dequeue</span><span class="o">()</span>  <span class="c1">//去出下一条消息
+</span>      <span class="k">if</span> <span class="o">(</span><span class="n">next</span> <span class="n">ne</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">Mailbox</span><span class="o">.</span><span class="n">debug</span><span class="o">)</span> <span class="n">println</span><span class="o">(</span><span class="n">actor</span><span class="o">.</span><span class="n">self</span> <span class="o">+</span> <span class="s">" processing message "</span> <span class="o">+</span> <span class="n">next</span><span class="o">)</span>
+        <span class="n">actor</span> <span class="n">invoke</span> <span class="n">next</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">Thread</span><span class="o">.</span><span class="n">interrupted</span><span class="o">())</span>
+          <span class="k">throw</span> <span class="k">new</span> <span class="nc">InterruptedException</span><span class="o">(</span><span class="s">"Interrupted while processing actor messages"</span><span class="o">)</span>
+        <span class="n">processAllSystemMessages</span><span class="o">()</span>
+        <span class="k">if</span> <span class="o">((</span><span class="n">left</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="o">)</span> <span class="o">&amp;&amp;</span> <span class="o">((</span><span class="n">dispatcher</span><span class="o">.</span><span class="n">isThroughputDeadlineTimeDefined</span> <span class="o">==</span> <span class="kc">false</span><span class="o">)</span> <span class="o">||</span> <span class="o">(</span><span class="nc">System</span><span class="o">.</span><span class="n">nanoTime</span> <span class="o">-</span> <span class="n">deadlineNs</span><span class="o">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="o">))</span>
+          <span class="n">processMailbox</span><span class="o">(</span><span class="n">left</span> <span class="o">-</span> <span class="mi">1</span><span class="o">,</span> <span class="n">deadlineNs</span><span class="o">)</span> <span class="c1">//递归处理下一条消息
+</span>      <span class="o">}</span>
+    <span class="o">}</span>
 
-<pre><code class="scala">
-@tailrec private final def processMailbox(
-    left:       Int  = java.lang.Math.max(dispatcher.throughput, 1),
-    deadlineNs: Long = if (dispatcher.isThroughputDeadlineTimeDefined == true) System.nanoTime + dispatcher.throughputDeadlineTime.toNanos else 0L): Unit =
-    if (shouldProcessMessage) {
-      val next = dequeue()  //去出下一条消息
-      if (next ne null) {
-        if (Mailbox.debug) println(actor.self + " processing message " + next)
-        actor invoke next
-        if (Thread.interrupted())
-          throw new InterruptedException("Interrupted while processing actor messages")
-        processAllSystemMessages()
-        if ((left &gt; 1) &amp;&amp; ((dispatcher.isThroughputDeadlineTimeDefined == false) || (System.nanoTime - deadlineNs) &lt; 0))
-          processMailbox(left - 1, deadlineNs) //递归处理下一条消息
-      }
-    }
-</code></pre>
-
+</code></pre></div>
 <p>从上述代码中我们可以清晰的看到，当满足消息处理的情况下就会进行消息处理，从消息队列列取出下一条消息就是上面的<code>dequeue()</code>,然后将消息发给具体的Actor进行处理，接下去又是处理系统消息，然后判断是否还有满足情况需要下一条消息，若有则再次进行处理，可以看成一个递归操作,<code>@tailrec</code>也说明了这一点，它表示的是让编译器进行尾递归优化。</p>
 
 <p>现在我们来看一下一条消息从发送到最终处理在Akka中到底是怎么执行的，下面的内容是我通过阅读Akka源码加自身理解得出的，这里先画了一张流程图：</p>
 
-<p><img src="/media/images/2017/05/actor-process.png" alt="Actor process" /></p>
+<p><img src="/media/images/2017/05/actor-process.png" alt="Actor process"></p>
 
 <p>消息的大致流程我都在图中给出，还有一些细节，必须序列化消息，获取状态等就没有具体说明了，有兴趣的同学可以自己去阅读以下Akka的源码，个人觉得Akka的源码阅读性还是很好的，比如：</p>
 
@@ -258,32 +238,27 @@ public void setA() {
 <li>不会有过多的注释，但关键部分会给出，更能加深自己的理解</li>
 </ul>
 
-
 <p>当然也有一些困扰，我们在不了解各个类，接口之间的关系时，阅读体验就会变得很糟糕，当然我用IDEA很快就解决了这个问题。</p>
 
 <p>我们这里来看看关键的部分：<strong>Actor是如何保证串行处理消息的？</strong></p>
 
 <p>上图中有一根判定，是否已有线程在执行任务？我们来看看这个判定的具体逻辑：</p>
-
-<pre><code class="scala">@tailrec
-  final def setAsScheduled(): Boolean = {  //是否有线程正在调度执行该MailBox的任务
-    val s = currentStatus
-    /*
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="nd">@tailrec</span>
+  <span class="k">final</span> <span class="k">def</span> <span class="n">setAsScheduled</span><span class="o">()</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="o">{</span>  <span class="c1">//是否有线程正在调度执行该MailBox的任务
+</span>    <span class="k">val</span> <span class="n">s</span> <span class="k">=</span> <span class="n">currentStatus</span>
+    <span class="cm">/*
      * Only try to add Scheduled bit if pure Open/Suspended, not Closed or with
      * Scheduled bit already set.
-     */
-    if ((s &amp; shouldScheduleMask) != Open) false
-    else updateStatus(s, s | Scheduled) || setAsScheduled()
-  }
-</code></pre>
-
+     */</span>
+    <span class="k">if</span> <span class="o">((</span><span class="n">s</span> <span class="o">&amp;</span> <span class="n">shouldScheduleMask</span><span class="o">)</span> <span class="o">!=</span> <span class="nc">Open</span><span class="o">)</span> <span class="kc">false</span>
+    <span class="k">else</span> <span class="n">updateStatus</span><span class="o">(</span><span class="n">s</span><span class="o">,</span> <span class="n">s</span> <span class="o">|</span> <span class="nc">Scheduled</span><span class="o">)</span> <span class="o">||</span> <span class="n">setAsScheduled</span><span class="o">()</span>
+  <span class="o">}</span>
+</code></pre></div>
 <p>从注释和代码的逻辑上我们可以看出当已有线程在执行返回false，若没有则去更改状态为以调度，直到被其他线程抢占或者更改成功，其中updateStatus()是线程安全的，我们可以看一下它的实现,是一个CAS操作：</p>
-
-<pre><code class="scala">@inline
-  protected final def updateStatus(oldStatus: Status, newStatus: Status): Boolean =
-    Unsafe.instance.compareAndSwapInt(this, AbstractMailbox.mailboxStatusOffset, oldStatus, newStatus)
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="nd">@inline</span>
+  <span class="k">protected</span> <span class="k">final</span> <span class="k">def</span> <span class="n">updateStatus</span><span class="o">(</span><span class="n">oldStatus</span><span class="k">:</span> <span class="kt">Status</span><span class="o">,</span> <span class="n">newStatus</span><span class="k">:</span> <span class="kt">Status</span><span class="o">)</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span>
+    <span class="nc">Unsafe</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">compareAndSwapInt</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="nc">AbstractMailbox</span><span class="o">.</span><span class="n">mailboxStatusOffset</span><span class="o">,</span> <span class="n">oldStatus</span><span class="o">,</span> <span class="n">newStatus</span><span class="o">)</span>
+</code></pre></div>
 <p>到这里我们应该可以大致清楚Actor内部是如何保证共享内存的一致性了，Actor接收消息是多线程的，但处理消息是单线程的，利用MailBox中的Status来保障这一机制。</p>
 
 <h2>总结</h2>
@@ -296,7 +271,6 @@ public void setA() {
 <li>Akka并发执行的处理并没有使用线程切换，不仅提高了线程的使用效率，也大大减少了线程切换消耗</li>
 <li>Akka为我们提供了更高层次的并发抽象模型，让我们不必关心底层的实现，只需着重实现业务逻辑就行，遵循它的规范，让框架帮我们处理一切难点</li>
 </ul>
-
 
   </section>
   

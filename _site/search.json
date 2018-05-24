@@ -1,0 +1,239 @@
+[
+
+  
+    {
+      "title"			: "微信小程序第三方开发需要注意的点",
+      "link"			: "/2018/05/24/wx-miniprogram-tips.html",
+      "excerpt"		: "1.关于小程序与公众号unionid数据互通"
+    }
+  
+
+  
+    ,{
+      "title"			: "Kafka学习笔记（二） ：初探Kafka",
+      "link"			: "/2018/03/24/learning-kafka-2.html",
+      "excerpt"		: "看完上一篇，相信大家对消息系统以及Kafka的整体构成都有了初步了解，学习一个东西最好的办法，就是去使用它，今天就让我们一起窥探一下Kafka，并完成自己的处女作。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Git删除本地分支（批量删除）",
+      "link"			: "/2018/03/20/git-small-skill.html",
+      "excerpt"		: "分享一个小技巧，我们在很多时候需要删除一些本地无用分支，假如我们想要删除具体分支，我们可以这么做："
+    }
+  
+
+  
+    ,{
+      "title"			: "Kafka学习笔记（一） ：为什么需要Kafka？",
+      "link"			: "/2018/03/05/learning-kafka-1.html",
+      "excerpt"		: "我们在学习一个东西的时候，往往只有真正了解它背后的含义，才能一步一步的掌握它，直到运筹帷幄。对于Kafka来说，我也是一个小白，本篇文章我就以一个小白的角度来初探一下Kafka，本篇文章基于官方文档，顺便说一句官方文档真的很重要，且读且珍惜。"
+    }
+  
+
+  
+    ,{
+      "title"			: "MySQL驱动架构设计",
+      "link"			: "/2017/12/10/mysql-parse-architecture.html",
+      "excerpt"		: "上一篇文章我们讲了MySQL网络协议分析，包括如何与MySQL进行通信，数据包的格式等内容，今天我主要会讲讲如何设计一个MySQL解析包类库（类似mysql-connector-xxx山寨版)，本篇文章不具备实际使用意义，更多的是一种架构的设计的尝试以及可以帮助大家理解一些相应第三方包的设计，为未来更从容的应对工作中遇到的问题。"
+    }
+  
+
+  
+    ,{
+      "title"			: "MySQL网络协议分析",
+      "link"			: "/2017/11/10/mysql-protocol.html",
+      "excerpt"		: "MySQL对大家来说，都应该很熟悉了，从大学里的课程到实际工作中数据的存储查询，很多时候都需要用到数据库，很多人也写过与数据库交互的程序，在Java中你可能一开始会使用原生mysql-connector-java来进行操作，后来你会接触到Hibernate，Mybatis等ORM框架，其实它们底层也是基于mysql-connector-java，但很多时候我们并不清楚程序是怎么跟数据库具体交互的，比如执行一个SQL查询，程序是如何从MySQL中获取数据的呢？今天就让我们来看看最基础的MySQL网络协议分析。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Java IO之NIO",
+      "link"			: "/2017/11/05/java-nio.html",
+      "excerpt"		: "上篇说了最基础的五种IO模型，相信大家对IO相关的概念应该有了一定的了解，这篇文章主要讲讲基于多路复用IO的Java NIO。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Java IO初探",
+      "link"			: "/2017/10/21/java-io.html",
+      "excerpt"		: "Java IO对大多数Java程序员来说是熟悉又陌生，熟悉的是感觉到处都有它的身影，小到简单的读取文件，大到各种服务器的应用，陌生的是Java IO背后到底是一个怎样的机制，今天就让我们去了解一下这位老朋友吧。本文不讲解Java IO如何具体使用，有这方面需求的同学可以自己查下。"
+    }
+  
+
+  
+    ,{
+      "title"			: "MySQL几个简单SQL的优化",
+      "link"			: "/2017/10/13/mysql-sql-optimize.html",
+      "excerpt"		: "最近在做项目的时候，遇到了一些大数据量的操作，有大批量的CRUD的操作，一开始的实现的方案经过性能测试，发现性能并不是很好，然后开始审查代码，对相关可以提升性能的操作进行了优化，这里分享给大家。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Asyncdb（一）：写一个纯函数式的Mysql异步驱动",
+      "link"			: "/2017/10/04/mysql-driver-info.html",
+      "excerpt"		: "之前的Akka系列博客接下去可能并不会经常更新了，但是后续看到一些好的点或者大家对哪些还是比较感兴趣还会继续写几篇，这里先跟大家说明一下。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Akka系列（十）：Akka集群之Akka Cluster",
+      "link"			: "/2017/09/05/learning-akka-10.html",
+      "excerpt"		: "上一篇文章我们讲了Akka Remote，理解了Akka中的远程通信，其实Akka Cluster可以看成Akka Remote的扩展，由原来的两点变成由多点组成的通信网络，这种模式相信大家都很了解，就是集群，它的优势主要有两点：系统伸缩性高，容错性更好。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Akka系列（九）：Akka分布式之Akka Remote",
+      "link"			: "/2017/08/10/learning-akka-9.html",
+      "excerpt"		: "Akka作为一个天生用于构建分布式应用的工具，当然提供了用于分布式组件即Akka Remote，那么我们就来看看如何用Akka Remote以及Akka Serialization来构建分布式应用。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Akka系列（八）：Akka persistence设计理念之CQRS",
+      "link"			: "/2017/07/29/learning-akka-8.html",
+      "excerpt"		: "这一篇文章主要是讲解Akka persistence的核心设计理念，也是CQRS（Command Query Responsibility Segregation）架构设计的典型应用，就让我们来看看为什么Akka persistence会采用CQRS架构设计。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Akka系列（七）：Actor持久化之Akka persistence",
+      "link"			: "/2017/07/25/learning-akka-7.html",
+      "excerpt"		: "这次把这部分内容提到现在写，是因为这段时间开发的项目刚好在这一块遇到了一些难点，所以准备把经验分享给大家，我们在使用Akka时，会经常遇到一些存储Actor内部状态的场景，在系统正常运行的情况下，我们不需要担心什么，但是当系统出错，比如Actor错误需要重启，或者内存溢出，亦或者整个系统崩溃，如果我们不采取一定的方案的话，在系统重启时Actor的状态就会丢失，这会导致我们丢失一些关键的数据，造成系统数据不一致的问题。Akka作为一款成熟的生产环境应用，为我们提供了相应的解决方案就是Akka persistence。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Akka系列（六）：Actor解决了什么问题？",
+      "link"			: "/2017/07/10/learning-akka-6.html",
+      "excerpt"		: "这段时间由于忙毕业前前后后的事情，拖更了很久，表示非常抱歉，回归后的第一篇文章主要是看到了Akka最新文档中写的What problems does the actor model solve?,阅读完后觉得还是蛮不错，能简洁清晰的阐述目前并发领域遇到的问题，并为何利用Actor模型可以解决这些问题，本文主要是利用自己的理解将这篇文章进行翻译，有不足之处还请指出。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Akka系列（五）：Java和Scala中的Future",
+      "link"			: "/2017/05/15/learning-akka-5.html",
+      "excerpt"		: "随着CPU的核数的增加，异步编程模型在并发领域中的得到了越来越多的应用，由于Scala是一门函数式语言，天然的支持异步编程模型，今天主要来看一下Java和Scala中的Futrue，带你走入异步编程的大门。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Akka系列（四）：Akka中的共享内存模型",
+      "link"			: "/2017/05/01/learning-akka-4.html",
+      "excerpt"		: "通过前几篇的学习，相信大家对Akka应该有所了解了，都说解决并发哪家强，JVM上面找Akka，那么Akka到底在解决并发问题上帮我们做了什么呢？"
+    }
+  
+
+  
+    ,{
+      "title"			: "Akka系列（三）：监管与容错",
+      "link"			: "/2017/04/15/learning-akka-3.html",
+      "excerpt"		: "Akka作为一种成熟的生产环境并发解决方案，必须拥有一套完善的错误异常处理机制，本文主要讲讲Akka中的监管和容错。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Akka系列（二）：Akka中的Actor系统",
+      "link"			: "/2017/04/02/learning-akka-2.html",
+      "excerpt"		: "Actor模型作为Akka中最核心的概念，所以Actor在Akka中的组织结构也至关重要，本文主要介绍Akka中Actor系统。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Akka系列（一）：Akka简介与Actor模型",
+      "link"			: "/2017/03/18/learning-akka-1.html",
+      "excerpt"		: "Akka是一个构建在JVM上，基于Actor模型的的并发框架，为构建伸缩性强，有弹性的响应式并发应用提高更好的平台。本文主要是个人对Akka的学习和应用中的一些理解。"
+    }
+  
+
+
+
+  
+    {
+      "title"			: "Akka系列（一）：Akka简介与Actor模型",
+      "link"			: "/2017-03-18-learning-akka-1",
+      "excerpt"		: ""
+    }
+  
+
+  
+    ,{
+      "title"			: 404,
+      "link"			: "/404",
+      "excerpt"		: ""
+    }
+  
+
+  
+
+  
+    ,{
+      "title"			: "about",
+      "link"			: "/about",
+      "excerpt"		: ""
+    }
+  
+
+  
+
+  
+    ,{
+      "title"			: "blog",
+      "link"			: "/blog",
+      "excerpt"		: ""
+    }
+  
+
+  
+
+  
+    ,{
+      "title"			: "blog",
+      "link"			: "/",
+      "excerpt"		: ""
+    }
+  
+
+  
+    ,{
+      "title"			: "About me",
+      "link"			: "/about/",
+      "excerpt"		: "So Simple is a responsive Jekyll theme for your words and images."
+    }
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    ,{
+      "title"			: "tags",
+      "link"			: "/tags",
+      "excerpt"		: ""
+    }
+  
+
+]

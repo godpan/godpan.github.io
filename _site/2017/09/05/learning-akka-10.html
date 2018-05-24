@@ -100,7 +100,6 @@
 <li>集群：是指在多台不同的服务器中部署相同应用或服务模块，构成一个集群，通过负载均衡设备对外提供服务；</li>
 </ul>
 
-
 <p>总的来说： 分布式是以分离任务缩短时间来提高效率，而集群是在单位时间内处理更多的任务来提高效率。</p>
 
 <h3>Akka Cluster</h3>
@@ -114,12 +113,10 @@
 <h4>Seed Nodes</h4>
 
 <p>Seed Nodes可以看过是种子节点或者原始节点，它的一个主要作用用于可以自动接收新加入集群的节点的信息，并与之通信，使用方式可以用配置文件或者运行时指定，推荐使用配置文件方式，比如：</p>
-
-<pre><code>akka.cluster.seed-nodes = [
+<div class="highlight"><pre><code class="language-" data-lang="">akka.cluster.seed-nodes = [
   "akka.tcp://ClusterSystem@host1:2552",
   "akka.tcp://ClusterSystem@host2:2552"]
-</code></pre>
-
+</code></pre></div>
 <p>seed-nodes列表中的第一个节点会集群启动的时候初始化，而其他节点则是在有需要时再初始化。</p>
 
 <p>当然你也可以不指定seed nodes，但你可以需要手动或者在程序中写相关逻辑让相应的节点加入集群，具体使用方式可参考官方文档。</p>
@@ -129,10 +126,8 @@
 <p>Cluster Events字面意思是集群事件，那么这是什么意思呢？其实它代表着是一个节点的各种状态和操作，举个例子，假设你在打一局王者5v5的游戏，那么你可以把十个人看成一个集群，我们每个人都是一个节点，我们的任何操作和状态都能被整个系统捕获到，比如A杀了B、A超神了，A离开了游戏，A重新连接了游戏等等，这些状态和操作在Cluster Events中就相当于节点之于集群，那么它具体是怎么使用的呢？</p>
 
 <p>首先我们必须将节点注册到集群中，或者说节点订阅了某个集群，我们可以这么做：</p>
-
-<pre><code class="scala">cluster.subscribe(self, classOf[MemberEvent], classOf[UnreachableMember])
-</code></pre>
-
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="n">cluster</span><span class="o">.</span><span class="n">subscribe</span><span class="o">(</span><span class="n">self</span><span class="o">,</span> <span class="n">classOf</span><span class="o">[</span><span class="kt">MemberEvent</span><span class="o">],</span> <span class="n">classOf</span><span class="o">[</span><span class="kt">UnreachableMember</span><span class="o">])</span>
+</code></pre></div>
 <p>具体代码相关的使用我会再下面写一个demo例子，来说明是如何具体使用它们的。</p>
 
 <p>从上面的代码我们可以看到有一个MemberEvent的概念，这个其实就是每个成员所可能拥有的events，那么一个成员在它的生命周期中有以下的events</p>
@@ -146,7 +141,6 @@
 <li>ClusterEvent.ReachableMember - 节点被标记为可触达；</li>
 </ul>
 
-
 <p>状态说明：
 - Joining: 加入集群的瞬间状态
 - Up: 正常服务状态
@@ -157,25 +151,19 @@
 <h4>Roles</h4>
 
 <p>虽然上面说到集群中的各个节点的功能是一样的，其实并不一定，比如我们将分布式和集群融合到一起，集群中的一部分节点负责接收请求，一部分用于计算，一部分用于数据存储等等，所以Akka Cluster提供了一种Roles的概念，用来表示该节点的功能特性，我们可以在配置文件中指定,比如：</p>
-
-<pre><code>akka.cluster.roles = request
+<div class="highlight"><pre><code class="language-" data-lang="">akka.cluster.roles = request
 akka.cluster.roles = compute
 akka.cluster.roles = store
-</code></pre>
-
+</code></pre></div>
 <h4>ClusterClient</h4>
 
 <p>ClusterClient是一个集群客户端，主要用于集群外部系统与集群通信，使用它非常方便，我们只需要将集群中的任意指定一个节点作为集群客户端，然后将其注册为一个该集群的接待员，最后我们就可以在外部系统直接与之通信了，使用ClusterClient需要做相应的配置：</p>
-
-<pre><code>akka.extensions = ["akka.cluster.client.ClusterClientReceptionist"]
-</code></pre>
-
+<div class="highlight"><pre><code class="language-" data-lang="">akka.extensions = ["akka.cluster.client.ClusterClientReceptionist"]
+</code></pre></div>
 <p>假设我们现在我一个接待的Actor，叫做frontend,我们就可以这样做：</p>
-
-<pre><code class="sacla">val frontend = system.actorOf(Props[TransformationFrontend], name = "frontend")
+<div class="highlight"><pre><code class="language-sacla" data-lang="sacla">val frontend = system.actorOf(Props[TransformationFrontend], name = "frontend")
 ClusterClientReceptionist(system).registerService(frontend)
-</code></pre>
-
+</code></pre></div>
 <h3>Akka Cluster例子</h3>
 
 <p>上面讲了集群概念和Akka Cluster中相对重要的概念，下面我们就来写一个Akka Cluster的demo，</p>
@@ -185,136 +173,129 @@ ClusterClientReceptionist(system).registerService(frontend)
 <p>线假设需要执行一些相同任务，频率为2s一个，现在我们需要将这些任务分配给Akka集群中的不同节点去执行，这里使用ClusterClient作为集群与外部的通信接口。</p>
 
 <p>首先我们先来定义一些命令：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala">
+<span class="k">package</span> <span class="nn">sample.cluster.transformation</span>
 
-<pre><code class="scala">
-package sample.cluster.transformation
-
-final case class TransformationJob(text: String) // 任务内容
-final case class TransformationResult(text: String) // 执行任务结果
-final case class JobFailed(reason: String, job: TransformationJob) //任务失败相应原因
-case object BackendRegistration // 后台具体执行任务节点注册事件
-</code></pre>
-
+<span class="k">final</span> <span class="k">case</span> <span class="k">class</span> <span class="nc">TransformationJob</span><span class="o">(</span><span class="n">text</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="c1">// 任务内容
+</span><span class="k">final</span> <span class="k">case</span> <span class="k">class</span> <span class="nc">TransformationResult</span><span class="o">(</span><span class="n">text</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="c1">// 执行任务结果
+</span><span class="k">final</span> <span class="k">case</span> <span class="k">class</span> <span class="nc">JobFailed</span><span class="o">(</span><span class="n">reason</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">job</span><span class="k">:</span> <span class="kt">TransformationJob</span><span class="o">)</span> <span class="c1">//任务失败相应原因
+</span><span class="k">case</span> <span class="k">object</span> <span class="nc">BackendRegistration</span> <span class="c1">// 后台具体执行任务节点注册事件
+</span>
+</code></pre></div>
 <p>然后我们实现具体执行任务逻辑的后台节点：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala">
+<span class="k">class</span> <span class="nc">TransformationBackend</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
 
-<pre><code class="scala">
-class TransformationBackend extends Actor {
+  <span class="k">val</span> <span class="n">cluster</span> <span class="k">=</span> <span class="nc">Cluster</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">)</span>
 
-  val cluster = Cluster(context.system)
+  <span class="k">override</span> <span class="k">def</span> <span class="n">preStart</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">subscribe</span><span class="o">(</span><span class="n">self</span><span class="o">,</span> <span class="n">classOf</span><span class="o">[</span><span class="kt">MemberEvent</span><span class="o">])</span>  <span class="c1">//在启动Actor时将该节点订阅到集群中
+</span>  <span class="k">override</span> <span class="k">def</span> <span class="n">postStop</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">unsubscribe</span><span class="o">(</span><span class="n">self</span><span class="o">)</span>
 
-  override def preStart(): Unit = cluster.subscribe(self, classOf[MemberEvent])  //在启动Actor时将该节点订阅到集群中
-  override def postStop(): Unit = cluster.unsubscribe(self)
+  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="k">case</span> <span class="nc">TransformationJob</span><span class="o">(</span><span class="n">text</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="c1">// 接收任务请求
+</span>      <span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="n">text</span><span class="o">.</span><span class="n">toUpperCase</span> <span class="c1">// 任务执行得到结果（将字符串转换为大写）
+</span>      <span class="n">sender</span><span class="o">()</span> <span class="o">!</span> <span class="nc">TransformationResult</span><span class="o">(</span><span class="n">text</span><span class="o">.</span><span class="n">toUpperCase</span><span class="o">)</span> <span class="c1">// 向发送者返回结果
+</span>    <span class="o">}</span>
+    <span class="k">case</span> <span class="n">state</span><span class="k">:</span> <span class="kt">CurrentClusterState</span> <span class="o">=&gt;</span>
+      <span class="n">state</span><span class="o">.</span><span class="n">members</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="nc">MemberStatus</span><span class="o">.</span><span class="nc">Up</span><span class="o">)</span> <span class="n">foreach</span> <span class="n">register</span> <span class="c1">// 根据节点状态向集群客户端注册
+</span>    <span class="k">case</span> <span class="nc">MemberUp</span><span class="o">(</span><span class="n">m</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">register</span><span class="o">(</span><span class="n">m</span><span class="o">)</span>  <span class="c1">// 将刚处于Up状态的节点向集群客户端注册
+</span>  <span class="o">}</span>
 
-  def receive = {
-    case TransformationJob(text) =&gt; { // 接收任务请求
-      val result = text.toUpperCase // 任务执行得到结果（将字符串转换为大写）
-      sender() ! TransformationResult(text.toUpperCase) // 向发送者返回结果
-    }
-    case state: CurrentClusterState =&gt;
-      state.members.filter(_.status == MemberStatus.Up) foreach register // 根据节点状态向集群客户端注册
-    case MemberUp(m) =&gt; register(m)  // 将刚处于Up状态的节点向集群客户端注册
-  }
+  <span class="k">def</span> <span class="n">register</span><span class="o">(</span><span class="n">member</span><span class="k">:</span> <span class="kt">Member</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="o">{</span>   <span class="c1">//将节点注册到集群客户端
+</span>    <span class="n">context</span><span class="o">.</span><span class="n">actorSelection</span><span class="o">(</span><span class="nc">RootActorPath</span><span class="o">(</span><span class="n">member</span><span class="o">.</span><span class="n">address</span><span class="o">)</span> <span class="o">/</span> <span class="s">"user"</span> <span class="o">/</span> <span class="s">"frontend"</span><span class="o">)</span> <span class="o">!</span>
+      <span class="nc">BackendRegistration</span>
+  <span class="o">}</span>
+<span class="o">}</span>
 
-  def register(member: Member): Unit = {   //将节点注册到集群客户端
-    context.actorSelection(RootActorPath(member.address) / "user" / "frontend") !
-      BackendRegistration
-  }
-}
-</code></pre>
-
+</code></pre></div>
 <p><em>相应节点的配置文件信息，我这里就不贴了，请从相应的源码demo里获取。</em><a href="https://github.com/godpan/akka-demo/tree/master/Example_07">源码链接</a></p>
 
 <p>接着我们来实现集群客户端：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala">
+<span class="k">class</span> <span class="nc">TransformationFrontend</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
 
-<pre><code class="scala">
-class TransformationFrontend extends Actor {
+  <span class="k">var</span> <span class="n">backends</span> <span class="k">=</span> <span class="nc">IndexedSeq</span><span class="o">.</span><span class="n">empty</span><span class="o">[</span><span class="kt">ActorRef</span><span class="o">]</span> <span class="c1">//任务后台节点列表
+</span>  <span class="k">var</span> <span class="n">jobCounter</span> <span class="k">=</span> <span class="mi">0</span>
 
-  var backends = IndexedSeq.empty[ActorRef] //任务后台节点列表
-  var jobCounter = 0
+  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="k">case</span> <span class="n">job</span><span class="k">:</span> <span class="kt">TransformationJob</span> <span class="kt">if</span> <span class="kt">backends.isEmpty</span> <span class="o">=&gt;</span>  <span class="c1">//目前暂无执行任务节点可用
+</span>      <span class="n">sender</span><span class="o">()</span> <span class="o">!</span> <span class="nc">JobFailed</span><span class="o">(</span><span class="s">"Service unavailable, try again later"</span><span class="o">,</span> <span class="n">job</span><span class="o">)</span>
 
-  def receive = {
-    case job: TransformationJob if backends.isEmpty =&gt;  //目前暂无执行任务节点可用
-      sender() ! JobFailed("Service unavailable, try again later", job)
+    <span class="k">case</span> <span class="n">job</span><span class="k">:</span> <span class="kt">TransformationJob</span> <span class="o">=&gt;</span> <span class="c1">//执行相应任务
+</span>      <span class="n">jobCounter</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="k">implicit</span> <span class="k">val</span> <span class="n">timeout</span> <span class="k">=</span> <span class="nc">Timeout</span><span class="o">(</span><span class="mi">5</span> <span class="n">seconds</span><span class="o">)</span>
+      <span class="k">val</span> <span class="n">backend</span> <span class="k">=</span> <span class="n">backends</span><span class="o">(</span><span class="n">jobCounter</span> <span class="o">%</span> <span class="n">backends</span><span class="o">.</span><span class="n">size</span><span class="o">)</span> <span class="c1">//根据相应算法选择执行任务的节点
+</span>      <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">"the backend is ${backend} and the job is ${job}"</span><span class="o">)</span>
+      <span class="k">val</span> <span class="n">result</span>  <span class="k">=</span> <span class="o">(</span><span class="n">backend</span> <span class="o">?</span> <span class="n">job</span><span class="o">)</span>
+        <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">x</span> <span class="k">=&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">asInstanceOf</span><span class="o">[</span><span class="kt">TransformationResult</span><span class="o">])</span>  <span class="c1">// 后台节点处理得到结果
+</span>      <span class="n">result</span> <span class="n">pipeTo</span> <span class="n">sender</span>  <span class="c1">//向外部系统发送执行结果
+</span>
+    <span class="k">case</span> <span class="nc">BackendRegistration</span> <span class="k">if</span> <span class="o">!</span><span class="n">backends</span><span class="o">.</span><span class="n">contains</span><span class="o">(</span><span class="n">sender</span><span class="o">())</span> <span class="k">=&gt;</span>  <span class="c1">// 添加新的后台任务节点
+</span>      <span class="n">context</span> <span class="n">watch</span> <span class="n">sender</span><span class="o">()</span> <span class="c1">//监控相应的任务节点
+</span>      <span class="n">backends</span> <span class="k">=</span> <span class="n">backends</span> <span class="o">:+</span> <span class="n">sender</span><span class="o">()</span>
 
-    case job: TransformationJob =&gt; //执行相应任务
-      jobCounter += 1
-      implicit val timeout = Timeout(5 seconds)
-      val backend = backends(jobCounter % backends.size) //根据相应算法选择执行任务的节点
-      println(s"the backend is ${backend} and the job is ${job}")
-      val result  = (backend ? job)
-        .map(x =&gt; x.asInstanceOf[TransformationResult])  // 后台节点处理得到结果
-      result pipeTo sender  //向外部系统发送执行结果
+    <span class="k">case</span> <span class="nc">Terminated</span><span class="o">(</span><span class="n">a</span><span class="o">)</span> <span class="k">=&gt;</span>
+      <span class="n">backends</span> <span class="k">=</span> <span class="n">backends</span><span class="o">.</span><span class="n">filterNot</span><span class="o">(</span><span class="k">_</span> <span class="o">==</span> <span class="n">a</span><span class="o">)</span>  <span class="c1">// 移除已经终止运行的节点
+</span>  <span class="o">}</span>
+<span class="o">}</span>
 
-    case BackendRegistration if !backends.contains(sender()) =&gt;  // 添加新的后台任务节点
-      context watch sender() //监控相应的任务节点
-      backends = backends :+ sender()
+</code></pre></div>
+<p>最后我们实现与集群客户端交互的逻辑：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">class</span> <span class="nc">ClientJobTransformationSendingActor</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
 
-    case Terminated(a) =&gt;
-      backends = backends.filterNot(_ == a)  // 移除已经终止运行的节点
-  }
-}
-</code></pre>
+  <span class="k">val</span> <span class="n">initialContacts</span> <span class="k">=</span> <span class="nc">Set</span><span class="o">(</span>
+    <span class="nc">ActorPath</span><span class="o">.</span><span class="n">fromString</span><span class="o">(</span><span class="s">"akka.tcp://ClusterSystem@127.0.0.1:2551/system/receptionist"</span><span class="o">))</span>
+  <span class="k">val</span> <span class="n">settings</span> <span class="k">=</span> <span class="nc">ClusterClientSettings</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">withInitialContacts</span><span class="o">(</span><span class="n">initialContacts</span><span class="o">)</span>
 
-<p> 最后我们实现与集群客户端交互的逻辑：</p>
-
-<pre><code class="scala">class ClientJobTransformationSendingActor extends Actor {
-
-  val initialContacts = Set(
-    ActorPath.fromString("akka.tcp://ClusterSystem@127.0.0.1:2551/system/receptionist"))
-  val settings = ClusterClientSettings(context.system)
-    .withInitialContacts(initialContacts)
-
-  val c = context.system.actorOf(ClusterClient.props(settings), "demo-client")
+  <span class="k">val</span> <span class="n">c</span> <span class="k">=</span> <span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">ClusterClient</span><span class="o">.</span><span class="n">props</span><span class="o">(</span><span class="n">settings</span><span class="o">),</span> <span class="s">"demo-client"</span><span class="o">)</span>
 
 
-  def receive = {
-    case TransformationResult(result) =&gt; {
-      println(s"Client response and the result is ${result}")
-    }
-    case Send(counter) =&gt; {
-        val job = TransformationJob("hello-" + counter)
-        implicit val timeout = Timeout(5 seconds)
-        val result = Patterns.ask(c,ClusterClient.Send("/user/frontend", job, localAffinity = true), timeout)
-        result.onComplete {
-          case Success(transformationResult) =&gt; {
-            self ! transformationResult
-          }
-          case Failure(t) =&gt; println("An error has occured: " + t.getMessage)
-        }
-      }
-  }
-}
-</code></pre>
-
+  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="k">case</span> <span class="nc">TransformationResult</span><span class="o">(</span><span class="n">result</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+      <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">"Client response and the result is ${result}"</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="k">case</span> <span class="nc">Send</span><span class="o">(</span><span class="n">counter</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+        <span class="k">val</span> <span class="n">job</span> <span class="k">=</span> <span class="nc">TransformationJob</span><span class="o">(</span><span class="s">"hello-"</span> <span class="o">+</span> <span class="n">counter</span><span class="o">)</span>
+        <span class="k">implicit</span> <span class="k">val</span> <span class="n">timeout</span> <span class="k">=</span> <span class="nc">Timeout</span><span class="o">(</span><span class="mi">5</span> <span class="n">seconds</span><span class="o">)</span>
+        <span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="nc">Patterns</span><span class="o">.</span><span class="n">ask</span><span class="o">(</span><span class="n">c</span><span class="o">,</span><span class="nc">ClusterClient</span><span class="o">.</span><span class="nc">Send</span><span class="o">(</span><span class="s">"/user/frontend"</span><span class="o">,</span> <span class="n">job</span><span class="o">,</span> <span class="n">localAffinity</span> <span class="k">=</span> <span class="kc">true</span><span class="o">),</span> <span class="n">timeout</span><span class="o">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">onComplete</span> <span class="o">{</span>
+          <span class="k">case</span> <span class="nc">Success</span><span class="o">(</span><span class="n">transformationResult</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+            <span class="n">self</span> <span class="o">!</span> <span class="n">transformationResult</span>
+          <span class="o">}</span>
+          <span class="k">case</span> <span class="nc">Failure</span><span class="o">(</span><span class="n">t</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">println</span><span class="o">(</span><span class="s">"An error has occured: "</span> <span class="o">+</span> <span class="n">t</span><span class="o">.</span><span class="n">getMessage</span><span class="o">)</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>下面我们开始运行这个domo：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">object</span> <span class="nc">DemoClient</span> <span class="o">{</span>
+  <span class="k">def</span> <span class="n">main</span><span class="o">(</span><span class="n">args</span> <span class="k">:</span> <span class="kt">Array</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span> <span class="o">{</span>
 
-<pre><code class="scala">object DemoClient {
-  def main(args : Array[String]) {
+    <span class="nc">TransformationFrontendApp</span><span class="o">.</span><span class="n">main</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="s">"2551"</span><span class="o">).</span><span class="n">toArray</span><span class="o">)</span>  <span class="c1">//启动集群客户端
+</span>    <span class="nc">TransformationBackendApp</span><span class="o">.</span><span class="n">main</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="s">"8001"</span><span class="o">).</span><span class="n">toArray</span><span class="o">)</span>   <span class="c1">//启动三个后台节点
+</span>    <span class="nc">TransformationBackendApp</span><span class="o">.</span><span class="n">main</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="s">"8002"</span><span class="o">).</span><span class="n">toArray</span><span class="o">)</span>
+    <span class="nc">TransformationBackendApp</span><span class="o">.</span><span class="n">main</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="s">"8003"</span><span class="o">).</span><span class="n">toArray</span><span class="o">)</span>
 
-    TransformationFrontendApp.main(Seq("2551").toArray)  //启动集群客户端
-    TransformationBackendApp.main(Seq("8001").toArray)   //启动三个后台节点
-    TransformationBackendApp.main(Seq("8002").toArray)
-    TransformationBackendApp.main(Seq("8003").toArray)
+    <span class="k">val</span> <span class="n">system</span> <span class="k">=</span> <span class="nc">ActorSystem</span><span class="o">(</span><span class="s">"OTHERSYSTEM"</span><span class="o">)</span>
+    <span class="k">val</span> <span class="n">clientJobTransformationSendingActor</span> <span class="k">=</span>
+      <span class="n">system</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">Props</span><span class="o">[</span><span class="kt">ClientJobTransformationSendingActor</span><span class="o">],</span>
+        <span class="n">name</span> <span class="k">=</span> <span class="s">"clientJobTransformationSendingActor"</span><span class="o">)</span>
 
-    val system = ActorSystem("OTHERSYSTEM")
-    val clientJobTransformationSendingActor =
-      system.actorOf(Props[ClientJobTransformationSendingActor],
-        name = "clientJobTransformationSendingActor")
-
-    val counter = new AtomicInteger
-    import system.dispatcher
-    system.scheduler.schedule(2.seconds, 2.seconds) {   //定时发送任务
-      clientJobTransformationSendingActor ! Send(counter.incrementAndGet())
-    }
-    StdIn.readLine()
-    system.terminate()
-  }
-}
-</code></pre>
-
+    <span class="k">val</span> <span class="n">counter</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span>
+    <span class="k">import</span> <span class="nn">system.dispatcher</span>
+    <span class="n">system</span><span class="o">.</span><span class="n">scheduler</span><span class="o">.</span><span class="n">schedule</span><span class="o">(</span><span class="mf">2.</span><span class="n">seconds</span><span class="o">,</span> <span class="mf">2.</span><span class="n">seconds</span><span class="o">)</span> <span class="o">{</span>   <span class="c1">//定时发送任务
+</span>      <span class="n">clientJobTransformationSendingActor</span> <span class="o">!</span> <span class="nc">Send</span><span class="o">(</span><span class="n">counter</span><span class="o">.</span><span class="n">incrementAndGet</span><span class="o">())</span>
+    <span class="o">}</span>
+    <span class="nc">StdIn</span><span class="o">.</span><span class="n">readLine</span><span class="o">()</span>
+    <span class="n">system</span><span class="o">.</span><span class="n">terminate</span><span class="o">()</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div>
 <p>运行结果：</p>
 
-<p><img src="/media/images/2017/09/akka-cluster.png" alt="akka-cluster" /></p>
+<p><img src="/media/images/2017/09/akka-cluster.png" alt="akka-cluster"></p>
 
 <p>从结果可以看到，我们将任务根据算法分配给不同的后台节点进行执行，最终返回结果。</p>
 
@@ -326,7 +307,6 @@ class TransformationFrontend extends Actor {
 <li>尝试自己写一个Akka cluster的相关例子</li>
 <li>下一步进阶了解Akka cluster的背后原理</li>
 </ul>
-
 
 <p>本文的demo例子已上传github：<a href="https://github.com/godpan/akka-demo/tree/master/Example_07">源码链接</a></p>
 
