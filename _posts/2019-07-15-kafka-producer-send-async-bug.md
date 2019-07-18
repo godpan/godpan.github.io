@@ -89,7 +89,7 @@ private ClusterAndWaitTime waitOnMetadata(String topic, Integer partition, long 
         }
         cluster = metadata.fetch();
         elapsed = time.milliseconds() - begin;
-        if (elapsed >= maxWaitMs) {  //判断1️⃣执行时间是否大于maxWaitMs
+        if (elapsed >= maxWaitMs) {  //判断执行时间是否大于maxWaitMs
             throw new TimeoutException(partitionsCount == null ?
                     String.format("Topic %s not present in metadata after %d ms.",
                             topic, maxWaitMs) :
