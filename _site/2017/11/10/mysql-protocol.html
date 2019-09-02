@@ -21,7 +21,14 @@
         var s = document.getElementsByTagName("script")[0]; 
         s.parentNode.insertBefore(hm, s);
       })();
-      </script>      
+    </script> 
+    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({
+        google_ad_client: "ca-pub-7784116562520918",
+        enable_page_level_ads: true
+      });
+    </script>      -->
   </head>
   <body>
       <div id="main" role="main">
@@ -299,8 +306,8 @@ len + 19 | 13 | 保留字节 |未来可能会用到，预留字节
 len + 32 | 12 + 1（0x00表示结束) | 挑战随机数（第二部分） |用于后续账户密码验证</p>
 
 <p>上表就是整个Handshake packet的这个包结构，属性的含义以及规范都有相应的说明，下面是我本机解析的某次连接数据库的Handshake packet包，仅供参考：</p>
-<div class="highlight"><pre><code class="language-" data-lang=""><span class="p">{</span><span class="err">protocolVersion=10,</span><span class="w"> </span><span class="err">serverVersion='5.7.13',</span><span class="w"> </span><span class="err">threadId=4055,</span><span class="w"> </span><span class="err">scramble=[49,</span><span class="w"> </span><span class="err">97,</span><span class="w"> </span><span class="err">80,</span><span class="w"> </span><span class="err">3,</span><span class="w"> </span><span class="err">35,</span><span class="w"> </span><span class="err">118,</span><span class="w"> </span><span class="err">45,</span><span class="w"> </span><span class="err">15,</span><span class="w"> </span><span class="err">5,</span><span class="w"> </span><span class="err">118,</span><span class="w"> </span><span class="err">9,</span><span class="w"> </span><span class="err">11,</span><span class="w"> </span><span class="err">124,</span><span class="w"> </span><span class="err">93,</span><span class="w"> </span><span class="err">93,</span><span class="w"> </span><span class="err">5,</span><span class="w"> </span><span class="err">31,</span><span class="w"> </span><span class="err">47,</span><span class="w"> </span><span class="err">111,</span><span class="w"> </span><span class="err">109,</span><span class="w"> </span><span class="err">0,</span><span class="w"> </span><span class="err">0,</span><span class="w"> </span><span class="err">0,</span><span class="w"> </span><span class="err">0,</span><span class="w"> </span><span class="err">0],</span><span class="w"> </span><span class="err">serverCapabilities=65535,</span><span class="w"> </span><span class="err">serverLanguage=33,</span><span class="w"> </span><span class="err">serverStatus=2</span><span class="p">}</span><span class="w">
-</span></code></pre></div>
+<div class="highlight"><pre><code class="language-" data-lang="">{protocolVersion=10, serverVersion='5.7.13', threadId=4055, scramble=[49, 97, 80, 3, 35, 118, 45, 15, 5, 118, 9, 11, 124, 93, 93, 5, 31, 47, 111, 109, 0, 0, 0, 0, 0], serverCapabilities=65535, serverLanguage=33, serverStatus=2}
+</code></pre></div>
 <h4>Auth packet</h4>
 
 <p>Auth packet是由Client向Server发送的认证包，用于验证数据库账户登录，相应内容的格式：</p>
@@ -622,7 +629,7 @@ n | 参数具体值（非NULL)（依次存储，使用Row Data Binary方式编�
         <footer>
           <div>
             
-            &copy; 2018  | powered by jekyll | themed by sext vi | <a href="https://github.com/godpan" title="github me">github</a>
+            &copy; 2019  | powered by jekyll | themed by sext vi | <a href="https://github.com/godpan" title="github me">github</a>
           </div>
         </footer>
       </div> <!-- main -->
