@@ -21,7 +21,14 @@
         var s = document.getElementsByTagName("script")[0]; 
         s.parentNode.insertBefore(hm, s);
       })();
-      </script>      
+    </script> 
+    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({
+        google_ad_client: "ca-pub-7784116562520918",
+        enable_page_level_ads: true
+      });
+    </script>      -->
   </head>
   <body>
       <div id="main" role="main">
@@ -105,9 +112,9 @@
 </code></pre></div>
 <p>Linux系统同学可以从官网下载源码解压，也可以直接执行以下命令:</p>
 <div class="highlight"><pre><code class="language-shell" data-lang="shell"><span class="nb">cd 
-</span>mkdir <span class="nb">test</span>-kafka <span class="o">&amp;&amp;</span> <span class="nb">cd test</span>-kafka
-curl -o kafka_2.11-1.0.1.tgz http://mirrors.tuna.tsinghua.edu.cn/apache/kafka/1.0.1/kafka_2.11-1.0.1.tgz
-tar -xzf kafka_2.11-1.0.1.tgz
+</span>mkdir test-kafka <span class="o">&amp;&amp;</span> <span class="nb">cd </span>test-kafka
+curl <span class="nt">-o</span> kafka_2.11-1.0.1.tgz http://mirrors.tuna.tsinghua.edu.cn/apache/kafka/1.0.1/kafka_2.11-1.0.1.tgz
+<span class="nb">tar</span> <span class="nt">-xzf</span> kafka_2.11-1.0.1.tgz
 <span class="nb">cd </span>kafka_2.11-1.0.1
 
 </code></pre></div>
@@ -124,7 +131,7 @@ tar -xzf kafka_2.11-1.0.1.tgz
 <h3>创建Topic</h3>
 
 <p>在一切就绪之后，我们要开始做极其重要的一步，那就是创建Topic，Topic是整个系统流转的核心，另外Topic本身也包含着很多复杂的参数，比如复制因子个数，分区个数等，这里为了从简，我们将对应的参数都设为1，方便大家测试：</p>
-<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic kakfa-test
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-topics.sh <span class="nt">--create</span> <span class="nt">--zookeeper</span> localhost:2181 <span class="nt">--replication-factor</span> 1 <span class="nt">--partitions</span> 1 <span class="nt">--topic</span> kakfa-test
 </code></pre></div>
 <p>其中参数的具体含义：</p>
 
@@ -141,7 +148,7 @@ tar -xzf kafka_2.11-1.0.1.tgz
 <h3>向Topic发送消息</h3>
 
 <p>在有了Topic后我们就可以向其发送消息：</p>
-<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kakfa-test
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-producer.sh <span class="nt">--broker-list</span> localhost:9092 <span class="nt">--topic</span> kakfa-test
 </code></pre></div>
 <p>然后我们向控制台输入一些消息：</p>
 <div class="highlight"><pre><code class="language-" data-lang="">this is my first test kafka
@@ -152,7 +159,7 @@ so good
 <h3>从Topic获取消息</h3>
 
 <p>现在Topic上已经有消息了，现在可以从中获取消息被消费：</p>
-<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic kafka-test --from-beginning
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-consumer.sh <span class="nt">--bootstrap-server</span> localhost:9092 <span class="nt">--topic</span> kafka-test <span class="nt">--from-beginning</span>
 </code></pre></div>
 <p>这时候我们可以在控制台看到：</p>
 <div class="highlight"><pre><code class="language-shell" data-lang="shell">this is my first <span class="nb">test </span>kafka
@@ -175,10 +182,10 @@ so good
 <p>与上文的启动一样，按照其操作即可。</p>
 
 <h3>2.创建输入Topic</h3>
-<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-topics.sh --zookeeper localhost:2181 --create --topic kafka-word-count-input --partitions 1 --replication-factor 1
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-topics.sh <span class="nt">--zookeeper</span> localhost:2181 <span class="nt">--create</span> <span class="nt">--topic</span> kafka-word-count-input <span class="nt">--partitions</span> 1 <span class="nt">--replication-factor</span> 1
 </code></pre></div>
 <h3>3.向Topic输入消息</h3>
-<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kafka-word-count-input
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-producer.sh <span class="nt">--broker-list</span> localhost:9092 <span class="nt">--topic</span> kafka-word-count-input
 </code></pre></div>
 <h3>4.流处理逻辑</h3>
 
@@ -246,7 +253,7 @@ so good
 <p><img src="/media/images/2018/03/kafka-word-count-input.png" alt="kafka-word-count-input"></p>
 
 <p>最后我们可以在消费者进程中看到以下输出：</p>
-<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-consumer.sh --topic kafka-word-count-output --from-beginning --bootstrap-server localhost:9092  --property print.key<span class="o">=</span><span class="nb">true</span>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">bin/kafka-console-consumer.sh <span class="nt">--topic</span> kafka-word-count-output <span class="nt">--from-beginning</span> <span class="nt">--bootstrap-server</span> localhost:9092  <span class="nt">--property</span> print.key<span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <p><img src="/media/images/2018/03/kafka-word-count-output.png" alt="kafka-word-count-output"></p>
 
@@ -310,7 +317,7 @@ so good
         <footer>
           <div>
             
-            &copy; 2018  | powered by jekyll | themed by sext vi | <a href="https://github.com/godpan" title="github me">github</a>
+            &copy; 2019  | powered by jekyll | themed by sext vi | <a href="https://github.com/godpan" title="github me">github</a>
           </div>
         </footer>
       </div> <!-- main -->

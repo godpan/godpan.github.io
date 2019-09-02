@@ -2,6 +2,22 @@
 
   
     {
+      "title"			: "Kafka producer异步发送在某些情况会阻塞主线程",
+      "link"			: "/2019/07/15/kafka-producer-send-async-bug.html",
+      "excerpt"		: "最近发现一个Kafka producer异步发送在某些情况会阻塞主线程，后来在排查解决问题过程中发现这可以算是Kafka的一个说明不恰当的地方。"
+    }
+  
+
+  
+    ,{
+      "title"			: "Git本地项目推送到github新创建仓库、.gitignore修改后不起效果",
+      "link"			: "/2018/10/06/git-init.html",
+      "excerpt"		: "1.Git本地项目推送到github新创建仓库"
+    }
+  
+
+  
+    ,{
       "title"			: "微信小程序第三方开发需要注意的点",
       "link"			: "/2018/05/24/wx-miniprogram-tips.html",
       "excerpt"		: "1.关于小程序与公众号unionid数据互通"
