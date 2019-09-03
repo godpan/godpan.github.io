@@ -9,7 +9,7 @@ Akka作为一种成熟的生产环境并发解决方案，必须拥有一套完�
 
 ## 监管
 
-看过我上篇文章的同学应该对Actor系统的工作流程有了一定的了解[Akka系列（二）：Akka中的Actor系统](http://www.godpan.me/blog/akka-2/)，它的很重要的概念就是分而治之，既然我们把任务分配给Actor去执行，那么我们必须去监管相应的Actor，当Actor出现了失败，比如系统环境错误，各种异常，能根据我们制定的相应监管策略进行错误恢复，就是后面我们会说到的容错。
+看过我上篇文章的同学应该对Actor系统的工作流程有了一定的了解[Akka系列（二）：Akka中的Actor系统](https://godpan.me/2017/04/02/learning-akka-2.html)，它的很重要的概念就是分而治之，既然我们把任务分配给Actor去执行，那么我们必须去监管相应的Actor，当Actor出现了失败，比如系统环境错误，各种异常，能根据我们制定的相应监管策略进行错误恢复，就是后面我们会说到的容错。
 
 ### 监管者
 
@@ -238,4 +238,4 @@ override def preRestart(cause: Throwable, msg: Option[Any]) {}
 
 这样重启相应Actor时就不会停止其子级下的所有Actor了。
 
-本文主要介绍了Actor系统中的监管和容错，这一部分内容在Akka中也是很重要的，它与Actor的树形组织结构巧妙结合，本文大量参考了Akka官方文档的相应章节，有兴趣的同学可以点击这里[Akka docs](http://doc.akka.io/docs/akka/2.5/scala/fault-tolerance.html)。也可以下载我的示例程序，里面包含了一个官方的提供的容错示例。
+本文主要介绍了Actor系统中的监管和容错，这一部分内容在Akka中也是很重要的，它与Actor的树形组织结构巧妙结合，本文大量参考了Akka官方文档的相应章节，有兴趣的同学可以点击这里[Akka docs](https://doc.akka.io/docs/akka/2.5/scala/fault-tolerance.html)。也可以下载我的示例程序，里面包含了一个官方的提供的容错示例。

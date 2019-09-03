@@ -116,7 +116,7 @@ try {
 
 **为什么是Callable接口呢？** 其实这里我们并没有显示声明Callable接口，这里lambda会帮我们自动进行类型推导，首先submit接受Callable接口或Runnble接口类型作为参数，而这里我们又给定了返回值，所以lambda能自动帮我们推导出内部是一个Callable接口参数。
 
-到这里我们应该大致清楚了在Java中的得到Future，那么我们又是如何从Future中得到我们想要的值呢？这个结论其实很容易得出，你只需要去跑一下上面的程序即可，在利用get去获取Future中的值时，线程会一直阻塞，直到返回值或者超时，所以Future中的get方法是阻塞，所以虽然利用Future似乎是异步执行任务，但是在某些需求上还是会阻塞的，并不是真正的异步，stackoverflow上有两个讨论说明了这个问题[Future.get](http://stackoverflow.com/questions/31092067/method-call-to-future-get-blocks-is-that-really-desirable)，[without blocking when task complete](http://stackoverflow.com/questions/31092067/method-call-to-future-get-blocks-is-that-really-desirable)，有兴趣的同学可以去看看。
+到这里我们应该大致清楚了在Java中的得到Future，那么我们又是如何从Future中得到我们想要的值呢？这个结论其实很容易得出，你只需要去跑一下上面的程序即可，在利用get去获取Future中的值时，线程会一直阻塞，直到返回值或者超时，所以Future中的get方法是阻塞，所以虽然利用Future似乎是异步执行任务，但是在某些需求上还是会阻塞的，并不是真正的异步，stackoverflow上有两个讨论说明了这个问题[Future.get](https://stackoverflow.com/questions/31092067/method-call-to-future-get-blocks-is-that-really-desirable)，[without blocking when task complete](https://stackoverflow.com/questions/31092067/method-call-to-future-get-blocks-is-that-really-desirable)，有兴趣的同学可以去看看。
 
 ### Scala中的Future
 
@@ -214,7 +214,7 @@ for {
   v2 <- fut2
 } yield println(s"the result is ${v1 + v2}")
 ```
-看上去是不是比之前的方式简洁多了，这也是我们在面对Future组合时推荐的方式，当然不得不说for yield表达式是一种语法糖，它最终还是会被翻译成我们常见的方法，比如flatMap，map，filter等，感兴趣的可以参考它的官方文档。[for yield表达式](http://docs.scala-lang.org/tutorials/FAQ/yield.html)
+看上去是不是比之前的方式简洁多了，这也是我们在面对Future组合时推荐的方式，当然不得不说for yield表达式是一种语法糖，它最终还是会被翻译成我们常见的方法，比如flatMap，map，filter等，感兴趣的可以参考它的官方文档。[for yield表达式](https://docs.scala-lang.org/tutorials/FAQ/yield.html)
 
 ##### 3.scala-async
 

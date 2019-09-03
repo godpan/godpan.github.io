@@ -41,7 +41,7 @@ Actor系统往往有成千上万个Actor，使用树形机构来组织管理Acto
 
 下面用一个简单的例子来说明一下ActorSystem会根据配置文件内容去生成相应的Actor系统环境：
 
-1.首先我们按照默认配置打印一下系统的日志级别，搭建Akka环境请看我上一篇文章：[Akka系列（一）：Akka简介与Actor模型](http://www.godpan.me/blog/akka-1/)
+1.首先我们按照默认配置打印一下系统的日志级别，搭建Akka环境请看我上一篇文章：[Akka系列（一）：Akka简介与Actor模型](https://godpan.me/2017/04/02/learning-akka-1.html)
 
 ```scala
 val actorSystem = ActorSystem("robot-system")

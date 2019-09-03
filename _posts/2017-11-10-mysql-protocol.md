@@ -106,7 +106,7 @@ SELECT DISTINCT connection_type from performance_schema.threads where connection
 0xFC 0x00 0x04
 ```
 
-其中0x代表16进制，实际数据传输中并没有该标识，第一位代表这是一个251~2^16之间的数值，所以后面两位为数值具体的值，这里使用的是小端字节序，MySQL默认使用的也是这种编码次序，所以这里1024是0x00 0x04，字节序相关知识可以参考：[理解字节序](http://www.ruanyifeng.com/blog/2016/11/byte-order.html)，到这里大家应该对这种编码格式有了一定的了解了，下面我们就来看看String。
+其中0x代表16进制，实际数据传输中并没有该标识，第一位代表这是一个251~2^16之间的数值，所以后面两位为数值具体的值，这里使用的是小端字节序，MySQL默认使用的也是这种编码次序，所以这里1024是0x00 0x04，字节序相关知识可以参考：[理解字节序](https://www.ruanyifeng.com/blog/2016/11/byte-order.html)，到这里大家应该对这种编码格式有了一定的了解了，下面我们就来看看String。
 
 ### String(字符串)
 

@@ -40,7 +40,7 @@ Linux系统同学可以从官网下载源码解压，也可以直接执行以下
 ```shell
 cd 
 mkdir test-kafka && cd test-kafka
-curl -o kafka_2.11-1.0.1.tgz http://mirrors.tuna.tsinghua.edu.cn/apache/kafka/1.0.1/kafka_2.11-1.0.1.tgz
+curl -o kafka_2.11-1.0.1.tgz https://mirrors.tuna.tsinghua.edu.cn/apache/kafka/1.0.1/kafka_2.11-1.0.1.tgz
 tar -xzf kafka_2.11-1.0.1.tgz
 cd kafka_2.11-1.0.1
 
