@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="author" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>泮关森的个人博客</title>
+    <link rel="shortcut icon" href="/media/favicon.ico">
+<!--     <link href="/atom.xml" rel="alternate" title="泮" type="application/atom+xml" /> -->
+<!--     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.2.0/css/font-awesome.min.css"> -->
+    <link rel="stylesheet" href="/media/css/style.css">
+  <!--   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/retina.js/1.3.0/retina.min.js"></script> -->
+    <link rel="stylesheet" href="/media/css/github.min.css">
+    <script src="/media/js/highlight.min.js"></script>
+    <script type="text/javascript"> hljs.initHighlightingOnLoad(); </script>
+    <script>
+      var _hmt = _hmt || [];
+      (function() {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?8ac3cc3bdb3696e1041a41874f47e7b4";
+        var s = document.getElementsByTagName("script")[0]; 
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script> 
+    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({
+        google_ad_client: "ca-pub-7784116562520918",
+        enable_page_level_ads: true
+      });
+    </script>      -->
+  </head>
+  <body>
+      <div id="main" role="main">
+        <header>
+          <div id="header">
+            <h1><a title="泮" class="" href="/">泮</a></h1>
+          </div>
+          <nav>
+            
+            <!-- <span><a title="Blog" href="/blog.html"><i class="fa fa-list-ul"></i></a></span> -->
+            <span><a title="Blog" href="/blog.html">Blog</a></span>
+            
+            <!-- <span><a title="Tags" href="/tags.html"><i class="fa fa-tags"></i></a></span> -->
+            <span><a title="Tags" href="/tags.html">Tags</a></span>
+            
+            <!-- <span><a title="About" href="/about.html"><i class="fa fa-user"></i></a></span> -->
+            <span><a title="About" href="/about.html">About</a></span>
+            
+          </nav>
+        </header>
+        <div id="content">
+        <article>
+  <section class="title">
+    <h2>Kafka producer异步发送在某些情况会阻塞主线程 </h2>
+  </section>
+  <section class="meta">
+  <span class="time">
+    <time datetime="2019-07-15">2019-07-15</time>
+  </span>
+  
+  <span class="tags">
+    
+    <a href="/tags.html#kafka" title="kafka">#kafka</a>
+    
+  </span>
+  <!-- BEGIN this would not work on any other domain -->
+  <span
+    class           = "like-wrapper"
+    like-shortname  = ''
+    like-identifier = 'urn:uuid:85cd4b63-e9f0-4459-8ca7-fbdsdc2a2fad'
+    like-name       = 'Kafka producer异步发送在某些情况会阻塞主线程'
+    like-btn        = '&#xf087;'
+    like-link       = '/2019/07/15/kafka-producer-send-async-bug.html'
+    ></span>
+  <script type="text/javascript">
+    var l = document.createElement('script');
+    l.type = 'text/javascript'; l.async = true; l.src = 'https://cdnjs.cloudflare.com/ajax/libs/soundplayer-widget/0.4.2/soundplayer-widget.min.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(l);
+  </script>
+  <!-- END this would not work on any other domain -->
+  
+  </section>
+  <section class="post">
+  <p>最近发现一个Kafka producer异步发送在某些情况会阻塞主线程，后来在排查解决问题过程中发现这可以算是Kafka的一个说明不恰当的地方。</p>
+
+<h3>问题说明</h3>
+
+<p>在很多场景下我们会使用异步方式来发送Kafka的消息，会使用KafkaProducer中的以下方法：</p>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">Future</span><span class="o">&lt;</span><span class="n">RecordMetadata</span><span class="o">&gt;</span> <span class="nf">send</span><span class="o">(</span><span class="n">ProducerRecord</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span> <span class="n">V</span><span class="o">&gt;</span> <span class="n">record</span><span class="o">,</span> <span class="n">Callback</span> <span class="n">callback</span><span class="o">)</span> <span class="o">{}</span>
+</code></pre></div>
+<p>根据<a href="https://github.com/apache/kafka/blob/1f2d230bfdaafb34c9be12a370ab2eb4d3016039/clients/src/main/java/org/apache/kafka/clients/producer/KafkaProducer.java#L853">文档的说明</a>它是一个异步的发送方法，按道理不管如何它都不应该阻塞主线程，但实际中某些情况下会出现阻塞线程，比如broker未正确运行，topic未创建等情况，有些时候我们不需要对发送的结果做保证，但是如果出现阻塞的话，会影响其他业务逻辑。</p>
+
+<h3>问题出现点</h3>
+
+<p>从KafkaProducer send这个方法声明上看并没有什么问题，那么我们来看一下她的具体实现：</p>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">Future</span><span class="o">&lt;</span><span class="n">RecordMetadata</span><span class="o">&gt;</span> <span class="nf">send</span><span class="o">(</span><span class="n">ProducerRecord</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span> <span class="n">V</span><span class="o">&gt;</span> <span class="n">record</span><span class="o">,</span> <span class="n">Callback</span> <span class="n">callback</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// intercept the record, which can be potentially modified; this method does not throw exceptions</span>
+    <span class="n">ProducerRecord</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span> <span class="n">V</span><span class="o">&gt;</span> <span class="n">interceptedRecord</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">interceptors</span><span class="o">.</span><span class="na">onSend</span><span class="o">(</span><span class="n">record</span><span class="o">);</span>
+    <span class="k">return</span> <span class="nf">doSend</span><span class="o">(</span><span class="n">interceptedRecord</span><span class="o">,</span> <span class="n">callback</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="cm">/**
+  * Implementation of asynchronously send a record to a topic.
+  */</span>
+<span class="kd">private</span> <span class="n">Future</span><span class="o">&lt;</span><span class="n">RecordMetadata</span><span class="o">&gt;</span> <span class="nf">doSend</span><span class="o">(</span><span class="n">ProducerRecord</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span> <span class="n">V</span><span class="o">&gt;</span> <span class="n">record</span><span class="o">,</span> <span class="n">Callback</span> <span class="n">callback</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">TopicPartition</span> <span class="n">tp</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="n">throwIfProducerClosed</span><span class="o">();</span>
+        <span class="c1">// first make sure the metadata for the topic is available</span>
+        <span class="n">ClusterAndWaitTime</span> <span class="n">clusterAndWaitTime</span><span class="o">;</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="n">clusterAndWaitTime</span> <span class="o">=</span> <span class="n">waitOnMetadata</span><span class="o">(</span><span class="n">record</span><span class="o">.</span><span class="na">topic</span><span class="o">(),</span> <span class="n">record</span><span class="o">.</span><span class="na">partition</span><span class="o">(),</span> <span class="n">maxBlockTimeMs</span><span class="o">);</span>  <span class="c1">//出现问题的地方</span>
+        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">KafkaException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">metadata</span><span class="o">.</span><span class="na">isClosed</span><span class="o">())</span>
+                <span class="k">throw</span> <span class="k">new</span> <span class="nf">KafkaException</span><span class="o">(</span><span class="s">"Producer closed while send in progress"</span><span class="o">,</span> <span class="n">e</span><span class="o">);</span>
+            <span class="k">throw</span> <span class="n">e</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="o">...</span>
+    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">ApiException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="o">...</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="n">ClusterAndWaitTime</span> <span class="nf">waitOnMetadata</span><span class="o">(</span><span class="n">String</span> <span class="n">topic</span><span class="o">,</span> <span class="n">Integer</span> <span class="n">partition</span><span class="o">,</span> <span class="kt">long</span> <span class="n">maxWaitMs</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+    <span class="c1">// add topic to metadata topic list if it is not there already and reset expiry</span>
+    <span class="n">Cluster</span> <span class="n">cluster</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="na">fetch</span><span class="o">();</span>
+
+    <span class="k">if</span> <span class="o">(</span><span class="n">cluster</span><span class="o">.</span><span class="na">invalidTopics</span><span class="o">().</span><span class="na">contains</span><span class="o">(</span><span class="n">topic</span><span class="o">))</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nf">InvalidTopicException</span><span class="o">(</span><span class="n">topic</span><span class="o">);</span>
+
+    <span class="n">metadata</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">topic</span><span class="o">);</span>
+
+    <span class="n">Integer</span> <span class="n">partitionsCount</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="na">partitionCountForTopic</span><span class="o">(</span><span class="n">topic</span><span class="o">);</span>
+    <span class="c1">// Return cached metadata if we have it, and if the record's partition is either undefined</span>
+    <span class="c1">// or within the known partition range</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">partitionsCount</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">partition</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">partition</span> <span class="o">&lt;</span> <span class="n">partitionsCount</span><span class="o">))</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">ClusterAndWaitTime</span><span class="o">(</span><span class="n">cluster</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
+
+    <span class="kt">long</span> <span class="n">begin</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="na">milliseconds</span><span class="o">();</span>
+    <span class="kt">long</span> <span class="n">remainingWaitMs</span> <span class="o">=</span> <span class="n">maxWaitMs</span><span class="o">;</span>
+    <span class="kt">long</span> <span class="n">elapsed</span><span class="o">;</span>
+
+    <span class="c1">//一直获取topic的元数据信息，直到获取成功，若获取时间超过maxWaitMs，则抛出异常</span>
+    <span class="k">do</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">partition</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">trace</span><span class="o">(</span><span class="s">"Requesting metadata update for partition {} of topic {}."</span><span class="o">,</span> <span class="n">partition</span><span class="o">,</span> <span class="n">topic</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">trace</span><span class="o">(</span><span class="s">"Requesting metadata update for topic {}."</span><span class="o">,</span> <span class="n">topic</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="n">metadata</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">topic</span><span class="o">);</span>
+        <span class="kt">int</span> <span class="n">version</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="na">requestUpdate</span><span class="o">();</span>
+        <span class="n">sender</span><span class="o">.</span><span class="na">wakeup</span><span class="o">();</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="n">metadata</span><span class="o">.</span><span class="na">awaitUpdate</span><span class="o">(</span><span class="n">version</span><span class="o">,</span> <span class="n">remainingWaitMs</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">TimeoutException</span> <span class="n">ex</span><span class="o">)</span> <span class="o">{</span>
+            <span class="c1">// Rethrow with original maxWaitMs to prevent logging exception with remainingWaitMs</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">TimeoutException</span><span class="o">(</span>
+                    <span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"Topic %s not present in metadata after %d ms."</span><span class="o">,</span>
+                            <span class="n">topic</span><span class="o">,</span> <span class="n">maxWaitMs</span><span class="o">));</span>
+        <span class="o">}</span>
+        <span class="n">cluster</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="na">fetch</span><span class="o">();</span>
+        <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="na">milliseconds</span><span class="o">()</span> <span class="o">-</span> <span class="n">begin</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">elapsed</span> <span class="o">&gt;=</span> <span class="n">maxWaitMs</span><span class="o">)</span> <span class="o">{</span>  <span class="c1">//判断执行时间是否大于maxWaitMs</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">TimeoutException</span><span class="o">(</span><span class="n">partitionsCount</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">?</span>
+                    <span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"Topic %s not present in metadata after %d ms."</span><span class="o">,</span>
+                            <span class="n">topic</span><span class="o">,</span> <span class="n">maxWaitMs</span><span class="o">)</span> <span class="o">:</span>
+                    <span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">"Partition %d of topic %s with partition count %d is not present in metadata after %d ms."</span><span class="o">,</span>
+                            <span class="n">partition</span><span class="o">,</span> <span class="n">topic</span><span class="o">,</span> <span class="n">partitionsCount</span><span class="o">,</span> <span class="n">maxWaitMs</span><span class="o">));</span>
+        <span class="o">}</span>
+        <span class="n">metadata</span><span class="o">.</span><span class="na">maybeThrowException</span><span class="o">();</span>
+        <span class="n">remainingWaitMs</span> <span class="o">=</span> <span class="n">maxWaitMs</span> <span class="o">-</span> <span class="n">elapsed</span><span class="o">;</span>
+        <span class="n">partitionsCount</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="na">partitionCountForTopic</span><span class="o">(</span><span class="n">topic</span><span class="o">);</span>
+    <span class="o">}</span> <span class="k">while</span> <span class="o">(</span><span class="n">partitionsCount</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="o">(</span><span class="n">partition</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">partition</span> <span class="o">&gt;=</span> <span class="n">partitionsCount</span><span class="o">));</span>
+
+    <span class="k">return</span> <span class="k">new</span> <span class="nf">ClusterAndWaitTime</span><span class="o">(</span><span class="n">cluster</span><span class="o">,</span> <span class="n">elapsed</span><span class="o">);</span>
+<span class="o">}</span>
+
+</code></pre></div>
+<p>从它的实现我们可以看出，会导致线程阻塞的原因在于以下这个逻辑：</p>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="n">ClusterAndWaitTime</span> <span class="nf">waitOnMetadata</span><span class="o">(</span><span class="n">String</span> <span class="n">topic</span><span class="o">,</span> <span class="n">Integer</span> <span class="n">partition</span><span class="o">,</span> <span class="kt">long</span> <span class="n">maxWaitMs</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">InterruptedException</span>
+</code></pre></div>
+<p>通过KafkaProducer 执行send的过程中需要先获取Metadata，而这是一个不断循环的操作，直到获取成功，或者抛出异常。</p>
+
+<p>其实Kafka本意这么实现并没有问题，因为你要发送消息的前提就是能获取到border和topic的信息，问题在于这个send对外暴露的是Future的方法，但是内部实现却是有阻塞的，那么在有些时候没有考虑到这种情况，一旦出现border或者topic异常，将会阻塞系统线程，导致系统响应变慢，直到奔溃。</p>
+
+<h3>问题解决</h3>
+
+<p>其实解决这个问题很简单，就是单独创建几个线程用于消息发送，这样即使遇到意外情况，也只会阻塞几个线程，不会引起系统线程大面积阻塞，不可用，具体实现：</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">java.util.concurrent.Callable</span>
+<span class="k">import</span> <span class="nn">java.util.concurrent.ExecutorService</span>
+<span class="k">import</span> <span class="nn">java.util.concurrent.Executors</span>
+<span class="k">import</span> <span class="nn">org.apache.kafka.clients.producer.</span><span class="o">{</span><span class="nc">Callback</span><span class="o">,</span> <span class="nc">KafkaProducer</span><span class="o">,</span> <span class="nc">ProducerRecord</span><span class="o">,</span> <span class="nc">RecordMetadata</span><span class="o">}</span>
+
+<span class="k">class</span> <span class="nc">ProducerF</span><span class="o">[</span><span class="kt">K</span>,<span class="kt">V</span><span class="o">](</span><span class="n">kafkaProducer</span><span class="k">:</span> <span class="kt">KafkaProducer</span><span class="o">[</span><span class="kt">K</span>,<span class="kt">V</span><span class="o">])</span> <span class="o">{</span>
+
+  <span class="k">val</span> <span class="n">executor</span><span class="k">:</span> <span class="kt">ExecutorService</span> <span class="o">=</span> <span class="nc">Executors</span><span class="o">.</span><span class="n">newScheduledThreadPool</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span>
+
+  <span class="k">def</span> <span class="n">sendAsync</span><span class="o">(</span><span class="n">producerRecord</span><span class="k">:</span> <span class="kt">ProducerRecord</span><span class="o">[</span><span class="kt">K</span>,<span class="kt">V</span><span class="o">],</span> <span class="n">callback</span><span class="k">:</span> <span class="kt">Callback</span><span class="o">)</span> <span class="k">=</span> <span class="o">{</span>
+    <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="o">(</span><span class="k">new</span> <span class="nc">Callable</span><span class="o">[</span><span class="kt">RecordMetadata</span><span class="o">]()</span> <span class="o">{</span>
+      <span class="k">def</span> <span class="n">call</span> <span class="k">=</span> <span class="n">kafkaProducer</span><span class="o">.</span><span class="n">send</span><span class="o">(</span><span class="n">producerRecord</span><span class="o">,</span> <span class="n">callback</span><span class="o">).</span><span class="n">get</span><span class="o">()</span>
+    <span class="o">})</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div>
+<p>这是一种实现方式，当然你也可以自己维护一个Kafka版本，但这样或许有点麻烦，具体用什么方式根据自己场景来做选择。</p>
+
+<p>使用例子:</p>
+<div class="highlight"><pre><code class="language-scala" data-lang="scala"><span class="k">import</span> <span class="nn">java.util.Properties</span>
+<span class="k">import</span> <span class="nn">org.apache.kafka.clients.producer.</span><span class="o">{</span><span class="nc">KafkaProducer</span><span class="o">,</span> <span class="nc">ProducerRecord</span><span class="o">,</span> <span class="nc">RecordMetadata</span><span class="o">}</span>
+
+<span class="k">object</span> <span class="nc">FixExample</span> <span class="k">extends</span> <span class="nc">App</span> <span class="o">{</span>
+
+  <span class="k">val</span> <span class="n">props</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Properties</span><span class="o">()</span>
+  <span class="n">props</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="s">"max.block.ms"</span><span class="o">,</span> <span class="s">"3000"</span><span class="o">)</span>
+  <span class="n">props</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="s">"bootstrap.servers"</span><span class="o">,</span> <span class="s">"localhost:9092"</span><span class="o">)</span>
+  <span class="n">props</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="s">"client.id"</span><span class="o">,</span> <span class="s">"ProducerSendFixExample"</span><span class="o">)</span>
+  <span class="n">props</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="s">"key.serializer"</span><span class="o">,</span> <span class="s">"org.apache.kafka.common.serialization.StringSerializer"</span><span class="o">)</span>
+  <span class="n">props</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="s">"value.serializer"</span><span class="o">,</span> <span class="s">"org.apache.kafka.common.serialization.StringSerializer"</span><span class="o">)</span>
+
+  <span class="k">val</span> <span class="n">producer</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">KafkaProducer</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">](</span><span class="n">props</span><span class="o">)</span>
+  <span class="k">val</span> <span class="n">topic</span> <span class="k">=</span> <span class="s">"topic-trace-one"</span>
+  <span class="k">val</span> <span class="n">userId</span> <span class="k">=</span> <span class="s">"godpan"</span>
+  <span class="k">val</span> <span class="n">msg</span> <span class="k">=</span> <span class="s">"login wechat"</span>
+  <span class="k">val</span> <span class="n">data</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">ProducerRecord</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">](</span><span class="n">topic</span><span class="o">,</span> <span class="n">userId</span><span class="o">,</span> <span class="n">msg</span><span class="o">)</span>
+
+  <span class="k">val</span> <span class="n">startTime</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
+  <span class="k">val</span> <span class="n">producerF</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">ProducerF</span><span class="o">(</span><span class="n">producer</span><span class="o">)</span>
+  <span class="n">producerF</span><span class="o">.</span><span class="n">sendAsync</span><span class="o">(</span><span class="n">data</span><span class="o">,(</span><span class="n">metadata</span><span class="k">:</span> <span class="kt">RecordMetadata</span><span class="o">,</span> <span class="n">exception</span><span class="k">:</span> <span class="kt">Exception</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span>
+    <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">"[producerF-sendAsync] data producerRecord: ${data}, exception: ${exception}"</span><span class="o">)</span>
+  <span class="o">})</span>
+
+  <span class="c1">// 如果想要得到发送结果，可以线程等待4s
+</span>  <span class="c1">// Thread.sleep(4000)
+</span>  <span class="nc">System</span><span class="o">.</span><span class="n">exit</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
+
+<span class="o">}</span>
+</code></pre></div>
+<p>相关代码已经传到github上了，地址：<a href="https://github.com/godpan/kafka-send-async-bug-fix">kafka-send-async-bug-fix</a>。</p>
+
+  </section>
+  
+  <div class="divider">
+    <span>
+    
+    <a href="/2018/10/06/git-init.html"><i class="fa fa-chevron-left"></i></a>
+    
+    </span>
+    <!-- BEGIN comment icon
+    <span><a href="javascript:leave_comment();" id="leave_comment_link"><i class="fa fa-comment-o"></i></a></span>
+    <span><a href="javascript:collapse_comment();" id="collapse_comment_link" style="display:none;"><i class="fa fa-chevron-up"></i></a></span>
+      END comment icon -->
+
+    <span>
+    
+    <a href="/2019/09/15/jekyll-deploy-linux-with-https.html"><i class="fa fa-chevron-right"></i></a>
+    
+    </span>
+  </div>
+  <span>文章允许转载、使用，但需要保留链接文章署名
+      <a href="https://godpan.me">godpan.me</a>,如有写的不当之处，也欢迎大家指正，联系邮箱：godpan.sen@gmail.com</span>
+
+  <!-- BEGIN comment
+  <section class="comment">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+      var disqus_shortname = '';
+      var disqus_identifier = 'urn:uuid:85cd4b63-e9f0-4459-8ca7-fbdsdc2a2fad';
+
+      function leave_comment() {
+          var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+          dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          $("#leave_comment_link").css("display", "none");
+          $("#collapse_comment_link").css("display", "");
+      };
+      function collapse_comment() {
+          // document.getElementById("disqus_thread").innerHTML = '';
+          $("#disqus_thread").slideUp(400, function() {
+              $("#disqus_thread").empty();
+              $("#leave_comment_link").css("display", "");
+              $("#collapse_comment_link").css("display", "none");
+              $("#disqus_thread").css("display", "");
+          });
+      };
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </section>
+  END comment -->
+  
+</article>
+
+        </div>
+        <footer>
+          <div>
+            
+            &copy; 2019  | powered by jekyll | themed by sext vi | <a href="https://github.com/godpan" title="github me">github</a>
+          </div>
+        </footer>
+      </div> <!-- main -->
+  </body>
+</html>

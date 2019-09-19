@@ -2,6 +2,14 @@
 
   
     {
+      "title"			: "Jekyll博客部署迁移到Linux（Centos7）且支持https教程",
+      "link"			: "/2019/09/15/jekyll-deploy-linux-with-https.html",
+      "excerpt"		: "之前一直把博客托管到Github pages上，虽然方便但是也有几个弊端，比如："
+    }
+  
+
+  
+    ,{
       "title"			: "Kafka producer异步发送在某些情况会阻塞主线程",
       "link"			: "/2019/07/15/kafka-producer-send-async-bug.html",
       "excerpt"		: "最近发现一个Kafka producer异步发送在某些情况会阻塞主线程，后来在排查解决问题过程中发现这可以算是Kafka的一个说明不恰当的地方。"
@@ -225,13 +233,13 @@
   
 
   
+
+  
     ,{
       "title"			: "About me",
       "link"			: "/about/",
       "excerpt"		: "So Simple is a responsive Jekyll theme for your words and images."
     }
-  
-
   
 
   

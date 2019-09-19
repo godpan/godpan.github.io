@@ -4,12 +4,178 @@
  <title>泮</title>
  <link href="/atom.xml" rel="self"/>
  <link href=""/>
- <updated>2019-09-02T09:15:22+08:00</updated>
+ <updated>2019-09-19T09:40:03+08:00</updated>
  <id>/</id>
  <author>
    <name></name>
  </author>
 
+ 
+ <entry>
+   <title>Jekyll博客部署迁移到Linux（Centos7）且支持https教程</title>
+   <link href="/2019/09/15/jekyll-deploy-linux-with-https.html"/>
+   <updated>2019-09-15T00:00:00+08:00</updated>
+   <id>urn:uuid:85cd4b63-e9f0-4459-8ca7-fbdsdc2a2fad</id>
+   <content type="html">&lt;p&gt;之前一直把博客托管到Github pages上，虽然方便但是也有几个弊端，比如：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;1.有时访问速度过慢&lt;/li&gt;
+&lt;li&gt;2.国内的一些搜索引擎无法检索到&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;刚好自己有一个服务器，所以准备将博客迁移到自己的服务器上，当然推荐将内容在github也保存一份，以防万一数据丢失。&lt;/p&gt;
+
+&lt;p&gt;操作前提：&lt;/p&gt;
+
+&lt;p&gt;1.申请一个自己的服务器和域名(国内的有些服务器用80端口需要备案，如使用请先备案)
+2.Jekyll博客安装
+3.有自己的github&lt;/p&gt;
+
+&lt;h3&gt;步骤&lt;/h3&gt;
+
+&lt;h4&gt;1.编译自己的博客&lt;/h4&gt;
+
+&lt;p&gt;执行命令：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-jekyll&quot; data-lang=&quot;jekyll&quot;&gt;jekyll build
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;jekyll将编译完的文件放在工程的&lt;em&gt;_site&lt;/em&gt;目录下，部署的时候可以单独上传这个文件夹就行，但这里我们会将自己的博客工程存储在github中，所以我们将工程的所有内容都上传到github上了。&lt;/p&gt;
+
+&lt;h4&gt;2.上传到github&lt;/h4&gt;
+
+&lt;p&gt;如何跟将项目跟github上的Repositories绑定请自行参考google。&lt;/p&gt;
+
+&lt;p&gt;执行命令进行上传：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-git&quot; data-lang=&quot;git&quot;&gt;git add -f *
+git commit -m &quot;update blog&quot;
+git push
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;3.服务器安装git并clone工程项目&lt;/h4&gt;
+
+&lt;p&gt;执行命令：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;yum install git
+
+//clone你自己的项目
+
+git clone https://github.com/godpan/godpan.github.io.git
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;4.安装nginx并修改配置&lt;/h4&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;yum install nginx
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;修改nginx配置&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;vi /etc/nginx/nginx.conf
+
+//修改以下内容，其他不变
+
+user root&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+server &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    listen       80 default_server&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    listen       &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;::]:80 default_server&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    server_name  _&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    root         /root/godpan.github.io/_site&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c&quot;&gt;#博客_site文件目录&lt;/span&gt;
+
+    &lt;span class=&quot;c&quot;&gt;# Load configuration files for the default server block.&lt;/span&gt;
+    include /etc/nginx/default.d/&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.conf&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    location / &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+    error_page 404 /404.html&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        location &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; /40x.html &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+    error_page 500 502 503 504 /50x.html&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        location &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; /50x.html &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;保存文件，并启动nginx并开启80端口&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;systemctl start nginx
+
+firewall-cmd --add-port=80/tcp --permanent
+firewall-cmd --reload
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;然后直接访问你服务器的ip，不出意外应该能直接看到你自己博客的内容了，接下来我们就将域名与ip绑定。&lt;/p&gt;
+
+&lt;h4&gt;5.绑定域名&lt;/h4&gt;
+
+&lt;p&gt;我这里操作的是阿里云上的域名，仅供参考，其他平台的自己按照规则设置，配置如下：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/media/images/2019/09/domain-settings.png&quot; alt=&quot;domain-settings&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;等域名生效（通常不超过10分钟）就可以直接用域名访问你的博客了。&lt;/p&gt;
+
+&lt;p&gt;如果你不想给网站配置为https的话，到这里就大功告成了。&lt;/p&gt;
+
+&lt;h4&gt;6.配置https&lt;/h4&gt;
+
+&lt;p&gt;这里我们使用Certbot来生成https需要的证书，先安装Certbot：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;yum install certbot
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;生成证书：
+&lt;code&gt;shell
+certbot certonly --webroot -w /root/godpan.github.io/_site -d godpan.me -d www.godpan.me
+&lt;/code&gt;
+证书生成的目录在：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;/etc/letsencrypt/live/godpan.me  &lt;span class=&quot;c&quot;&gt;#后面为你自己的域名&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;修改nginx对应的配置：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;vi /etc/nginx/nginx.conf
+
+&lt;span class=&quot;c&quot;&gt;#修改443端口对应的server内容：&lt;/span&gt;
+
+server &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    listen       443 ssl http2 default_server&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    listen       &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;::]:443 ssl http2 default_server&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    server_name  _&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    root         /root/godpan.github.io/_site&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c&quot;&gt;#博客_site文件目录&lt;/span&gt;
+
+    ssl_certificate &lt;span class=&quot;s2&quot;&gt;&quot;/etc/letsencrypt/live/godpan.me/fullchain.pem&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;  &lt;span class=&quot;c&quot;&gt;#证书的路径&lt;/span&gt;
+    ssl_certificate_key &lt;span class=&quot;s2&quot;&gt;&quot;/etc/letsencrypt/live/godpan.me/privkey.pem&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c&quot;&gt;#证书密钥的路径&lt;/span&gt;
+    ssl_session_cache shared:SSL:1m&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    ssl_session_timeout  10m&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    ssl_ciphers HIGH:!aNULL:!MD5&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    ssl_prefer_server_ciphers on&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;c&quot;&gt;# Load configuration files for the default server block.&lt;/span&gt;
+    include /etc/nginx/default.d/&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.conf&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    location / &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+    error_page 404 /404.html&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        location &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; /40x.html &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+    error_page 500 502 503 504 /50x.html&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        location &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; /50x.html &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;开启443端口，并重启nginx：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;firewall-cmd &lt;span class=&quot;nt&quot;&gt;--add-port&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;443/tcp &lt;span class=&quot;nt&quot;&gt;--permanent&lt;/span&gt;
+firewall-cmd &lt;span class=&quot;nt&quot;&gt;--reload&lt;/span&gt;
+systemctl restart nginx
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;这时候你就可以用https访问你的网站了，比如https://godpan.me，但因为certbot证书有3个月的有效期，所以我们需要定时去更新证书，不过它提供了更新证书的命令：
+&lt;code&gt;
+certbot renew
+&lt;/code&gt;
+但手动更新的话可以能会忘，所以我们用系统自身的定时任务去更新：&lt;/p&gt;
+
+&lt;p&gt;创建一个定时任务：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;vi certbot-auto-renew-crontab
+
+&lt;span class=&quot;c&quot;&gt;#输入以下内容进行保存，含义是每个月第一天的一点凌晨会去更新一次证书&lt;/span&gt;
+
+0 1 1 &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt; certbot renew &lt;span class=&quot;nt&quot;&gt;--pre-hook&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;systemctl stop nginx&quot;&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--post-hook&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;systemctl start nginx&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;最后我们crontab来启动这个任务：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;crontab certbot-auto-renew-crontab
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;至此大功告成，除非你的服务器崩溃或者被封了😂😂😂。&lt;/p&gt;
+</content>
+ </entry>
  
  <entry>
    <title>Kafka producer异步发送在某些情况会阻塞主线程</title>
@@ -378,7 +544,7 @@
 &lt;p&gt;Linux系统同学可以从官网下载源码解压，也可以直接执行以下命令:&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;&lt;span class=&quot;nb&quot;&gt;cd 
 &lt;/span&gt;mkdir test-kafka &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;cd &lt;/span&gt;test-kafka
-curl &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; kafka_2.11-1.0.1.tgz http://mirrors.tuna.tsinghua.edu.cn/apache/kafka/1.0.1/kafka_2.11-1.0.1.tgz
+curl &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; kafka_2.11-1.0.1.tgz https://mirrors.tuna.tsinghua.edu.cn/apache/kafka/1.0.1/kafka_2.11-1.0.1.tgz
 &lt;span class=&quot;nb&quot;&gt;tar&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-xzf&lt;/span&gt; kafka_2.11-1.0.1.tgz
 &lt;span class=&quot;nb&quot;&gt;cd &lt;/span&gt;kafka_2.11-1.0.1
 
@@ -1031,7 +1197,7 @@ Named pipes | 否 | Windows系统 | 否 |--enable-named-pipe=on/off. |  --socket
 &lt;p&gt;举个简单的例子，比如1024的编码为：&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-&quot; data-lang=&quot;&quot;&gt;0xFC 0x00 0x04
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-&lt;p&gt;其中0x代表16进制，实际数据传输中并没有该标识，第一位代表这是一个251~2^16之间的数值，所以后面两位为数值具体的值，这里使用的是小端字节序，MySQL默认使用的也是这种编码次序，所以这里1024是0x00 0x04，字节序相关知识可以参考：&lt;a href=&quot;http://www.ruanyifeng.com/blog/2016/11/byte-order.html&quot;&gt;理解字节序&lt;/a&gt;，到这里大家应该对这种编码格式有了一定的了解了，下面我们就来看看String。&lt;/p&gt;
+&lt;p&gt;其中0x代表16进制，实际数据传输中并没有该标识，第一位代表这是一个251~2^16之间的数值，所以后面两位为数值具体的值，这里使用的是小端字节序，MySQL默认使用的也是这种编码次序，所以这里1024是0x00 0x04，字节序相关知识可以参考：&lt;a href=&quot;https://www.ruanyifeng.com/blog/2016/11/byte-order.html&quot;&gt;理解字节序&lt;/a&gt;，到这里大家应该对这种编码格式有了一定的了解了，下面我们就来看看String。&lt;/p&gt;
 
 &lt;h3&gt;String(字符串)&lt;/h3&gt;
 
@@ -1445,7 +1611,7 @@ n | 参数具体值（非NULL)（依次存储，使用Row Data Binary方式编�
 
 &lt;h3&gt;背景&lt;/h3&gt;
 
-&lt;p&gt;Java诞生至今，有好多种IO模型，从最早的Java IO到后来的Java NIO以及最新的Java AIO，每种IO模型都有它自己的特点，详情请看我的上篇文章&lt;a href=&quot;http://www.godpan.me/2017/10/21/java-io.html&quot;&gt;Java IO初探&lt;/a&gt;，而其中的的Java NIO应用非常广泛，尤其是在高并发领域，比如我们常见的Netty，Mina等框架，都是基于它实现的，相信大家都有所了解，下面让我们来看看Java NIO的具体架构。&lt;/p&gt;
+&lt;p&gt;Java诞生至今，有好多种IO模型，从最早的Java IO到后来的Java NIO以及最新的Java AIO，每种IO模型都有它自己的特点，详情请看我的上篇文章&lt;a href=&quot;https://godpan.me/2017/10/21/java-io.html&quot;&gt;Java IO初探&lt;/a&gt;，而其中的的Java NIO应用非常广泛，尤其是在高并发领域，比如我们常见的Netty，Mina等框架，都是基于它实现的，相信大家都有所了解，下面让我们来看看Java NIO的具体架构。&lt;/p&gt;
 
 &lt;h3&gt;Java NIO架构&lt;/h3&gt;
 
@@ -1570,164 +1736,6 @@ n | 参数具体值（非NULL)（依次存储，使用Row Data Binary方式编�
 &lt;h3&gt;总结&lt;/h3&gt;
 
 &lt;p&gt;这篇文章主要讲解了Java NIO中重要的三个组成部分，在实际使用过程也是比较重要的，掌握它们之间的关系，可以让你对Java NIO的整个架构更加熟悉，理解相对来说也会更加深刻，并分析了这种模式是如何与多路复用IO模型的映射，了解Java NIO在高并发场景下优势的原因。&lt;/p&gt;
-</content>
- </entry>
- 
- <entry>
-   <title>Java IO初探</title>
-   <link href="/2017/10/21/java-io.html"/>
-   <updated>2017-10-21T00:00:00+08:00</updated>
-   <id>urn:uuid:8d2f2b63-g930-3d54-8ca7-fbvbds2a4fge</id>
-   <content type="html">&lt;p&gt;Java IO对大多数Java程序员来说是熟悉又陌生，熟悉的是感觉到处都有它的身影，小到简单的读取文件，大到各种服务器的应用，陌生的是Java IO背后到底是一个怎样的机制，今天就让我们去了解一下这位老朋友吧。本文不讲解Java IO如何具体使用，有这方面需求的同学可以自己查下。&lt;/p&gt;
-
-&lt;h3&gt;IO模型&lt;/h3&gt;
-
-&lt;p&gt;要说IO，就不得不说IO模型，IO模型大家都有所了解，同步异步，阻塞非阻塞什么的，总的来说IO模型可分为以下五种：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;阻塞IO&lt;/li&gt;
-&lt;li&gt;非阻塞IO&lt;/li&gt;
-&lt;li&gt;多路复用IO&lt;/li&gt;
-&lt;li&gt;信号驱动IO&lt;/li&gt;
-&lt;li&gt;异步IO&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;那么这几种IO都有什么区别呢？下面我们一一来看，每种模型我都会举一个适当的例子助于理解：&lt;/p&gt;
-
-&lt;h4&gt;1.阻塞IO&lt;/h4&gt;
-
-&lt;p&gt;阻塞IO相信大家都最熟悉了，线程发起一个IO请求，直到有结果返回，否则则一直阻塞等待，比如我们平常常见的阻塞数据库操作，网络IO等。&lt;/p&gt;
-
-&lt;p&gt;小明阻塞IO吃饭：&lt;/p&gt;
-
-&lt;p&gt;五年前一天周末，小明和朋友一起去商场的外婆家吃饭，到店后发现排队的人超多，所以他就领了一个号码，然后他和朋友就坐在旁边等候，一直等着服务员叫他们的号，也不能做其他事，过了一个多小时终于轮到他们了，然后他们进店点菜，又得等待上菜，最后他们吃饭总共花了两个小时；&lt;/p&gt;
-
-&lt;p&gt;关键部分：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;等待座位吃饭：一直阻塞，直到有座位&lt;/li&gt;
-&lt;li&gt;等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;没什么说的，反正就是一直等，反应到程序中就是一直阻塞，而一个IO请求需要一个线程，可想而知当有大量的IO请求，线程的创建和销毁，线程间的切换，线程所占用的资源等等要耗费多少时间和资源，系统的性能会有多差。&lt;/p&gt;
-
-&lt;h4&gt;2.非阻塞IO&lt;/h4&gt;
-
-&lt;p&gt;非阻塞IO和阻塞IO的最大区别就在于线程发起一个IO请求,不会一直堵塞直到有数据，而是不断的检查是否已有数据，若有数据则读取数据。&lt;/p&gt;
-
-&lt;p&gt;小明非阻塞IO吃饭：&lt;/p&gt;
-
-&lt;p&gt;有了第一次的教训，小明学乖了，他在拿到后不再傻傻的等着，而是去外婆家旁边逛了逛，每过3分钟他就会回来，然后跑到前台去询问服务员轮到他了吗？不幸的是，排队的人超多，直到过了半个多小时后才轮到他进店吃饭，期间他大概问了十几次，他们进店点菜，又得等待上菜，最后他们吃饭总共花了两个小时，基本也没做啥其他事；&lt;/p&gt;
-
-&lt;p&gt;关键部分：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;领号后询问是否轮到他：非阻塞，非询问期间可以做点别的事,但也不做了啥大事&lt;/li&gt;
-&lt;li&gt;等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;总的来说非阻塞IO的非阻塞主要体现在不需要一直等待到有数据，当然读数据那部分操作还是阻塞的，另外这种非阻塞模式需要用户线程自己不断询问检查，其实效率也不是太高，实际编程中运用的也不多。&lt;/p&gt;
-
-&lt;h4&gt;3.多路复用IO&lt;/h4&gt;
-
-&lt;p&gt;既然上面我们说到非阻塞IO的缺点，那么有没有什么方式改进呢？答案是当然有，那就是多路复用IO，我理解的它的特点就是复用，首先它也是一种非阻塞IO的模型，只不过上面说到轮询的方式用了不同的方式处理了，当一个线程发起IO请求，系统会将它注册到一个单独管理IO请求的一个线程，之后该IO的相关操作的通知状态都有这个管理IO请求的线程处理，Java 1.4发布的NIO就是这种模式，我们可以大致来看一下它的流程：&lt;/p&gt;
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;c1&quot;&gt;// 打开服务器套接字通道&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;ServerSocketChannel&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ServerSocketChannel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;open&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;// 服务器配置为非阻塞&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;configureBlocking&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;// 进行服务的绑定&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;bind&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;InetSocketAddress&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;localhost&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8008&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;));&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;// 这里的selector就相当于单独管理IO请求的线程&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;Selector&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;open&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;// 注册到selector，等待连接&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;ssc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;register&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SelectionKey&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;OP_ACCEPT&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
-
-&lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;select&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;//为IO请求去轮询状态&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;Set&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SelectionKey&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;keys&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;selector&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;selectedKeys&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//多个IO请求的状态&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;Iterator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;SelectionKey&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;keyIterator&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;keys&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;iterator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;keyIterator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;hasNext&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//依次处理IO请求&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;SelectionKey&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;key&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;keyIterator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;doThing&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
-        &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
-    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-&lt;p&gt;可以看出Java NIO的模式就是多路复用IO模型的应用。&lt;/p&gt;
-
-&lt;p&gt;小明多路复用IO吃饭：&lt;/p&gt;
-
-&lt;p&gt;随着生意越来越好，外婆家发现好多顾客都堵在门口等待吃饭，等待区都站不下来人了，，思来想去，外婆家准备请一个人专门来维护顾客的排队请求，这样顾客取号后，就不用堵在门口了，我们叫他小A，小明这次取号后，将自己的相关信息告诉小A，并从小A那里获得了一个GPS（用于小A能快速找到小明，假设有了GPS后，小A能秒速找到小明），然后小明就跟朋友们开心的去逛商场，看看MM，买买衣服，而小A则不断的观察店里的情况，当有空座位出现的时候，他便会按照相关信息找到具体的顾客，将其带回进行用餐，但他们进店点菜，还得等待上菜，最后他们吃饭总共花了两个小时，但是他们不再需要排队等位，而是去做一些其他的事。&lt;/p&gt;
-
-&lt;p&gt;关键部分：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;领号后委托给小A，小A观察到有空位后带回小明：非阻塞，领号后可以安心去做自己的事，不用担心错过&lt;/li&gt;
-&lt;li&gt;等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;多路复用IO可以看成普通非阻塞IO的升级版，也是目前Java编程中用到比较多的IO模型，它的优势在于可以处理大量的IO请求，用一个线程管理所有的IO请求，无需像阻塞IO和非阻塞IO一样，每个IO需要一个线程处理，提升了系统的吞吐量。&lt;/p&gt;
-
-&lt;h4&gt;4.信号驱动IO&lt;/h4&gt;
-
-&lt;p&gt;信号驱动IO相对于以上几种模型最大的特点就是它支持内核信号通知，线程在发起一个IO请求后，会注册一个信号函数，然后内核在确认数据可读了，便会给相应的线程发送通知，让其进行具体IO读写操作。&lt;/p&gt;
-
-&lt;p&gt;小明信号驱动IO吃饭：&lt;/p&gt;
-
-&lt;p&gt;又了一段时间，外婆家通过使用复用IO模式缓解了排队拥挤的情况，但是觉得还要请一个人专门维护队列，感觉不划算，那么有没有一种更好的方式呢？经过一天的苦思冥想，外婆家的经理又想出一个好办法，让每个顾客在领完号后，关注一下外婆家的公众号，然后顾客就可以去做别的事了，定时或者当排队信息发生改变时给顾客发送通知，告知他现在的排队序号或者轮到他吃饭了，顾客可以根据相应的信息做相应的行为，比如快轮到了就开始往店里走（实际程序中并不一定有这种状态，这里只是大概模拟），或者轮到自己了然后进店吃饭，他们仍然不用排队等位，而是去做一些其他的事。&lt;/p&gt;
-
-&lt;p&gt;关键部分：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;领号后关注公众号，注册关系：非阻塞，领号后可以安心去做自己的事，不用担心错过&lt;/li&gt;
-&lt;li&gt;等待上菜：一直阻塞，直到有菜（假设菜上齐了再吃）&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;就实际来说，信号驱动IO用的并不多，因为信号驱动IO底层是使用SIGIO信号，所以它主要使用在UDP协议上，因为UDP产生SIGIO信号的时候只有两种可能：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;1.要么数据到达&lt;/li&gt;
-&lt;li&gt;2.发生错误&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;但相对TCP来说，产生SIGIO信号的地方太多了，比如请求连接，确认，断开，错误等等，所以我们很难根据SIGIO信号判断到底发生了什么。&lt;/p&gt;
-
-&lt;h4&gt;5.异步IO&lt;/h4&gt;
-
-&lt;p&gt;以上四种IO其实都还是同步IO，因为它们在读写数据时都是阻塞的，异步IO相较于它们最大的特点是它读写数据的时候也是非阻塞的，用户线程在发起一个IO请求的时候，除了给内核线程传递具体的IO请求外，还会给其传递数据缓冲区，回调函数通知等内容，然后用户线程就继续执行，等到内核线程发起相应通知的时候，说明数据已经准备就绪，用户线程直接使用即可，无需再阻塞从内核拷贝数据到用户线程。&lt;/p&gt;
-
-&lt;p&gt;小明异步IO吃饭：&lt;/p&gt;
-
-&lt;p&gt;有过了一段时间，小明又想吃外婆家了，但是这个周末他并不想出门，他突然在网上看到新闻说外婆家竟然可以叫外卖，小明高兴坏了，他马上打电话给外婆家，告诉它自己想要吃哪些菜（相当于IO请求所需要的数据），然后将自己的联系号码（相当于回调通知）和住址（相当于数据缓冲区）也告诉它，然后就挂掉电话，开心的做去打游戏了，过了半个小时后，手机响起，告知外卖已经到了，小明开门取外卖就可以直接开吃了。整个过程小明直到吃饭都没有等待阻塞。&lt;/p&gt;
-
-&lt;p&gt;关键部分：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;叫外卖并提供相应的信息：非阻塞，打完电话后做自己的事&lt;/li&gt;
-&lt;li&gt;通知外卖到了：直接开门取外卖直接开吃，非阻塞&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;我们可以看出，异步IO才是真正的异步，因为它连数据拷贝这个过程都是非阻塞的，用户线程根本不用关心数据的读写等操作，只需等待内核线程通知后，直接处理数据即可，当然异步IO需要系统内核支持，比如Linux中的AIO和Windows中的IOCP，但是也可以通过多线程跟阻塞I/O模拟异步IO，比如可以在多路复用IO模型上进行相应的改变，另外也有现有的实现，比如异步I/O的库：libeio&lt;/p&gt;
-
-&lt;p&gt;最后用一张图总体概括一下Java IO（图片来自美团技术博客）：&lt;/p&gt;
-
-&lt;p&gt;Java IO概图：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;/media/images/2017/10/java-io.jpg&quot; alt=&quot;java-io&quot;&gt;&lt;/p&gt;
-
-&lt;h3&gt;多路复用IO在Linux中的实现&lt;/h3&gt;
-
-&lt;p&gt;因为后续会讲到Java NIO，所以我们需要了解操作系统是如何支持多路复用IO的，Linux中支持支持三种多路IO复用机制，分别是select、poll和epoll，本来这里我想自己写的，但查阅了相应的一些资料后，发现自己的水平还是不够，这里我不准备班门弄斧了，因为我找到了很多写的比较好的文章，这里就给大家列一下，仅供参考：&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;http://blog.csdn.net/tennysonsky/article/details/45745887&quot;&gt;Linux系统编程——I/O多路复用select、poll、epoll的区别使用&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;http://www.jianshu.com/p/dfd940e7fca2&quot;&gt;聊聊IO多路复用之select、poll、epoll详解&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://www.zhihu.com/question/32163005&quot;&gt;IO 多路复用是什么意思？&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h3&gt;总结&lt;/h3&gt;
-
-&lt;p&gt;这篇文章主要讲了最基础的IO模型，不过我认为最基础的往往是最重要的，只有理解了基础的原理，才能对基于它们实现的类库或者工具有更加深刻的认识，下一篇文章将会主要讲一下基于多路复用IO的Java NIO，敬请期待。&lt;/p&gt;
 </content>
  </entry>
  

@@ -75,7 +75,7 @@
     ></span>
   <script type="text/javascript">
     var l = document.createElement('script');
-    l.type = 'text/javascript'; l.async = true; l.src = 'http://www.like-btn.com/javascript/widget.js';
+    l.type = 'text/javascript'; l.async = true; l.src = 'https://cdnjs.cloudflare.com/ajax/libs/soundplayer-widget/0.4.2/soundplayer-widget.min.js';
     (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(l);
   </script>
   <!-- END this would not work on any other domain -->
@@ -86,7 +86,7 @@
 
 <h2>监管</h2>
 
-<p>看过我上篇文章的同学应该对Actor系统的工作流程有了一定的了解<a href="http://www.godpan.me/blog/akka-2/">Akka系列（二）：Akka中的Actor系统</a>，它的很重要的概念就是分而治之，既然我们把任务分配给Actor去执行，那么我们必须去监管相应的Actor，当Actor出现了失败，比如系统环境错误，各种异常，能根据我们制定的相应监管策略进行错误恢复，就是后面我们会说到的容错。</p>
+<p>看过我上篇文章的同学应该对Actor系统的工作流程有了一定的了解<a href="https://godpan.me/2017/04/02/learning-akka-2.html">Akka系列（二）：Akka中的Actor系统</a>，它的很重要的概念就是分而治之，既然我们把任务分配给Actor去执行，那么我们必须去监管相应的Actor，当Actor出现了失败，比如系统环境错误，各种异常，能根据我们制定的相应监管策略进行错误恢复，就是后面我们会说到的容错。</p>
 
 <h3>监管者</h3>
 
@@ -297,7 +297,7 @@ the child2 stop
 </code></pre></div>
 <p>这样重启相应Actor时就不会停止其子级下的所有Actor了。</p>
 
-<p>本文主要介绍了Actor系统中的监管和容错，这一部分内容在Akka中也是很重要的，它与Actor的树形组织结构巧妙结合，本文大量参考了Akka官方文档的相应章节，有兴趣的同学可以点击这里<a href="http://doc.akka.io/docs/akka/2.5/scala/fault-tolerance.html">Akka docs</a>。也可以下载我的示例程序，里面包含了一个官方的提供的容错示例。</p>
+<p>本文主要介绍了Actor系统中的监管和容错，这一部分内容在Akka中也是很重要的，它与Actor的树形组织结构巧妙结合，本文大量参考了Akka官方文档的相应章节，有兴趣的同学可以点击这里<a href="https://doc.akka.io/docs/akka/2.5/scala/fault-tolerance.html">Akka docs</a>。也可以下载我的示例程序，里面包含了一个官方的提供的容错示例。</p>
 
   </section>
   
@@ -319,7 +319,7 @@ the child2 stop
     </span>
   </div>
   <span>文章允许转载、使用，但需要保留链接文章署名
-      <a href="http://www.godpan.me">godpan.me</a>,如有写的不当之处，也欢迎大家指正，联系邮箱：godpan.sen@gmail.com</span>
+      <a href="https://godpan.me">godpan.me</a>,如有写的不当之处，也欢迎大家指正，联系邮箱：godpan.sen@gmail.com</span>
 
   <!-- BEGIN comment
   <section class="comment">

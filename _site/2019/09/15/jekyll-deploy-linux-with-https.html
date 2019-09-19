@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="author" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>泮关森的个人博客</title>
+    <link rel="shortcut icon" href="/media/favicon.ico">
+<!--     <link href="/atom.xml" rel="alternate" title="泮" type="application/atom+xml" /> -->
+<!--     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.2.0/css/font-awesome.min.css"> -->
+    <link rel="stylesheet" href="/media/css/style.css">
+  <!--   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/retina.js/1.3.0/retina.min.js"></script> -->
+    <link rel="stylesheet" href="/media/css/github.min.css">
+    <script src="/media/js/highlight.min.js"></script>
+    <script type="text/javascript"> hljs.initHighlightingOnLoad(); </script>
+    <script>
+      var _hmt = _hmt || [];
+      (function() {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?8ac3cc3bdb3696e1041a41874f47e7b4";
+        var s = document.getElementsByTagName("script")[0]; 
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script> 
+    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({
+        google_ad_client: "ca-pub-7784116562520918",
+        enable_page_level_ads: true
+      });
+    </script>      -->
+  </head>
+  <body>
+      <div id="main" role="main">
+        <header>
+          <div id="header">
+            <h1><a title="泮" class="" href="/">泮</a></h1>
+          </div>
+          <nav>
+            
+            <!-- <span><a title="Blog" href="/blog.html"><i class="fa fa-list-ul"></i></a></span> -->
+            <span><a title="Blog" href="/blog.html">Blog</a></span>
+            
+            <!-- <span><a title="Tags" href="/tags.html"><i class="fa fa-tags"></i></a></span> -->
+            <span><a title="Tags" href="/tags.html">Tags</a></span>
+            
+            <!-- <span><a title="About" href="/about.html"><i class="fa fa-user"></i></a></span> -->
+            <span><a title="About" href="/about.html">About</a></span>
+            
+          </nav>
+        </header>
+        <div id="content">
+        <article>
+  <section class="title">
+    <h2>Jekyll博客部署迁移到Linux（Centos7）且支持https教程 </h2>
+  </section>
+  <section class="meta">
+  <span class="time">
+    <time datetime="2019-09-15">2019-09-15</time>
+  </span>
+  
+  <span class="tags">
+    
+    <a href="/tags.html#Jekyll" title="Jekyll">#Jekyll</a>
+    
+    <a href="/tags.html#https" title="https">#https</a>
+    
+  </span>
+  <!-- BEGIN this would not work on any other domain -->
+  <span
+    class           = "like-wrapper"
+    like-shortname  = ''
+    like-identifier = 'urn:uuid:85cd4b63-e9f0-4459-8ca7-fbdsdc2a2fad'
+    like-name       = 'Jekyll博客部署迁移到Linux（Centos7）且支持https教程'
+    like-btn        = '&#xf087;'
+    like-link       = '/2019/09/15/jekyll-deploy-linux-with-https.html'
+    ></span>
+  <script type="text/javascript">
+    var l = document.createElement('script');
+    l.type = 'text/javascript'; l.async = true; l.src = 'https://cdnjs.cloudflare.com/ajax/libs/soundplayer-widget/0.4.2/soundplayer-widget.min.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(l);
+  </script>
+  <!-- END this would not work on any other domain -->
+  
+  </section>
+  <section class="post">
+  <p>之前一直把博客托管到Github pages上，虽然方便但是也有几个弊端，比如：</p>
+
+<ul>
+<li>1.有时访问速度过慢</li>
+<li>2.国内的一些搜索引擎无法检索到</li>
+</ul>
+
+<p>刚好自己有一个服务器，所以准备将博客迁移到自己的服务器上，当然推荐将内容在github也保存一份，以防万一数据丢失。</p>
+
+<p>操作前提：</p>
+
+<p>1.申请一个自己的服务器和域名(国内的有些服务器用80端口需要备案，如使用请先备案)
+2.Jekyll博客安装
+3.有自己的github</p>
+
+<h3>步骤</h3>
+
+<h4>1.编译自己的博客</h4>
+
+<p>执行命令：</p>
+<div class="highlight"><pre><code class="language-jekyll" data-lang="jekyll">jekyll build
+</code></pre></div>
+<p>jekyll将编译完的文件放在工程的<em>_site</em>目录下，部署的时候可以单独上传这个文件夹就行，但这里我们会将自己的博客工程存储在github中，所以我们将工程的所有内容都上传到github上了。</p>
+
+<h4>2.上传到github</h4>
+
+<p>如何跟将项目跟github上的Repositories绑定请自行参考google。</p>
+
+<p>执行命令进行上传：</p>
+<div class="highlight"><pre><code class="language-git" data-lang="git">git add -f *
+git commit -m "update blog"
+git push
+</code></pre></div>
+<h4>3.服务器安装git并clone工程项目</h4>
+
+<p>执行命令：</p>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">yum install git
+
+//clone你自己的项目
+
+git clone https://github.com/godpan/godpan.github.io.git
+</code></pre></div>
+<h4>4.安装nginx并修改配置</h4>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">yum install nginx
+</code></pre></div>
+<p>修改nginx配置</p>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">vi /etc/nginx/nginx.conf
+
+//修改以下内容，其他不变
+
+user root<span class="p">;</span>
+
+server <span class="o">{</span>
+    listen       80 default_server<span class="p">;</span>
+    listen       <span class="o">[</span>::]:80 default_server<span class="p">;</span>
+    server_name  _<span class="p">;</span>
+    root         /root/godpan.github.io/_site<span class="p">;</span> <span class="c">#博客_site文件目录</span>
+
+    <span class="c"># Load configuration files for the default server block.</span>
+    include /etc/nginx/default.d/<span class="k">*</span>.conf<span class="p">;</span>
+
+    location / <span class="o">{</span>
+    <span class="o">}</span>
+
+    error_page 404 /404.html<span class="p">;</span>
+        location <span class="o">=</span> /40x.html <span class="o">{</span>
+    <span class="o">}</span>
+
+    error_page 500 502 503 504 /50x.html<span class="p">;</span>
+        location <span class="o">=</span> /50x.html <span class="o">{</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div>
+<p>保存文件，并启动nginx并开启80端口</p>
+<div class="highlight"><pre><code class="language-" data-lang="">systemctl start nginx
+
+firewall-cmd --add-port=80/tcp --permanent
+firewall-cmd --reload
+</code></pre></div>
+<p>然后直接访问你服务器的ip，不出意外应该能直接看到你自己博客的内容了，接下来我们就将域名与ip绑定。</p>
+
+<h4>5.绑定域名</h4>
+
+<p>我这里操作的是阿里云上的域名，仅供参考，其他平台的自己按照规则设置，配置如下：</p>
+
+<p><img src="/media/images/2019/09/domain-settings.png" alt="domain-settings"></p>
+
+<p>等域名生效（通常不超过10分钟）就可以直接用域名访问你的博客了。</p>
+
+<p>如果你不想给网站配置为https的话，到这里就大功告成了。</p>
+
+<h4>6.配置https</h4>
+
+<p>这里我们使用Certbot来生成https需要的证书，先安装Certbot：</p>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">yum install certbot
+</code></pre></div>
+<p>生成证书：
+<code>shell
+certbot certonly --webroot -w /root/godpan.github.io/_site -d godpan.me -d www.godpan.me
+</code>
+证书生成的目录在：</p>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">/etc/letsencrypt/live/godpan.me  <span class="c">#后面为你自己的域名</span>
+</code></pre></div>
+<p>修改nginx对应的配置：</p>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">vi /etc/nginx/nginx.conf
+
+<span class="c">#修改443端口对应的server内容：</span>
+
+server <span class="o">{</span>
+    listen       443 ssl http2 default_server<span class="p">;</span>
+    listen       <span class="o">[</span>::]:443 ssl http2 default_server<span class="p">;</span>
+    server_name  _<span class="p">;</span>
+    root         /root/godpan.github.io/_site<span class="p">;</span> <span class="c">#博客_site文件目录</span>
+
+    ssl_certificate <span class="s2">"/etc/letsencrypt/live/godpan.me/fullchain.pem"</span><span class="p">;</span>  <span class="c">#证书的路径</span>
+    ssl_certificate_key <span class="s2">"/etc/letsencrypt/live/godpan.me/privkey.pem"</span><span class="p">;</span> <span class="c">#证书密钥的路径</span>
+    ssl_session_cache shared:SSL:1m<span class="p">;</span>
+    ssl_session_timeout  10m<span class="p">;</span>
+    ssl_ciphers HIGH:!aNULL:!MD5<span class="p">;</span>
+    ssl_prefer_server_ciphers on<span class="p">;</span>
+
+    <span class="c"># Load configuration files for the default server block.</span>
+    include /etc/nginx/default.d/<span class="k">*</span>.conf<span class="p">;</span>
+
+    location / <span class="o">{</span>
+    <span class="o">}</span>
+
+    error_page 404 /404.html<span class="p">;</span>
+        location <span class="o">=</span> /40x.html <span class="o">{</span>
+    <span class="o">}</span>
+
+    error_page 500 502 503 504 /50x.html<span class="p">;</span>
+        location <span class="o">=</span> /50x.html <span class="o">{</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div>
+<p>开启443端口，并重启nginx：</p>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">firewall-cmd <span class="nt">--add-port</span><span class="o">=</span>443/tcp <span class="nt">--permanent</span>
+firewall-cmd <span class="nt">--reload</span>
+systemctl restart nginx
+</code></pre></div>
+<p>这时候你就可以用https访问你的网站了，比如https://godpan.me，但因为certbot证书有3个月的有效期，所以我们需要定时去更新证书，不过它提供了更新证书的命令：
+<code>
+certbot renew
+</code>
+但手动更新的话可以能会忘，所以我们用系统自身的定时任务去更新：</p>
+
+<p>创建一个定时任务：</p>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">vi certbot-auto-renew-crontab
+
+<span class="c">#输入以下内容进行保存，含义是每个月第一天的一点凌晨会去更新一次证书</span>
+
+0 1 1 <span class="k">*</span> <span class="k">*</span> certbot renew <span class="nt">--pre-hook</span> <span class="s2">"systemctl stop nginx"</span> <span class="nt">--post-hook</span> <span class="s2">"systemctl start nginx"</span>
+</code></pre></div>
+<p>最后我们crontab来启动这个任务：</p>
+<div class="highlight"><pre><code class="language-shell" data-lang="shell">crontab certbot-auto-renew-crontab
+</code></pre></div>
+<p>至此大功告成，除非你的服务器崩溃或者被封了😂😂😂。</p>
+
+  </section>
+  
+  <div class="divider">
+    <span>
+    
+    <a href="/2019/07/15/kafka-producer-send-async-bug.html"><i class="fa fa-chevron-left"></i></a>
+    
+    </span>
+    <!-- BEGIN comment icon
+    <span><a href="javascript:leave_comment();" id="leave_comment_link"><i class="fa fa-comment-o"></i></a></span>
+    <span><a href="javascript:collapse_comment();" id="collapse_comment_link" style="display:none;"><i class="fa fa-chevron-up"></i></a></span>
+      END comment icon -->
+
+    <span>
+    
+    <i class="fa fa-circle"></i>
+    
+    </span>
+  </div>
+  <span>文章允许转载、使用，但需要保留链接文章署名
+      <a href="https://godpan.me">godpan.me</a>,如有写的不当之处，也欢迎大家指正，联系邮箱：godpan.sen@gmail.com</span>
+
+  <!-- BEGIN comment
+  <section class="comment">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+      var disqus_shortname = '';
+      var disqus_identifier = 'urn:uuid:85cd4b63-e9f0-4459-8ca7-fbdsdc2a2fad';
+
+      function leave_comment() {
+          var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+          dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          $("#leave_comment_link").css("display", "none");
+          $("#collapse_comment_link").css("display", "");
+      };
+      function collapse_comment() {
+          // document.getElementById("disqus_thread").innerHTML = '';
+          $("#disqus_thread").slideUp(400, function() {
+              $("#disqus_thread").empty();
+              $("#leave_comment_link").css("display", "");
+              $("#collapse_comment_link").css("display", "none");
+              $("#disqus_thread").css("display", "");
+          });
+      };
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </section>
+  END comment -->
+  
+</article>
+
+        </div>
+        <footer>
+          <div>
+            
+            &copy; 2019  | powered by jekyll | themed by sext vi | <a href="https://github.com/godpan" title="github me">github</a>
+          </div>
+        </footer>
+      </div> <!-- main -->
+  </body>
+</html>
