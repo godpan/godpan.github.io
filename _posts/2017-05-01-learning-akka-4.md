@@ -83,13 +83,13 @@ public void setA() {
 - 对变量的写操作不依赖于当前值
 - 该变量没有包含在具有其他变量的不变式中
 
-多的方面这里我就不展开了，推荐两篇我觉得写的还不错的文章：[volatile的使用及其原理](http://www.cnblogs.com/paddix/p/5428507.html)[volatile的适用场景](http://blog.csdn.net/vking_wang/article/details/9982709)
+多的方面这里我就不展开了，推荐两篇我觉得写的还不错的文章：[volatile的使用及其原理](https://www.cnblogs.com/paddix/p/5428507.html)[volatile的适用场景](https://blog.csdn.net/vking_wang/article/details/9982709)
 
 #### 3.synchronized关键词
 
 很多同学在学习Java并发过程中最先接触的就是synchronized关键词了，它确实能解决我们上述的并发问题，那它到时如何帮我们保证共享变量的一致性的呢？
 
-简而言之的说，线程在访问请求用synchronized关键词修饰的方法，代码块都会要求获得一个监视器锁，当线程获得了监视器锁后，它才有权限去执行相应的方法或代码块，并在执行结束后释放监视器锁，这便能保证共享内存的一致性了，因为本文主要是讲Akka的共享内存，过多的篇幅就不展开了，这里推荐一篇解析synchronized原理很不错的文章，有兴趣的同学可以去看看：[Synchronized及其实现原理](http://www.cnblogs.com/paddix/p/5367116.html)
+简而言之的说，线程在访问请求用synchronized关键词修饰的方法，代码块都会要求获得一个监视器锁，当线程获得了监视器锁后，它才有权限去执行相应的方法或代码块，并在执行结束后释放监视器锁，这便能保证共享内存的一致性了，因为本文主要是讲Akka的共享内存，过多的篇幅就不展开了，这里推荐一篇解析synchronized原理很不错的文章，有兴趣的同学可以去看看：[Synchronized及其实现原理](https://www.cnblogs.com/paddix/p/5367116.html)
 
 
 ### Akka共享内存
