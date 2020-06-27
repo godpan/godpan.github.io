@@ -1,6 +1,6 @@
 # highlighter: pygments
 permalink: /:year/:month/:day/:title.html
-name: "泮关森的博客"
+name: "三分青年的博客"
 markdown: redcarpet
 
 
