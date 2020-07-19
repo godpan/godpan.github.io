@@ -1,5 +1,5 @@
 ---
-title: Scala-with-cats中文翻译（四）：Type class的变型与不变
+title: Scala-with-cats中文翻译（四）：Type class的变型与不变，以及本章小结
 layout: post
 guid: urn:uuid:85cd4b63-e9f0-4459-8ca7-tg6785hyj56
 tags:
@@ -120,3 +120,16 @@ final case object C extends A
 | 优先选择子类型？     | No     | Yes  | No   |
 
 很明显，没有完美的类型系统。Cats更倾向于使用不变的类型，这意味着我们需要指定更具体的instance，举个例子一个Some[Int]的值直接使用Option[Int]类型的instance，如果需要的话，可以将Some[Int]类型的值声明为Option[Int]，比如 Some(1) : Option[Int]，或者使用一些更便捷的方法，比如我们在之前1.5.3章节中看到的Option.apply, Option.empty, some, none等方法。
+
+### 1.7 Summary
+
+在本章中，我们首先学习了什么是type class，然后实现了一个我们自己定义的type class：Printable，紧接着我们学习了Cats中的两个type class：Show和Eq。
+
+现在，我们来看Cats的基本组成结构：
+
+- type class都声明在[cats](http://typelevel.org/cats/api/cats/)这个包中。
+- 每一个type class都有一个伴生对象，里面包含着一个apply方法，用于指定对应类型的instance，以及一个或者多个用于创建instance的构造方法，另外还有其他一系列相关的辅助方法。
+- 默认的instance都放在[cats.instance](http://typelevel.org/cats/api/cats/instances/)这个包中，相同类型的所有instance会放在一起。
+- 很多type class都提供interface syntax，放置在[cats.syntax](http://typelevel.org/cats/api/cats/syntax/)这个包中。
+
+在接下去的章节中，我们将会学习一些应用广泛且强大的type class，比如Semigroup, Monoid, Functor, Monad, Semigroupal, Applicative, Traverse等，我们会介绍每个type class所拥有的能力，遵循的法则，以及它在Cats中是如何实现的。这些type class相对Show以及Eq来说，要更抽象许多，虽然这会让我们更难学习，但实际上它们却更有用。
